@@ -1,4 +1,31 @@
+use log::info;
+use log4rs;
+
 use eframe::{egui, App, Frame};
+use lazy_static::lazy_static;
+use std::fs;
+use std::fs::File;
+use std::io::Read;
+use std::sync::{Mutex};
+
+use crate::settings::Settings;
+
+pub mod settings;
+
+// Create a global variable for application settings.
+// This will be available in other files.
+lazy_static! {
+    static ref SETTINGS: Mutex<Settings> = {
+        // Read YAML settings file.
+        let mut file = File::open("settings.yml").expect("Unable to open file");
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).expect("Unable to read file");
+        
+        // Deserialize YAML into Settings struct.
+        let settings: Settings = serde_yaml::from_str(&contents).expect("Unable to parse YAML");
+        Mutex::new(settings)
+    };
+}
 
 // Define a struct for your application state
 struct MyApp {
@@ -60,16 +87,28 @@ impl App for MyApp {
 }
 
 fn main() -> Result<(), eframe::Error> {
-    // Configure the native options for the window
+    // Create folder for logs if it doesn't already exist.
+    let _ = fs::create_dir_all("./logs");
+
+    // Logging configuration held in log4rs.yml .
+    log4rs::init_file("log4rs.yml", Default::default()).unwrap();
+
+    // Get application settings in scope.
+    let settings: Settings = SETTINGS.lock().unwrap().clone();
+    // Do initial program version logging, mainly as a test.
+    info!("Application started: {} v({})", settings.program_name, settings.program_ver);  
+
+    // Configure the native options for the window.
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([600.0, 400.0]), // Initial window size
+        viewport: egui::ViewportBuilder::default().with_inner_size([600.0, 400.0]),
         ..Default::default()
     };
 
-    // Run the application
+    // Run the application.
+    // Create and box the app state.
     eframe::run_native(
-        "My App Title", // The title of the window
+        "SCRAPER",
         options,
-        Box::new(|_cc| Ok(Box::new(MyApp::default()))), // Create and box your app state
+        Box::new(|_cc| Ok(Box::new(MyApp::default()))),
     )
 }
