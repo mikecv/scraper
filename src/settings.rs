@@ -8,4 +8,5 @@ pub struct Settings {
     pub program_web: String,
     pub win_width: f32,
     pub win_height: f32,
+    pub file_types: Vec<String>,
 }

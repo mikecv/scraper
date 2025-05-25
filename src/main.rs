@@ -1,3 +1,6 @@
+// Application to perform custom scraping of log files,
+// and present results in tabular and graphical format.
+
 use log::info;
 use log4rs;
 
@@ -32,7 +35,8 @@ lazy_static! {
 }
 
 // Application launch.
-fn main() -> Result<(), eframe::Error> {
+#[tokio::main]
+async fn main() -> Result<(), eframe::Error> {
     // Create folder for logs if it doesn't already exist.
     let _ = fs::create_dir_all("./logs");
 
@@ -41,6 +45,7 @@ fn main() -> Result<(), eframe::Error> {
 
     // Get application settings in scope.
     let settings: Settings = SETTINGS.lock().unwrap().clone();
+
     // Do initial application information.
     info!("Application started: {:?} v({:?})", settings.program_name, settings.program_ver);  
     info!("Application devs: {:?} web: ({:?})", settings.program_devs, settings.program_web);  
@@ -53,7 +58,7 @@ fn main() -> Result<(), eframe::Error> {
     };
 
     // Run the application.
-    info!("Running the application, creating the window app..");
+    info!("Running the application, creating the window app...");
     eframe::run_native(
         "Scraper",
         options,
