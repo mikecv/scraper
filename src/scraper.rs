@@ -80,6 +80,7 @@ impl Scraper {
             }
             ctx.request_repaint();
         });
+ 
         // Set that file open dialog is closed.
         // This allows recovery from an aborted browse.
         self.file_dialog_open = false;
@@ -113,7 +114,8 @@ impl Scraper {
     }
 
     // Method to get path and filename for display.
-    pub fn get_selected_file(&self) -> Option<&PathBuf> {
+    // Not currently used.
+    pub fn _get_selected_file(&self) -> Option<&PathBuf> {
         self.selected_file.as_ref()
     }
 
