@@ -1,6 +1,7 @@
 // Scraper structure and methods.
 
 use log::info;
+
 use rfd::AsyncFileDialog;
 use std::path::PathBuf;
 use std::sync::mpsc;
@@ -110,7 +111,11 @@ impl Scraper {
     // Method to scrape the selected file.
     fn process_file(&self, path: &PathBuf) {
         info!("Scraping file: {:?}", path);
-        // TODO
+ 
+        // Open file for scraping.
+        // Intent is to search for particular line of text using regx,
+        // and processing content since previous previous detetion (or start of file),
+        // and then repeating until last detection (or end of file).
     }
 
     // Method to get path and filename for display.

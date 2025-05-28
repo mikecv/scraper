@@ -15,6 +15,7 @@ pub struct MyApp {
     pub scraper: Scraper,
     pub show_about: bool,
     pub show_help: bool,
+    pub help_detached: bool,
     pub about_icon: Option<egui::TextureHandle>,
     pub help_image_1: Option<egui::TextureHandle>,
 }
@@ -31,6 +32,7 @@ impl Default for MyApp {
             scraper: Scraper::default(),
             show_about: false,
             show_help: false,
+            help_detached: false,
             about_icon: None,
             help_image_1: None,
         }

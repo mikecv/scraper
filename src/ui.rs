@@ -57,6 +57,7 @@ pub fn draw_central_panel(app: &mut MyApp, ctx: &egui::Context) {
 // Function to draw the About dialog.
 pub fn draw_about_dialog(app: &mut MyApp, ctx: &egui::Context) {
     if app.show_about {
+
         // Try to load the icon if it hasn't been loaded yet.
         app.load_about_icon(ctx);
         
@@ -98,22 +99,74 @@ pub fn draw_about_dialog(app: &mut MyApp, ctx: &egui::Context) {
     }
 }
 
-// Function to draw the Help panel/window - now uses separated content
+// Function to draw the Help panel/window - now with detach option
 pub fn draw_help_panel(app: &mut MyApp, ctx: &egui::Context) {
     if app.show_help {
 
-        // Try to load the help images if they haven't been loaded yet.
+        // Load help images if not loaded.
         app.load_help_images(ctx);
 
-        egui::Window::new("Help")
-            .default_width(500.0)
-            .default_height(400.0)
-            .resizable(true)
-            .show(ctx, |ui| {
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    // Use the separated help content.
-                    help_content::draw_help_content(ui, app);
+        if app.help_detached {
+            // Create a detached window in its own viewport.
+            ctx.show_viewport_immediate(
+                egui::ViewportId::from_hash_of("help_window"),
+                egui::ViewportBuilder::default()
+                    .with_title("Help - Scraper")
+                    .with_inner_size([600.0, 500.0])
+                    .with_resizable(true),
+                |ctx, class| {
+                    assert!(class == egui::ViewportClass::Immediate);
+                    egui::CentralPanel::default().show(ctx, |ui| {
+                        ui.horizontal(|ui| {
+                            // Show help attached to main windoe.
+                            if ui.button("Help").clicked() {
+                                info!("Help button clicked.");
+                                app.show_help = true;
+                                app.help_detached = true;
+                                ui.close_menu();
+                            }
+                            // Attach help dialog to main window.
+                            if ui.button("Attach to Main Window").clicked() {
+                                app.help_detached = false;
+                            }
+                            // Close help menu.
+                            ui.separator();
+                            if ui.button("Close").clicked() {
+                                app.show_help = false;
+                                app.help_detached = false;
+                            }
+
+                        });
+                        ui.separator();
+                        
+                        egui::ScrollArea::vertical().show(ui, |ui| {
+                            help_content::draw_help_content(ui, app);
+                        });
+                    });
+                },
+            );
+        } else {
+            // Regular attached window
+            egui::Window::new("Help")
+                .default_width(500.0)
+                .default_height(400.0)
+                .resizable(true)
+                .show(ctx, |ui| {
+                    ui.horizontal(|ui| {
+                        if ui.button("Detach Window").clicked() {
+                            app.help_detached = true;
+                        }
+                        ui.separator();
+                        if ui.button("Close").clicked() {
+                            app.show_help = false;
+                        }
+                    });
+                    ui.separator();
+                    
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        help_content::draw_help_content(ui, app);
+                    });
                 });
-            });
+        }
     }
 }

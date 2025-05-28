@@ -2381,3 +2381,111 @@ opengl vendor: Mesa
 28-05-2025 19:48:28 - DEBUG eframe::native::run:133 - Asking to exit event loop…
 28-05-2025 19:48:28 - DEBUG eframe::native::run:199 - Received Event::LoopExiting - saving app state…
 28-05-2025 19:48:28 - DEBUG eframe::native::run:301 - eframe window closed
+28-05-2025 21:19:40 - INFO  scraper:51 - Application started: "Scraper" v("0.0.1")
+28-05-2025 21:19:40 - INFO  scraper:52 - Application devs: ["Michael Cvitanovich"] web: ("galacticwingcommander")
+28-05-2025 21:19:40 - INFO  scraper:55 - Configuring the options for the window.
+28-05-2025 21:19:40 - INFO  scraper:62 - Running the application, creating the window app...
+28-05-2025 21:19:40 - DEBUG eframe:258 - Using the glow renderer
+28-05-2025 21:19:40 - DEBUG eframe::native::glow_integration:396 - Event::Resumed
+28-05-2025 21:19:40 - DEBUG eframe::native::glow_integration:939 - trying to create glutin Display with config: ConfigTemplateBuilder { template: ConfigTemplate { color_buffer_type: Rgb { r_size: 8, g_size: 8, b_size: 8 }, alpha_size: 8, depth_size: 0, stencil_size: 0, num_samples: None, min_swap_interval: None, max_swap_interval: None, config_surface_types: ConfigSurfaceTypes(WINDOW), api: None, transparency: false, single_buffering: false, stereoscopy: None, float_pixels: false, max_pbuffer_width: None, hardware_accelerated: None, max_pbuffer_height: None, native_window: None } }
+28-05-2025 21:19:40 - DEBUG eframe::native::glow_integration:962 - using the first config from config picker closure. config: Glx(Config { inner: Config { raw: GlxConfig(0x55f35d9a5c60), display: GlxDisplay(0x55f35d811bc0) } })
+28-05-2025 21:19:40 - DEBUG eframe::native::glow_integration:975 - successfully created GL Display with version: GLX 1.4 and supported features: DisplayFeatures(CONTEXT_ROBUSTNESS | CONTEXT_NO_ERROR | FLOAT_PIXEL_FORMAT | SWAP_CONTROL | CONTEXT_RELEASE_BEHAVIOR | CREATE_ES_CONTEXT | MULTISAMPLING_PIXEL_FORMATS | SRGB_FRAMEBUFFERS)
+28-05-2025 21:19:40 - DEBUG eframe::native::glow_integration:985 - creating gl context using raw window handle: Some(Xlib(XlibWindowHandle { window: 46137347, visual_id: 1310 }))
+28-05-2025 21:19:40 - DEBUG eframe::native::glow_integration:1122 - Initializing egui_winit for viewport "FFFF"
+28-05-2025 21:19:40 - DEBUG egui_winit::clipboard:150 - Cannot init smithay clipboard without a Wayland display handle
+28-05-2025 21:19:40 - DEBUG eframe::native::glow_integration:1134 - Creating a gl_surface for viewport "FFFF"
+28-05-2025 21:19:40 - DEBUG egui_glow::painter:155 - 
+opengl version: 4.5 (Core Profile) Mesa 23.2.1-1ubuntu3.1~22.04.3
+opengl renderer: llvmpipe (LLVM 15.0.7, 256 bits)
+opengl vendor: Mesa
+28-05-2025 21:19:40 - DEBUG egui_glow::shader_version:28 - Shader version: Gl140 ("4.50").
+28-05-2025 21:19:40 - DEBUG egui_glow::painter:171 - Shader header: "#version 140\n".
+28-05-2025 21:19:40 - DEBUG egui_glow::painter:180 - SRGB texture Support: true
+28-05-2025 21:19:40 - DEBUG egui_glow::painter:187 - SRGB framebuffer Support: true
+28-05-2025 21:19:40 - DEBUG egui_glow::vao:122 - GL version: "4.5 (Core Profile) Mesa 23.2.1-1ubuntu3.1~22.04.3".
+28-05-2025 21:19:40 - INFO  scraper::app:25 - Creating new instance of MyApp.
+28-05-2025 21:19:40 - INFO  scraper::scraper:33 - Creating new instance of Scraper.
+28-05-2025 21:19:48 - INFO  scraper::ui:28 - About button clicked.
+28-05-2025 21:19:48 - INFO  scraper::app:55 - About icon loaded successfully.
+28-05-2025 21:20:01 - INFO  scraper::ui:23 - Help button clicked.
+28-05-2025 21:20:09 - DEBUG eframe::native::glow_integration:1341 - Creating new viewport "9BA2" (Some("Help - Scraper"))
+28-05-2025 21:20:09 - DEBUG eframe::native::glow_integration:1098 - Creating a window for viewport "9BA2"
+28-05-2025 21:20:09 - DEBUG eframe::native::glow_integration:1122 - Initializing egui_winit for viewport "9BA2"
+28-05-2025 21:20:09 - DEBUG egui_winit::clipboard:150 - Cannot init smithay clipboard without a Wayland display handle
+28-05-2025 21:20:09 - DEBUG eframe::native::glow_integration:1134 - Creating a gl_surface for viewport "9BA2"
+28-05-2025 21:20:21 - INFO  scraper::ui:127 - Help button clicked.
+28-05-2025 21:20:27 - DEBUG egui::context:2362 - Removing viewport "9BA2" (Some("Help - Scraper")): it was never used this pass
+28-05-2025 21:20:27 - DEBUG eframe::native::glow_integration:806 - Received WindowEvent::Destroyed for viewport None
+28-05-2025 21:20:41 - DEBUG eframe::native::glow_integration:787 - Received WindowEvent::CloseRequested for viewport Some("FFFF")
+28-05-2025 21:20:41 - DEBUG eframe::native::epi_integration:295 - Closing root viewport (ViewportCommand::CancelClose was not sent)
+28-05-2025 21:20:41 - DEBUG eframe::native::run:133 - Asking to exit event loop…
+28-05-2025 21:20:41 - DEBUG eframe::native::run:199 - Received Event::LoopExiting - saving app state…
+28-05-2025 21:20:41 - DEBUG eframe::native::run:301 - eframe window closed
+28-05-2025 21:26:19 - INFO  scraper:51 - Application started: "Scraper" v("0.0.1")
+28-05-2025 21:26:19 - INFO  scraper:52 - Application devs: ["Michael Cvitanovich"] web: ("galacticwingcommander")
+28-05-2025 21:26:19 - INFO  scraper:55 - Configuring the options for the window.
+28-05-2025 21:26:19 - INFO  scraper:62 - Running the application, creating the window app...
+28-05-2025 21:26:19 - DEBUG eframe:258 - Using the glow renderer
+28-05-2025 21:26:19 - DEBUG eframe::native::glow_integration:396 - Event::Resumed
+28-05-2025 21:26:19 - DEBUG eframe::native::glow_integration:939 - trying to create glutin Display with config: ConfigTemplateBuilder { template: ConfigTemplate { color_buffer_type: Rgb { r_size: 8, g_size: 8, b_size: 8 }, alpha_size: 8, depth_size: 0, stencil_size: 0, num_samples: None, min_swap_interval: None, max_swap_interval: None, config_surface_types: ConfigSurfaceTypes(WINDOW), api: None, transparency: false, single_buffering: false, stereoscopy: None, float_pixels: false, max_pbuffer_width: None, hardware_accelerated: None, max_pbuffer_height: None, native_window: None } }
+28-05-2025 21:26:19 - DEBUG eframe::native::glow_integration:962 - using the first config from config picker closure. config: Glx(Config { inner: Config { raw: GlxConfig(0x55633e61e5b0), display: GlxDisplay(0x55633e48a530) } })
+28-05-2025 21:26:19 - DEBUG eframe::native::glow_integration:975 - successfully created GL Display with version: GLX 1.4 and supported features: DisplayFeatures(CONTEXT_ROBUSTNESS | CONTEXT_NO_ERROR | FLOAT_PIXEL_FORMAT | SWAP_CONTROL | CONTEXT_RELEASE_BEHAVIOR | CREATE_ES_CONTEXT | MULTISAMPLING_PIXEL_FORMATS | SRGB_FRAMEBUFFERS)
+28-05-2025 21:26:19 - DEBUG eframe::native::glow_integration:985 - creating gl context using raw window handle: Some(Xlib(XlibWindowHandle { window: 46137347, visual_id: 1310 }))
+28-05-2025 21:26:19 - DEBUG eframe::native::glow_integration:1122 - Initializing egui_winit for viewport "FFFF"
+28-05-2025 21:26:19 - DEBUG egui_winit::clipboard:150 - Cannot init smithay clipboard without a Wayland display handle
+28-05-2025 21:26:19 - DEBUG eframe::native::glow_integration:1134 - Creating a gl_surface for viewport "FFFF"
+28-05-2025 21:26:19 - DEBUG egui_glow::painter:155 - 
+opengl version: 4.5 (Core Profile) Mesa 23.2.1-1ubuntu3.1~22.04.3
+opengl renderer: llvmpipe (LLVM 15.0.7, 256 bits)
+opengl vendor: Mesa
+28-05-2025 21:26:19 - DEBUG egui_glow::shader_version:28 - Shader version: Gl140 ("4.50").
+28-05-2025 21:26:19 - DEBUG egui_glow::painter:171 - Shader header: "#version 140\n".
+28-05-2025 21:26:19 - DEBUG egui_glow::painter:180 - SRGB texture Support: true
+28-05-2025 21:26:19 - DEBUG egui_glow::painter:187 - SRGB framebuffer Support: true
+28-05-2025 21:26:19 - DEBUG egui_glow::vao:122 - GL version: "4.5 (Core Profile) Mesa 23.2.1-1ubuntu3.1~22.04.3".
+28-05-2025 21:26:19 - INFO  scraper::app:25 - Creating new instance of MyApp.
+28-05-2025 21:26:19 - INFO  scraper::scraper:33 - Creating new instance of Scraper.
+28-05-2025 21:26:27 - INFO  scraper::ui:23 - Help button clicked.
+28-05-2025 21:26:31 - DEBUG eframe::native::glow_integration:1341 - Creating new viewport "9BA2" (Some("Help - Scraper"))
+28-05-2025 21:26:31 - DEBUG eframe::native::glow_integration:1098 - Creating a window for viewport "9BA2"
+28-05-2025 21:26:31 - DEBUG eframe::native::glow_integration:1122 - Initializing egui_winit for viewport "9BA2"
+28-05-2025 21:26:31 - DEBUG egui_winit::clipboard:150 - Cannot init smithay clipboard without a Wayland display handle
+28-05-2025 21:26:31 - DEBUG eframe::native::glow_integration:1134 - Creating a gl_surface for viewport "9BA2"
+28-05-2025 21:26:37 - DEBUG egui::context:2362 - Removing viewport "9BA2" (Some("Help - Scraper")): it was never used this pass
+28-05-2025 21:26:37 - DEBUG eframe::native::glow_integration:806 - Received WindowEvent::Destroyed for viewport None
+28-05-2025 21:26:56 - DEBUG eframe::native::epi_integration:295 - Closing root viewport (ViewportCommand::CancelClose was not sent)
+28-05-2025 21:26:56 - DEBUG eframe::native::run:133 - Asking to exit event loop…
+28-05-2025 21:26:56 - DEBUG eframe::native::run:199 - Received Event::LoopExiting - saving app state…
+28-05-2025 21:26:56 - DEBUG eframe::native::run:301 - eframe window closed
+28-05-2025 21:35:42 - INFO  scraper:51 - Application started: "Scraper" v("0.0.1")
+28-05-2025 21:35:42 - INFO  scraper:52 - Application devs: ["Michael Cvitanovich"] web: ("galacticwingcommander")
+28-05-2025 21:35:42 - INFO  scraper:55 - Configuring the options for the window.
+28-05-2025 21:35:42 - INFO  scraper:62 - Running the application, creating the window app...
+28-05-2025 21:35:42 - DEBUG eframe:258 - Using the glow renderer
+28-05-2025 21:35:42 - DEBUG eframe::native::glow_integration:396 - Event::Resumed
+28-05-2025 21:35:42 - DEBUG eframe::native::glow_integration:939 - trying to create glutin Display with config: ConfigTemplateBuilder { template: ConfigTemplate { color_buffer_type: Rgb { r_size: 8, g_size: 8, b_size: 8 }, alpha_size: 8, depth_size: 0, stencil_size: 0, num_samples: None, min_swap_interval: None, max_swap_interval: None, config_surface_types: ConfigSurfaceTypes(WINDOW), api: None, transparency: false, single_buffering: false, stereoscopy: None, float_pixels: false, max_pbuffer_width: None, hardware_accelerated: None, max_pbuffer_height: None, native_window: None } }
+28-05-2025 21:35:42 - DEBUG eframe::native::glow_integration:962 - using the first config from config picker closure. config: Glx(Config { inner: Config { raw: GlxConfig(0x5631bc795ea0), display: GlxDisplay(0x5631bc601bc0) } })
+28-05-2025 21:35:42 - DEBUG eframe::native::glow_integration:975 - successfully created GL Display with version: GLX 1.4 and supported features: DisplayFeatures(CONTEXT_ROBUSTNESS | CONTEXT_NO_ERROR | FLOAT_PIXEL_FORMAT | SWAP_CONTROL | CONTEXT_RELEASE_BEHAVIOR | CREATE_ES_CONTEXT | MULTISAMPLING_PIXEL_FORMATS | SRGB_FRAMEBUFFERS)
+28-05-2025 21:35:42 - DEBUG eframe::native::glow_integration:985 - creating gl context using raw window handle: Some(Xlib(XlibWindowHandle { window: 46137347, visual_id: 1310 }))
+28-05-2025 21:35:42 - DEBUG eframe::native::glow_integration:1122 - Initializing egui_winit for viewport "FFFF"
+28-05-2025 21:35:42 - DEBUG egui_winit::clipboard:150 - Cannot init smithay clipboard without a Wayland display handle
+28-05-2025 21:35:42 - DEBUG eframe::native::glow_integration:1134 - Creating a gl_surface for viewport "FFFF"
+28-05-2025 21:35:42 - DEBUG egui_glow::painter:155 - 
+opengl version: 4.5 (Core Profile) Mesa 23.2.1-1ubuntu3.1~22.04.3
+opengl renderer: llvmpipe (LLVM 15.0.7, 256 bits)
+opengl vendor: Mesa
+28-05-2025 21:35:42 - DEBUG egui_glow::shader_version:28 - Shader version: Gl140 ("4.50").
+28-05-2025 21:35:42 - DEBUG egui_glow::painter:171 - Shader header: "#version 140\n".
+28-05-2025 21:35:42 - DEBUG egui_glow::painter:180 - SRGB texture Support: true
+28-05-2025 21:35:42 - DEBUG egui_glow::painter:187 - SRGB framebuffer Support: true
+28-05-2025 21:35:42 - DEBUG egui_glow::vao:122 - GL version: "4.5 (Core Profile) Mesa 23.2.1-1ubuntu3.1~22.04.3".
+28-05-2025 21:35:42 - INFO  scraper::app:25 - Creating new instance of MyApp.
+28-05-2025 21:35:42 - INFO  scraper::scraper:33 - Creating new instance of Scraper.
+28-05-2025 21:35:52 - INFO  scraper::ui:28 - About button clicked.
+28-05-2025 21:35:52 - INFO  scraper::app:55 - About icon loaded successfully.
+28-05-2025 21:36:04 - INFO  scraper::ui:23 - Help button clicked.
+28-05-2025 21:36:21 - DEBUG eframe::native::glow_integration:787 - Received WindowEvent::CloseRequested for viewport Some("FFFF")
+28-05-2025 21:36:21 - DEBUG eframe::native::epi_integration:295 - Closing root viewport (ViewportCommand::CancelClose was not sent)
+28-05-2025 21:36:21 - DEBUG eframe::native::run:133 - Asking to exit event loop…
+28-05-2025 21:36:21 - DEBUG eframe::native::run:199 - Received Event::LoopExiting - saving app state…
+28-05-2025 21:36:21 - DEBUG eframe::native::run:301 - eframe window closed
