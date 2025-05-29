@@ -2,7 +2,10 @@
 
 use log::info;
 
+use regex::Regex;
 use rfd::AsyncFileDialog;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::sync::mpsc;
 
@@ -18,6 +21,15 @@ pub enum FileDialogMessage {
     DialogClosed,
 }
 
+// Structure to hold processed data
+#[derive(Debug, Clone)]
+pub struct ProcessedEntry {
+    pub line_number: usize,
+    pub content: String,
+    pub timestamp: Option<String>, // If your logs have timestamps
+    // Add other fields as needed for your specific log format
+}
+
 // Scraper struct and methods.
 #[derive(Debug)]
 pub struct Scraper {
@@ -25,6 +37,8 @@ pub struct Scraper {
     pub selected_file: Option<PathBuf>,
     pub file_dialog_open: bool,
     pub file_receiver: Option<mpsc::Receiver<FileDialogMessage>>,
+    pub processed_data: Vec<ProcessedEntry>,
+    pub processing_status: String,
 }
 
 impl Scraper {
@@ -40,6 +54,8 @@ impl Scraper {
             selected_file: None,
             file_dialog_open: false,
             file_receiver: None,
+            processed_data: Vec::new(),
+            processing_status: "No file selected".to_string(),
         }
     }
 
@@ -109,13 +125,117 @@ impl Scraper {
     }
 
     // Method to scrape the selected file.
-    fn process_file(&self, path: &PathBuf) {
-        info!("Scraping file: {:?}", path);
- 
-        // Open file for scraping.
-        // Intent is to search for particular line of text using regx,
-        // and processing content since previous previous detetion (or start of file),
-        // and then repeating until last detection (or end of file).
+    fn process_file(&mut self, path: &PathBuf) {
+        info!("Processing file: {:?}", path);
+        
+        // Clear previous results
+        self.processed_data.clear();
+        
+        match self.read_and_process_file(path) {
+            Ok(count) => {
+                self.processing_status = format!("Successfully processed {} entries", count);
+                info!("File processing completed: {} entries found", count);
+            }
+            Err(e) => {
+                self.processing_status = format!("Error processing file: {}", e);
+                info!("File processing error: {}", e);
+            }
+        }
+    }
+
+    // Main file processing logic
+    fn read_and_process_file(&mut self, path: &PathBuf) -> Result<usize, Box<dyn std::error::Error>> {
+        // Open the file
+        let file = File::open(path)?;
+        let reader = BufReader::new(file);
+        
+        // TODO: Define your regex patterns here
+        // Example patterns - adjust these for your specific log format
+        let start_pattern = Regex::new(r"START_MARKER|ERROR|BEGIN")?; // Pattern to start processing
+        let end_pattern = Regex::new(r"END_MARKER|STOP|COMPLETE")?;   // Pattern to stop processing
+        let data_pattern = Regex::new(r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})")?; // Example: timestamp extraction
+        
+        let mut processing = false;
+        let mut line_number = 0;
+        let mut processed_count = 0;
+        
+        // Process file line by line
+        for line_result in reader.lines() {
+            line_number += 1;
+            let line = line_result?;
+            
+            // Check if we should start processing
+            if !processing && start_pattern.is_match(&line) {
+                processing = true;
+                info!("Started processing at line {}: {}", line_number, line.trim());
+                continue;
+            }
+            
+            // Check if we should stop processing
+            if processing && end_pattern.is_match(&line) {
+                processing = false;
+                info!("Stopped processing at line {}: {}", line_number, line.trim());
+                // Optionally include the end line in results:
+                // self.process_line(&line, line_number, &data_pattern);
+                // processed_count += 1;
+                break; // Remove this 'break' if you want to continue looking for more start patterns
+            }
+            
+            // Process lines between start and end patterns
+            if processing {
+                if self.process_line(&line, line_number, &data_pattern) {
+                    processed_count += 1;
+                }
+            }
+        }
+        
+        // Handle case where we reach end of file while still processing
+        if processing {
+            info!("Reached end of file while processing (no end pattern found)");
+        }
+        
+        Ok(processed_count)
+    }
+
+    // Process individual line and extract data
+    fn process_line(&mut self, line: &str, line_number: usize, data_pattern: &Regex) -> bool {
+        // Skip empty lines
+        if line.trim().is_empty() {
+            return false;
+        }
+        
+        // TODO: Add your specific line processing logic here
+        // This is where you'd extract specific data from each line
+        
+        // Example: Extract timestamp if present
+        let timestamp = data_pattern.captures(line)
+            .and_then(|caps| caps.get(1))
+            .map(|m| m.as_str().to_string());
+        
+        // Create processed entry
+        let entry = ProcessedEntry {
+            line_number,
+            content: line.to_string(),
+            timestamp,
+        };
+        
+        self.processed_data.push(entry);
+        true
+    }
+
+    // Get processing status for display
+    pub fn get_processing_status(&self) -> &str {
+        &self.processing_status
+    }
+    
+    // Get processed data for display
+    pub fn get_processed_data(&self) -> &[ProcessedEntry] {
+        &self.processed_data
+    }
+    
+    // Get count of processed entries
+    pub fn get_processed_count(&self) -> usize {
+        self.processed_data.len()
     }
 
     // Method to get path and filename for display.

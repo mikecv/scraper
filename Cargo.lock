@@ -3013,6 +3013,7 @@ dependencies = [
  "lazy_static",
  "log",
  "log4rs",
+ "regex",
  "rfd",
  "serde",
  "serde_json",

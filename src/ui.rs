@@ -43,13 +43,57 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
 // Function to draw the main content area.
 pub fn draw_central_panel(app: &mut MyApp, ctx: &egui::Context) {
     egui::CentralPanel::default().show(ctx, |ui| {
-        // Check for file dialog results.
+        // Check for file dialog results
         app.scraper.check_file_dialog();
         
-        // Display selected file info if available.
-        // If not loaded then default image will be displayed.
+        // Display selected file info if available
         if let Some(filename) = app.scraper.get_selected_filename() {
-            ui.label(format!("Selected file: {}", filename));
+            ui.horizontal(|ui| {
+                ui.label("Selected file:");
+                ui.strong(filename);
+            });
+            
+            // Display processing status
+            ui.horizontal(|ui| {
+                ui.label("Status:");
+                ui.label(app.scraper.get_processing_status());
+            });
+            
+            ui.separator();
+            
+            // Display processed data count
+            let count = app.scraper.get_processed_count();
+            if count > 0 {
+                ui.horizontal(|ui| {
+                    ui.label(format!("Found {} processed entries:", count));
+                });
+                
+                ui.separator();
+                
+                // Display processed entries in a scrollable area
+                egui::ScrollArea::vertical()
+                    .max_height(400.0)
+                    .show(ui, |ui| {
+                        for (index, entry) in app.scraper.get_processed_data().iter().enumerate() {
+                            ui.group(|ui| {
+                                ui.horizontal(|ui| {
+                                    ui.label(format!("Entry {}: Line {}", index + 1, entry.line_number));
+                                    if let Some(timestamp) = &entry.timestamp {
+                                        ui.separator();
+                                        ui.label(format!("Time: {}", timestamp));
+                                    }
+                                });
+                                ui.label(&entry.content);
+                            });
+                            ui.add_space(5.0);
+                        }
+                    });
+            }
+        } else {
+            ui.vertical_centered(|ui| {
+                ui.label("No file selected");
+                ui.label("Use File -> Open to select a log file");
+            });
         }
     });
 }
