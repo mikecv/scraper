@@ -82,7 +82,22 @@ impl MyApp {
 // Implement the eframe::App trait for MyApp.
 impl App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut Frame) {
-        // Check for file dialog results first
+        // Check for dropped files first.
+        // Then check for file dialog file.
+        if !ctx.input(|i| i.raw.dropped_files.is_empty()) {
+            info!("Files dropped - reinitializing data");
+            self.scraper.reinitialize_data();
+            
+            let dropped_files = ctx.input(|i| i.raw.dropped_files.clone());
+            if let Some(file) = dropped_files.first() {
+                if let Some(path) = &file.path {
+                    info!("Processing dropped file: {:?}", path);
+                    self.scraper.load_file_from_path(path);
+                }
+            }
+        }
+        
+        // Check for file dialog results.
         self.scraper.check_file_dialog();
 
         // Here, we delegate the actual UI drawing to functions

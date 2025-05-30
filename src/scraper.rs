@@ -21,7 +21,7 @@ pub enum FileDialogMessage {
     DialogClosed,
 }
 
-// Structure to hold processed data
+// Structure to hold processed data.
 #[derive(Debug, Clone)]
 pub struct ProcessedEntry {
     pub line_number: usize,
@@ -101,6 +101,28 @@ impl Scraper {
         // Set that file open dialog is closed.
         // This allows recovery from an aborted browse.
         self.file_dialog_open = false;
+    }
+
+    // Method to reinitialize/clear data before loading new file.
+    // This is required as there is no close file menu option.
+    pub fn reinitialize_data(&mut self) {
+        info!("Reinitializing scraper data for new file.");
+        self.selected_file = None;
+        self.processed_data.clear();
+        self.processing_status = "Loading new file...".to_string();
+        // Clear any ongoing file dialog state.
+        self.file_dialog_open = false;
+        self.file_receiver = None;
+    }
+
+    // Method to load file from a given path.
+    // Required for drag and drop files.
+    pub fn load_file_from_path(&mut self, path: &std::path::Path) {
+        info!("Loading file from path: {:?}", path);
+        
+        let path_buf = path.to_path_buf();
+        self.selected_file = Some(path_buf.clone());
+        self.process_file(&path_buf);
     }
 
     // Method to check for file dialog results.
