@@ -6,6 +6,7 @@ use eframe::{egui};
 
 use crate::app::MyApp;
 use crate::help_content;
+use crate::DETAILS;
 
 // Function to draw the menu bar.
 pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
@@ -43,17 +44,15 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
 // Function to draw the main content area.
 pub fn draw_central_panel(app: &mut MyApp, ctx: &egui::Context) {
     egui::CentralPanel::default().show(ctx, |ui| {
-        // Check for file dialog results
-        app.scraper.check_file_dialog();
         
-        // Display selected file info if available
+        // Display selected file info if available.
         if let Some(filename) = app.scraper.get_selected_filename() {
             ui.horizontal(|ui| {
                 ui.label("Selected file:");
                 ui.strong(filename);
             });
             
-            // Display processing status
+            // Display processing status.
             ui.horizontal(|ui| {
                 ui.label("Status:");
                 ui.label(app.scraper.get_processing_status());
@@ -61,7 +60,7 @@ pub fn draw_central_panel(app: &mut MyApp, ctx: &egui::Context) {
             
             ui.separator();
             
-            // Display processed data count
+            // Display processed data count.
             let count = app.scraper.get_processed_count();
             if count > 0 {
                 ui.horizontal(|ui| {
@@ -70,7 +69,7 @@ pub fn draw_central_panel(app: &mut MyApp, ctx: &egui::Context) {
                 
                 ui.separator();
                 
-                // Display processed entries in a scrollable area
+                // Display processed entries in a scrollable area.
                 egui::ScrollArea::vertical()
                     .max_height(400.0)
                     .show(ui, |ui| {
@@ -91,8 +90,8 @@ pub fn draw_central_panel(app: &mut MyApp, ctx: &egui::Context) {
             }
         } else {
             ui.vertical_centered(|ui| {
-                ui.label("No file selected");
-                ui.label("Use File -> Open to select a log file");
+                ui.label("No file selected.");
+                ui.label("Use File -> Open to select a debuglog file.");
             });
         }
     });
@@ -104,7 +103,10 @@ pub fn draw_about_dialog(app: &mut MyApp, ctx: &egui::Context) {
 
         // Try to load the icon if it hasn't been loaded yet.
         app.load_about_icon(ctx);
-        
+
+        // Lock the global DETAILS to obtain access to the Details object.
+        let details = DETAILS.lock().unwrap().clone();
+
         egui::Window::new("About Scraper")
             .collapsible(false)
             .resizable(false)
@@ -116,18 +118,20 @@ pub fn draw_about_dialog(app: &mut MyApp, ctx: &egui::Context) {
                     if let Some(texture) = &app.about_icon {
                         ui.image((texture.id(), egui::Vec2::new(64.0, 64.0)));
                     } else {
-                        // Fallback to the circle design.
+                        // Fallback to a simple svg coded image.
                         let (rect, _) = ui.allocate_exact_size(egui::Vec2::new(64.0, 64.0), egui::Sense::hover());
                         ui.painter().circle_filled(rect.center(), 32.0, egui::Color32::from_rgb(70, 130, 180));
                         ui.painter().circle_filled(rect.center(), 28.0, egui::Color32::from_rgb(100, 160, 210));
                         ui.painter().circle_filled(rect.center(), 20.0, egui::Color32::from_rgb(130, 190, 240));
                     }
 
-                    ui.heading("Scraper");
+                    // About application details.
+                    ui.heading(details.program_name);
                     ui.separator();                  
-                    ui.label("Version: 0.0.1");
-                    ui.label("Devs: MDC");
-                    ui.label("Build Date: 2025");
+                    ui.label(format!("Version: {:?}", details.program_ver));
+                    ui.label(format!("Devs: {:?}", details.program_devs));
+                    ui.label(format!("Build Date: {:?}", details.program_date));
+                    ui.label(format!("Web: {:?}", details.program_web));
                     ui.label("Built with Rust & eframe");
                     ui.separator();
                     ui.label("A tool for scraping and presenting log data.");
@@ -143,7 +147,7 @@ pub fn draw_about_dialog(app: &mut MyApp, ctx: &egui::Context) {
     }
 }
 
-// Function to draw the Help panel/window - now with detach option
+// Function to draw the detachable Help panel/window.
 pub fn draw_help_panel(app: &mut MyApp, ctx: &egui::Context) {
     if app.show_help {
 
@@ -162,7 +166,7 @@ pub fn draw_help_panel(app: &mut MyApp, ctx: &egui::Context) {
                     assert!(class == egui::ViewportClass::Immediate);
                     egui::CentralPanel::default().show(ctx, |ui| {
                         ui.horizontal(|ui| {
-                            // Show help attached to main windoe.
+                            // Show help attached to main window.
                             if ui.button("Help").clicked() {
                                 info!("Help button clicked.");
                                 app.show_help = true;
@@ -190,7 +194,7 @@ pub fn draw_help_panel(app: &mut MyApp, ctx: &egui::Context) {
                 },
             );
         } else {
-            // Regular attached window
+            // Regular attached window.
             egui::Window::new("Help")
                 .default_width(500.0)
                 .default_height(400.0)

@@ -13,6 +13,7 @@ use std::sync::{Mutex};
 
 use app::MyApp;
 use crate::settings::Settings;
+use crate::settings::Details;
 
 mod settings;
 mod app;
@@ -35,6 +36,22 @@ lazy_static! {
     };
 }
 
+// Create a global variable for program details.
+// Not included in settings as not user settable.
+// This will be available in other files.
+lazy_static! {
+    static ref DETAILS: Mutex<Details> = {
+        let details = Details {
+            program_name: "Scraper".to_string(),
+            program_ver: "0.1.0".to_string(),
+            program_date: "2025".to_string(),
+            program_devs: vec!["mdc".to_string()],
+            program_web: "galacticwingcommander".to_string(),
+        };
+        Mutex::new(details)
+    };
+}
+
 // Application launch.
 #[tokio::main]
 async fn main() -> Result<(), eframe::Error> {
@@ -47,9 +64,11 @@ async fn main() -> Result<(), eframe::Error> {
     // Get application settings in scope.
     let settings: Settings = SETTINGS.lock().unwrap().clone();
 
+    // Get application details in scope.
+    let details: Details = DETAILS.lock().unwrap().clone();
+
     // Do initial application information.
-    info!("Application started: {:?} v({:?})", settings.program_name, settings.program_ver);  
-    info!("Application devs: {:?} web: ({:?})", settings.program_devs, settings.program_web);  
+    info!("Application: {:?} v({:?})", details.program_name, details.program_ver);  
 
     // Configure the native options for the window.
     info!("Configuring the options for the window.");

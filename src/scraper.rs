@@ -3,11 +3,11 @@
 use log::info;
 
 use regex::Regex;
-use rfd::AsyncFileDialog;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::sync::mpsc;
+use tinyfiledialogs::open_file_dialog;
 
 use crate::egui;
 use crate::settings::Settings;
@@ -26,8 +26,7 @@ pub enum FileDialogMessage {
 pub struct ProcessedEntry {
     pub line_number: usize,
     pub content: String,
-    pub timestamp: Option<String>, // If your logs have timestamps
-    // Add other fields as needed for your specific log format
+    pub timestamp: Option<String>,
 }
 
 // Scraper struct and methods.
@@ -55,53 +54,42 @@ impl Scraper {
             file_dialog_open: false,
             file_receiver: None,
             processed_data: Vec::new(),
-            processing_status: "No file selected".to_string(),
+            processing_status: "No file selected.".to_string(),
         }
     }
 
-    // Method to browse for file to open.
-    pub fn load_file(&mut self, ctx: &egui::Context) {
-        // info!("{:?}", self.settings.test_string);
-        info!("Browsing for file to open.");
+pub fn load_file(&mut self, ctx: &egui::Context) {
+    info!("Browsing for file to open.");
 
-        // Prevent multiple dialogs.
-        if self.file_dialog_open {
-            return;
-        }
-
-        // Set that file open dialog is now open.
-        self.file_dialog_open = true;
-        
-        // Create a channel for communication.
-        let (sender, receiver) = mpsc::channel();
-        self.file_receiver = Some(receiver);
-        
-        let ctx = ctx.clone();
-        let task = AsyncFileDialog::new()
-            // Set file types to accept (from settings).
-            .add_filter("Log file", &self.settings.file_types)
-            .pick_file();
-
-        // Execute the async task to browse for file.
-        tokio::spawn(async move {
-            match task.await {
-                Some(file) => {
-                    let path = file.path().to_path_buf();
-                    info!("File selected: {:?}", path);
-                    let _ = sender.send(FileDialogMessage::FileSelected(path));
-                }
-                None => {
-                    info!("No file was selected.");
-                    let _ = sender.send(FileDialogMessage::DialogClosed);
-                }
-            }
-            ctx.request_repaint();
-        });
- 
-        // Set that file open dialog is closed.
-        // This allows recovery from an aborted browse.
-        self.file_dialog_open = false;
+    // Prevent multiple dialogs.
+    if self.file_dialog_open {
+        return;
     }
+
+    self.file_dialog_open = true;
+
+    // Use tinyfiledialogs synchronous dialog.
+    let file_path = open_file_dialog(
+        "Select log file",
+        "",
+        Some((&["*.bak", "*.csv"], "Log files (bak, csv)")),
+    );
+
+    match file_path {
+        Some(path_string) => {
+            let path = PathBuf::from(path_string);
+            info!("File selected: {:?}", path);
+            self.selected_file = Some(path.clone());
+            self.process_file(&path);
+        }
+        None => {
+            info!("No file was selected.");
+        }
+    }
+
+    self.file_dialog_open = false;
+    ctx.request_repaint();
+}
 
     // Method to reinitialize/clear data before loading new file.
     // This is required as there is no close file menu option.
@@ -125,27 +113,6 @@ impl Scraper {
         self.process_file(&path_buf);
     }
 
-    // Method to check for file dialog results.
-    pub fn check_file_dialog(&mut self) {
-        if let Some(receiver) = &self.file_receiver {
-            if let Ok(message) = receiver.try_recv() {
-                match message {
-                    FileDialogMessage::FileSelected(path) => {
-                        self.selected_file = Some(path.clone());
-                        self.process_file(&path);
-                    }
-                    FileDialogMessage::DialogClosed => {
-                        // Dialog was closed without selection.
-                        info!("Dialog was closed without selection.");
-                        self.file_dialog_open = false;
-                    }
-                }
-                self.file_dialog_open = false;
-                self.file_receiver = None;
-            }
-        }
-    }
-
     // Method to scrape the selected file.
     fn process_file(&mut self, path: &PathBuf) {
         info!("Processing file: {:?}", path);
@@ -165,9 +132,9 @@ impl Scraper {
         }
     }
 
-    // Main file processing logic
+    // Main file processing logic.
     fn read_and_process_file(&mut self, path: &PathBuf) -> Result<usize, Box<dyn std::error::Error>> {
-        // Open the file
+        // Open the file.
         let file = File::open(path)?;
         let reader = BufReader::new(file);
         
@@ -186,14 +153,14 @@ impl Scraper {
             line_number += 1;
             let line = line_result?;
             
-            // Check if we should start processing
+            // Check if we should start processing.
             if !processing && start_pattern.is_match(&line) {
                 processing = true;
                 info!("Started processing at line {}: {}", line_number, line.trim());
                 continue;
             }
             
-            // Check if we should stop processing
+            // Check if we should stop processing.
             if processing && end_pattern.is_match(&line) {
                 processing = false;
                 info!("Stopped processing at line {}: {}", line_number, line.trim());
@@ -203,7 +170,7 @@ impl Scraper {
                 break; // Remove this 'break' if you want to continue looking for more start patterns
             }
             
-            // Process lines between start and end patterns
+            // Process lines between start and end patterns.
             if processing {
                 if self.process_line(&line, line_number, &data_pattern) {
                     processed_count += 1;
@@ -211,7 +178,7 @@ impl Scraper {
             }
         }
         
-        // Handle case where we reach end of file while still processing
+        // Handle case where we reach end of file while still processing.
         if processing {
             info!("Reached end of file while processing (no end pattern found)");
         }
@@ -219,22 +186,22 @@ impl Scraper {
         Ok(processed_count)
     }
 
-    // Process individual line and extract data
+    // Process individual line and extract data.
     fn process_line(&mut self, line: &str, line_number: usize, data_pattern: &Regex) -> bool {
-        // Skip empty lines
+        // Skip empty lines.
         if line.trim().is_empty() {
             return false;
         }
         
-        // TODO: Add your specific line processing logic here
-        // This is where you'd extract specific data from each line
+        // TODO: Add your specific line processing logic here.
+        // This is where you'd extract specific data from each line.
         
-        // Example: Extract timestamp if present
+        // Example: Extract timestamp if present.
         let timestamp = data_pattern.captures(line)
             .and_then(|caps| caps.get(1))
             .map(|m| m.as_str().to_string());
         
-        // Create processed entry
+        // Create processed entry.
         let entry = ProcessedEntry {
             line_number,
             content: line.to_string(),
@@ -245,17 +212,17 @@ impl Scraper {
         true
     }
 
-    // Get processing status for display
+    // Get processing status for display.
     pub fn get_processing_status(&self) -> &str {
         &self.processing_status
     }
     
-    // Get processed data for display
+    // Get processed data for display.
     pub fn get_processed_data(&self) -> &[ProcessedEntry] {
         &self.processed_data
     }
     
-    // Get count of processed entries
+    // Get count of processed entries.
     pub fn get_processed_count(&self) -> usize {
         self.processed_data.len()
     }
