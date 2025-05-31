@@ -24,6 +24,7 @@ pub enum FileDialogMessage {
 // Structure to hold processed data.
 #[derive(Debug, Clone)]
 pub struct ProcessedEntry {
+    pub _conrtoller_id: String,
     pub line_number: usize,
     pub content: String,
     pub timestamp: Option<String>,
@@ -116,14 +117,14 @@ pub fn load_file(&mut self, ctx: &egui::Context) {
     // Method to scrape the selected file.
     fn process_file(&mut self, path: &PathBuf) {
         info!("Processing file: {:?}", path);
-        
-        // Clear previous results
+
+        // Clear previous results.
         self.processed_data.clear();
         
         match self.read_and_process_file(path) {
-            Ok(count) => {
-                self.processing_status = format!("Successfully processed {} entries", count);
-                info!("File processing completed: {} entries found", count);
+            Ok(sn) => {
+                self.processing_status = format!("Successfully completed processing.");
+                info!("Successfully completed processing.");
             }
             Err(e) => {
                 self.processing_status = format!("Error processing file: {}", e);
@@ -138,95 +139,30 @@ pub fn load_file(&mut self, ctx: &egui::Context) {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
         
-        // TODO: Define your regex patterns here
-        // Example patterns - adjust these for your specific log format
-        let start_pattern = Regex::new(r"START_MARKER|ERROR|BEGIN")?; // Pattern to start processing
-        let end_pattern = Regex::new(r"END_MARKER|STOP|COMPLETE")?;   // Pattern to stop processing
-        let data_pattern = Regex::new(r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})")?; // Example: timestamp extraction
+        // Get the serial number of the controller.
+        let sn_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\.\d{3})?(?: [AP]M)?)[:, ]UNIT ([0-9]+)$")?;
+        let mut _found_sn = false;
         
-        let mut processing = false;
-        let mut line_number = 0;
-        let mut processed_count = 0;
-        
-        // Process file line by line
+        // Process file line by line,
         for line_result in reader.lines() {
-            line_number += 1;
             let line = line_result?;
             
-            // Check if we should start processing.
-            if !processing && start_pattern.is_match(&line) {
-                processing = true;
-                info!("Started processing at line {}: {}", line_number, line.trim());
-                continue;
-            }
-            
             // Check if we should stop processing.
-            if processing && end_pattern.is_match(&line) {
-                processing = false;
-                info!("Stopped processing at line {}: {}", line_number, line.trim());
-                // Optionally include the end line in results:
-                // self.process_line(&line, line_number, &data_pattern);
-                // processed_count += 1;
-                break; // Remove this 'break' if you want to continue looking for more start patterns
-            }
-            
-            // Process lines between start and end patterns.
-            if processing {
-                if self.process_line(&line, line_number, &data_pattern) {
-                    processed_count += 1;
-                }
+            if let Some(captures) = sn_pattern.captures(&line) {
+                _found_sn = true;
+                // Group 3 contains the s erialnumber.
+                let sn_str = captures.get(3).unwrap().as_str();
+                info!("Found controller s/n: {:?}", sn_str);
+                
+                // If you want to return the serial number as usize:
+                return Ok(sn_str.parse::<usize>()?);
             }
         }
-        
-        // Handle case where we reach end of file while still processing.
-        if processing {
-            info!("Reached end of file while processing (no end pattern found)");
-        }
-        
-        Ok(processed_count)
-    }
 
-    // Process individual line and extract data.
-    fn process_line(&mut self, line: &str, line_number: usize, data_pattern: &Regex) -> bool {
-        // Skip empty lines.
-        if line.trim().is_empty() {
-            return false;
-        }
-        
-        // TODO: Add your specific line processing logic here.
-        // This is where you'd extract specific data from each line.
-        
-        // Example: Extract timestamp if present.
-        let timestamp = data_pattern.captures(line)
-            .and_then(|caps| caps.get(1))
-            .map(|m| m.as_str().to_string());
-        
-        // Create processed entry.
-        let entry = ProcessedEntry {
-            line_number,
-            content: line.to_string(),
-            timestamp,
-        };
-        
-        self.processed_data.push(entry);
-        true
+        // Return 0 if no serial number was found
+        Ok(0)
     }
-
-    // Get processing status for display.
-    pub fn get_processing_status(&self) -> &str {
-        &self.processing_status
-    }
-    
-    // Get processed data for display.
-    pub fn get_processed_data(&self) -> &[ProcessedEntry] {
-        &self.processed_data
-    }
-    
-    // Get count of processed entries.
-    pub fn get_processed_count(&self) -> usize {
-        self.processed_data.len()
-    }
-
+       
     // Method to get path and filename for display.
     // Not currently used.
     pub fn _get_selected_file(&self) -> Option<&PathBuf> {
@@ -239,6 +175,21 @@ pub fn load_file(&mut self, ctx: &egui::Context) {
             .and_then(|path| path.file_name())
             .and_then(|name| name.to_str())
             .map(|s| s.to_string())
+    }
+
+    // Get processing status for display.
+    pub fn get_processing_status(&self) -> &str {
+        &self.processing_status
+    }
+
+    // Get processed data for display.
+    pub fn get_processed_data(&self) -> &[ProcessedEntry] {
+        &self.processed_data
+    }
+
+    // Get count of processed entries.
+    pub fn get_processed_count(&self) -> usize {
+        self.processed_data.len()
     }
 }
 
