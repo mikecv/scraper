@@ -41,59 +41,115 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
     });
 }
 
-// Function to draw the main content area.
-pub fn draw_central_panel(app: &mut MyApp, ctx: &egui::Context) {
-    egui::CentralPanel::default().show(ctx, |ui| {
-        
-        // Display selected file info if available.
-        if let Some(filename) = app.scraper.get_selected_filename() {
-            ui.horizontal(|ui| {
-                ui.label("Selected file:");
-                ui.strong(filename);
-            });
-            
-            // Display processing status.
-            ui.horizontal(|ui| {
-                ui.label("Status:");
-                ui.label(app.scraper.get_processing_status());
-            });
-            
-            ui.separator();
-            
-            // Display processed data count.
-            let count = app.scraper.get_processed_count();
-            if count > 0 {
+// Function to draw the bottom status panel.
+pub fn draw_bottom_panel(app: &mut MyApp, ctx: &egui::Context) {
+    egui::TopBottomPanel::bottom("bottom_panel")
+        .min_height(30.0)
+        .show(ctx, |ui| {
+            ui.vertical(|ui| {
+                ui.add_space(0.5);
+                
+                // First row: File and Controller ID.
                 ui.horizontal(|ui| {
-                    ui.label(format!("Found {} processed entries:", count));
+                    ui.style_mut().text_styles.insert(
+                        egui::TextStyle::Body,
+                        egui::FontId::new(10.0, egui::FontFamily::Proportional)
+                    );
+                    
+                    // Display selected file info if available.
+                    if let Some(filename) = app.scraper.get_selected_filename() {
+                        ui.label("File:");
+                        ui.strong(filename);
+                        
+                        // Add controller ID if available.
+                        if !app.scraper.controller_id.is_empty() {
+                            ui.separator();
+                            ui.label("Controller ID:");
+                            ui.strong(format!("{:0>6}", app.scraper.controller_id));
+                        }
+
+                        // Add controller firmware version if available.
+                        if !app.scraper.controller_fw.is_empty() {
+                            ui.separator();
+                            ui.label("Firmware Version:");
+                            ui.strong(format!("{:?}", app.scraper.controller_fw));
+                        }
+                    } else {
+                        ui.label("No file selected");
+                    }
                 });
                 
-                ui.separator();
+                ui.add_space(0.5);
                 
-                // Display processed entries in a scrollable area.
-                egui::ScrollArea::vertical()
-                    .max_height(400.0)
-                    .show(ui, |ui| {
-                        for (index, entry) in app.scraper.get_processed_data().iter().enumerate() {
-                            ui.group(|ui| {
-                                ui.horizontal(|ui| {
-                                    ui.label(format!("Entry {}: Line {}", index + 1, entry.line_number));
-                                    if let Some(timestamp) = &entry.timestamp {
-                                        ui.separator();
-                                        ui.label(format!("Time: {}", timestamp));
-                                    }
-                                });
-                                ui.label(&entry.content);
-                            });
-                            ui.add_space(5.0);
-                        }
-                    });
-            }
-        } else {
-            ui.vertical_centered(|ui| {
-                ui.label("No file selected.");
-                ui.label("Use File -> Open to select a debuglog file.");
+                // Second row: Status
+                ui.horizontal(|ui| {
+                    ui.style_mut().text_styles.insert(
+                        egui::TextStyle::Body,
+                        egui::FontId::new(10.0, egui::FontFamily::Proportional)
+                    );
+                    
+                    ui.label("Status:");
+                    ui.label(app.scraper.get_processing_status());
+                });
+                
+                ui.add_space(0.5);
             });
-        }
+        });
+}
+
+// Function to draw the main content area.
+pub fn draw_central_panel(_app: &mut MyApp, ctx: &egui::Context) {
+    egui::CentralPanel::default().show(ctx, |_ui| {
+        
+        // // Display selected file info if available.
+        // if let Some(filename) = app.scraper.get_selected_filename() {
+        //     ui.horizontal(|ui| {
+        //         ui.label("Selected file:");
+        //         ui.strong(filename);
+        //     });
+            
+        //     // Display processing status.
+        //     ui.horizontal(|ui| {
+        //         ui.label("Status:");
+        //         ui.label(app.scraper.get_processing_status());
+        //     });
+            
+        //     ui.separator();
+            
+        //     // Display processed data count.
+        //     let count = app.scraper.get_processed_count();
+        //     if count > 0 {
+        //         ui.horizontal(|ui| {
+        //             ui.label(format!("Found {} processed entries:", count));
+        //         });
+                
+        //         ui.separator();
+                
+        //         // Display processed entries in a scrollable area.
+        //         egui::ScrollArea::vertical()
+        //             .max_height(400.0)
+        //             .show(ui, |ui| {
+        //                 for (index, entry) in app.scraper.get_processed_data().iter().enumerate() {
+        //                     ui.group(|ui| {
+        //                         ui.horizontal(|ui| {
+        //                             ui.label(format!("Entry {}: Line {}", index + 1, entry.line_number));
+        //                             if let Some(timestamp) = &entry.timestamp {
+        //                                 ui.separator();
+        //                                 ui.label(format!("Time: {}", timestamp));
+        //                             }
+        //                         });
+        //                         ui.label(&entry.content);
+        //                     });
+        //                     ui.add_space(5.0);
+        //                 }
+        //             });
+        //     }
+        // } else {
+        //     ui.vertical_centered(|ui| {
+        //         ui.label("No file selected.");
+        //         ui.label("Use File -> Open to select a debuglog file.");
+        //     });
+        // }
     });
 }
 

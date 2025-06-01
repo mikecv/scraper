@@ -24,10 +24,9 @@ pub enum FileDialogMessage {
 // Structure to hold processed data.
 #[derive(Debug, Clone)]
 pub struct ProcessedEntry {
-    pub _conrtoller_id: String,
-    pub line_number: usize,
-    pub content: String,
-    pub timestamp: Option<String>,
+    pub _line_number: usize,
+    pub _content: String,
+    pub _timestamp: Option<String>,
 }
 
 // Scraper struct and methods.
@@ -39,8 +38,11 @@ pub struct Scraper {
     pub file_receiver: Option<mpsc::Receiver<FileDialogMessage>>,
     pub processed_data: Vec<ProcessedEntry>,
     pub processing_status: String,
+    pub controller_id: String,
+    pub controller_fw: String,
 }
 
+// Implement Scraper class.
 impl Scraper {
     // A function to create a new Scraper instance.
     pub fn new() -> Self {
@@ -56,41 +58,45 @@ impl Scraper {
             file_receiver: None,
             processed_data: Vec::new(),
             processing_status: "No file selected.".to_string(),
+            controller_id: "".to_string(),
+            controller_fw: "".to_string(),
         }
     }
-
-pub fn load_file(&mut self, ctx: &egui::Context) {
-    info!("Browsing for file to open.");
-
-    // Prevent multiple dialogs.
-    if self.file_dialog_open {
-        return;
-    }
-
-    self.file_dialog_open = true;
-
-    // Use tinyfiledialogs synchronous dialog.
-    let file_path = open_file_dialog(
-        "Select log file",
-        "",
-        Some((&["*.bak", "*.csv"], "Log files (bak, csv)")),
-    );
-
-    match file_path {
-        Some(path_string) => {
-            let path = PathBuf::from(path_string);
-            info!("File selected: {:?}", path);
-            self.selected_file = Some(path.clone());
-            self.process_file(&path);
-        }
-        None => {
-            info!("No file was selected.");
-        }
-    }
-
-    self.file_dialog_open = false;
-    ctx.request_repaint();
 }
+
+impl Scraper {
+    pub fn load_file(&mut self, ctx: &egui::Context) {
+        info!("Browsing for file to open.");
+
+        // Prevent multiple dialogs.
+        if self.file_dialog_open {
+            return;
+        }
+
+        self.file_dialog_open = true;
+
+        // Use tinyfiledialogs synchronous dialog.
+        let file_path = open_file_dialog(
+            "Select log file",
+            "",
+            Some((&["*.bak", "*.csv"], "Log files (bak, csv)")),
+        );
+
+        match file_path {
+            Some(path_string) => {
+                let path = PathBuf::from(path_string);
+                info!("File selected: {:?}", path);
+                self.selected_file = Some(path.clone());
+                self.process_file(&path);
+            }
+            None => {
+                info!("No file was selected.");
+            }
+        }
+
+        self.file_dialog_open = false;
+        ctx.request_repaint();
+    }
 
     // Method to reinitialize/clear data before loading new file.
     // This is required as there is no close file menu option.
@@ -99,6 +105,8 @@ pub fn load_file(&mut self, ctx: &egui::Context) {
         self.selected_file = None;
         self.processed_data.clear();
         self.processing_status = "Loading new file...".to_string();
+        self.controller_id = "".to_string();
+        self.controller_fw = "".to_string(); // Clear firmware field
         // Clear any ongoing file dialog state.
         self.file_dialog_open = false;
         self.file_receiver = None;
@@ -122,7 +130,7 @@ pub fn load_file(&mut self, ctx: &egui::Context) {
         self.processed_data.clear();
         
         match self.read_and_process_file(path) {
-            Ok(sn) => {
+            Ok(_sn) => {
                 self.processing_status = format!("Successfully completed processing.");
                 info!("Successfully completed processing.");
             }
@@ -135,10 +143,17 @@ pub fn load_file(&mut self, ctx: &egui::Context) {
 
     // Main file processing logic.
     fn read_and_process_file(&mut self, path: &PathBuf) -> Result<usize, Box<dyn std::error::Error>> {
+
+        // Clear fields at start of processing to ensure clean state
+        self.controller_id.clear();
+        self.controller_fw.clear();
+
         // Open the file.
         let file = File::open(path)?;
         let reader = BufReader::new(file);
         
+        info!("Searching file for controller serial number.");
+    
         // Get the serial number of the controller.
         let sn_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\.\d{3})?(?: [AP]M)?)[:, ]UNIT ([0-9]+)$")?;
         let mut _found_sn = false;
@@ -150,16 +165,49 @@ pub fn load_file(&mut self, ctx: &egui::Context) {
             // Check if we should stop processing.
             if let Some(captures) = sn_pattern.captures(&line) {
                 _found_sn = true;
-                // Group 3 contains the s erialnumber.
+                // Group 3 contains the serialnumber.
                 let sn_str = captures.get(3).unwrap().as_str();
-                info!("Found controller s/n: {:?}", sn_str);
-                
-                // If you want to return the serial number as usize:
-                return Ok(sn_str.parse::<usize>()?);
+                self.controller_id = sn_str.to_string();
+                info!("Found controller s/n: {:0>6}", sn_str); 
+            }
+            if _found_sn == true {
+                break
             }
         }
+        if _found_sn == false {
+            info!("Failed to find controller serial number."); 
+        }
 
-        // Return 0 if no serial number was found
+        // Initialise file reader again.
+        let file = File::open(path)?;
+        let reader = BufReader::new(file);
+
+        info!("Searching file for controller firmware version.");
+       
+        // Get the controller firmware version.
+        let fw_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\.\d{3})?(?: [AP]M)?) .*?EVENT ([0-9]+) ([0-9]+) (.+)/(.+)/(.+)/([-0-9]+)/([0-9]+) SWSTART (.+) ([.0-9]+.+) v:(.+)$")?;        let mut _found_fw = false;
+
+
+        // Process file line by line,
+        for line_result in reader.lines() {
+            let line = line_result?;
+            
+            // Check if we should stop processing.
+            if let Some(captures) = fw_pattern.captures(&line) {
+                _found_fw = true;
+                // Group 11 contains the firmware version.
+                let fw_str = captures.get(11).unwrap().as_str();
+                self.controller_fw = fw_str.to_string();
+                info!("Found controller firmware: {:?}", fw_str); 
+            }
+            if _found_fw == true {
+                break
+            }
+        }
+        if _found_fw == false {
+                info!("Failed to find controller firmware version."); 
+        }
+
         Ok(0)
     }
        
@@ -183,12 +231,12 @@ pub fn load_file(&mut self, ctx: &egui::Context) {
     }
 
     // Get processed data for display.
-    pub fn get_processed_data(&self) -> &[ProcessedEntry] {
+    pub fn _get_processed_data(&self) -> &[ProcessedEntry] {
         &self.processed_data
     }
 
     // Get count of processed entries.
-    pub fn get_processed_count(&self) -> usize {
+    pub fn _get_processed_count(&self) -> usize {
         self.processed_data.len()
     }
 }

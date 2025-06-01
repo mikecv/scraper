@@ -46,7 +46,7 @@ impl MyApp {
             // Embed the icon at compile time.
             // Icon file should be in the assets folder.
 
-            let icon_bytes = include_bytes!("../assets/about_logo.png");
+            let icon_bytes = include_bytes!("../assets/about.png");
             match image::load_from_memory(icon_bytes) {
                 Ok(img) => {
                     let rgba = img.to_rgba8();
@@ -102,6 +102,7 @@ impl App for MyApp {
         // in the ui module. We pass `self` (or parts of it)
         // so the UI functions can access and modify the state.
         ui::draw_menu_bar(self, ctx);
+        ui::draw_bottom_panel(self, ctx); // Add the bottom panel
         ui::draw_central_panel(self, ctx);
 
         // Handle modal dialogs.
