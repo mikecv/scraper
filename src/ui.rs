@@ -42,6 +42,8 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
 }
 
 // Function to draw the bottom status panel.
+// This is a strip at the bottom of the screen to show
+// controller details.
 pub fn draw_bottom_panel(app: &mut MyApp, ctx: &egui::Context) {
     egui::TopBottomPanel::bottom("bottom_panel")
         .min_height(30.0)
@@ -100,56 +102,10 @@ pub fn draw_bottom_panel(app: &mut MyApp, ctx: &egui::Context) {
 // Function to draw the main content area.
 pub fn draw_central_panel(_app: &mut MyApp, ctx: &egui::Context) {
     egui::CentralPanel::default().show(ctx, |_ui| {
-        
-        // // Display selected file info if available.
-        // if let Some(filename) = app.scraper.get_selected_filename() {
-        //     ui.horizontal(|ui| {
-        //         ui.label("Selected file:");
-        //         ui.strong(filename);
-        //     });
-            
-        //     // Display processing status.
-        //     ui.horizontal(|ui| {
-        //         ui.label("Status:");
-        //         ui.label(app.scraper.get_processing_status());
-        //     });
-            
-        //     ui.separator();
-            
-        //     // Display processed data count.
-        //     let count = app.scraper.get_processed_count();
-        //     if count > 0 {
-        //         ui.horizontal(|ui| {
-        //             ui.label(format!("Found {} processed entries:", count));
-        //         });
-                
-        //         ui.separator();
-                
-        //         // Display processed entries in a scrollable area.
-        //         egui::ScrollArea::vertical()
-        //             .max_height(400.0)
-        //             .show(ui, |ui| {
-        //                 for (index, entry) in app.scraper.get_processed_data().iter().enumerate() {
-        //                     ui.group(|ui| {
-        //                         ui.horizontal(|ui| {
-        //                             ui.label(format!("Entry {}: Line {}", index + 1, entry.line_number));
-        //                             if let Some(timestamp) = &entry.timestamp {
-        //                                 ui.separator();
-        //                                 ui.label(format!("Time: {}", timestamp));
-        //                             }
-        //                         });
-        //                         ui.label(&entry.content);
-        //                     });
-        //                     ui.add_space(5.0);
-        //                 }
-        //             });
-        //     }
-        // } else {
-        //     ui.vertical_centered(|ui| {
-        //         ui.label("No file selected.");
-        //         ui.label("Use File -> Open to select a debuglog file.");
-        //     });
-        // }
+ 
+        // Trips and contained go here.
+        // This will be a scrollable and collapsable list.
+        // Frpm Trips to Events to Event Details.
     });
 }
 
@@ -170,7 +126,7 @@ pub fn draw_about_dialog(app: &mut MyApp, ctx: &egui::Context) {
             .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
             .show(ctx, |ui| {
                 ui.vertical_centered(|ui| {
-                    // Try to display the loaded icon, fallback to circles if not available.
+                    // Try to display the loaded icon, fallback to the default one if not available.
                     if let Some(texture) = &app.about_icon {
                         ui.image((texture.id(), egui::Vec2::new(64.0, 64.0)));
                     } else {

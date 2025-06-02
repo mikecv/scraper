@@ -4,14 +4,11 @@ use log::info;
 
 use eframe::{egui, App, Frame};
 
-use crate::settings::Settings;
-use crate::SETTINGS;
 use crate::scraper::Scraper;
 use crate::ui;
 
 // Make the MyApp struct public.
 pub struct MyApp {
-    pub settings: Settings,
     pub scraper: Scraper,
     pub show_about: bool,
     pub show_help: bool,
@@ -24,11 +21,7 @@ impl Default for MyApp {
     fn default() -> Self {
         info!("Creating new instance of MyApp.");
 
-        // Lock the global SETTINGS to obtain access to the Settings object.
-        let settings = SETTINGS.lock().unwrap().clone();
-
         Self {
-            settings: settings,
             scraper: Scraper::default(),
             show_about: false,
             show_help: false,
@@ -45,7 +38,6 @@ impl MyApp {
         if self.about_icon.is_none() {
             // Embed the icon at compile time.
             // Icon file should be in the assets folder.
-
             let icon_bytes = include_bytes!("../assets/about.png");
             match image::load_from_memory(icon_bytes) {
                 Ok(img) => {

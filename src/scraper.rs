@@ -10,8 +10,6 @@ use std::sync::mpsc;
 use tinyfiledialogs::open_file_dialog;
 
 use crate::egui;
-use crate::settings::Settings;
-use crate::SETTINGS;
 
 #[allow(dead_code)]
 
@@ -21,22 +19,12 @@ pub enum FileDialogMessage {
     DialogClosed,
 }
 
-// Structure to hold processed data.
-#[derive(Debug, Clone)]
-pub struct ProcessedEntry {
-    pub _line_number: usize,
-    pub _content: String,
-    pub _timestamp: Option<String>,
-}
-
 // Scraper struct and methods.
 #[derive(Debug)]
 pub struct Scraper {
-    pub settings: Settings,
     pub selected_file: Option<PathBuf>,
     pub file_dialog_open: bool,
     pub file_receiver: Option<mpsc::Receiver<FileDialogMessage>>,
-    pub processed_data: Vec<ProcessedEntry>,
     pub processing_status: String,
     pub controller_id: String,
     pub controller_fw: String,
@@ -48,15 +36,10 @@ impl Scraper {
     pub fn new() -> Self {
         info!("Creating new instance of Scraper.");
 
-        // Lock the global SETTINGS to obtain access to the Settings object.
-        let settings = SETTINGS.lock().unwrap().clone();
-
         Self {
-            settings: settings,
             selected_file: None,
             file_dialog_open: false,
             file_receiver: None,
-            processed_data: Vec::new(),
             processing_status: "No file selected.".to_string(),
             controller_id: "".to_string(),
             controller_fw: "".to_string(),
@@ -103,10 +86,10 @@ impl Scraper {
     pub fn reinitialize_data(&mut self) {
         info!("Reinitializing scraper data for new file.");
         self.selected_file = None;
-        self.processed_data.clear();
+        // self.processed_data.clear();
         self.processing_status = "Loading new file...".to_string();
         self.controller_id = "".to_string();
-        self.controller_fw = "".to_string(); // Clear firmware field
+        self.controller_fw = "".to_string();
         // Clear any ongoing file dialog state.
         self.file_dialog_open = false;
         self.file_receiver = None;
@@ -126,9 +109,6 @@ impl Scraper {
     fn process_file(&mut self, path: &PathBuf) {
         info!("Processing file: {:?}", path);
 
-        // Clear previous results.
-        self.processed_data.clear();
-        
         match self.read_and_process_file(path) {
             Ok(_sn) => {
                 self.processing_status = format!("Successfully completed processing.");
@@ -185,7 +165,8 @@ impl Scraper {
         info!("Searching file for controller firmware version.");
        
         // Get the controller firmware version.
-        let fw_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\.\d{3})?(?: [AP]M)?) .*?EVENT ([0-9]+) ([0-9]+) (.+)/(.+)/(.+)/([-0-9]+)/([0-9]+) SWSTART (.+) ([.0-9]+.+) v:(.+)$")?;        let mut _found_fw = false;
+        let fw_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}) EVENT ([0-9]+) ([0-9]+) ([-0-9]+)/([0-9]+)/([0-9]+)/([0-9]+)/([0-9]+) ([A-Z_]+) ([0-9]+) ([A-Z]+) (.+)$")?;
+        let mut _found_fw = false;
 
 
         // Process file line by line,
@@ -208,6 +189,38 @@ impl Scraper {
                 info!("Failed to find controller firmware version."); 
         }
 
+        // Initialise file reader again.
+        let file = File::open(path)?;
+        let reader = BufReader::new(file);
+        info!("Searching file for controller events.");
+
+        // Get the controller events.
+        let ev_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}) EVENT ([0-9]+) ([0-9]+) ([-0-9]+)/([0-9]+)/([0-9]+)/([0-9]+)/([0-9]+) ([A-Z_]+) (.+)$")?;
+        let mut event_count = 0;
+
+        // Process file line by line.
+        for line_result in reader.lines() {
+            let line = line_result?;
+            
+            // Check for event pattern
+            if let Some(captures) = ev_pattern.captures(&line) {
+                event_count += 1;
+                
+                // Extract some key fields for logging.
+                let date = captures.get(1).unwrap().as_str();
+                let time = captures.get(2).unwrap().as_str();
+                let event_type = captures.get(10).unwrap().as_str();
+                let event_id = captures.get(3).unwrap().as_str();
+                
+                info!("Event #{}: {} {} - Type: {}, ID: {}", 
+                    event_count, date, time, event_type, event_id);
+                
+                // You could store these events in a Vec if needed:
+                // self.events.push(SomeEventStruct { ... });
+            }
+        }
+
+        info!("Found {} total events.", event_count);
         Ok(0)
     }
        
@@ -228,16 +241,6 @@ impl Scraper {
     // Get processing status for display.
     pub fn get_processing_status(&self) -> &str {
         &self.processing_status
-    }
-
-    // Get processed data for display.
-    pub fn _get_processed_data(&self) -> &[ProcessedEntry] {
-        &self.processed_data
-    }
-
-    // Get count of processed entries.
-    pub fn _get_processed_count(&self) -> usize {
-        self.processed_data.len()
     }
 }
 
