@@ -100,12 +100,13 @@ pub fn draw_bottom_panel(app: &mut MyApp, ctx: &egui::Context) {
 }
 
 // Function to draw the main content area.
-pub fn draw_central_panel(_app: &mut MyApp, ctx: &egui::Context) {
-    egui::CentralPanel::default().show(ctx, |_ui| {
- 
-        // Trips and contained go here.
-        // This will be a scrollable and collapsable list.
-        // Frpm Trips to Events to Event Details.
+pub fn draw_central_panel(app: &mut MyApp, ctx: &egui::Context) {
+    egui::CentralPanel::default().show(ctx, |ui| {
+        // Calculate available height for the scrollable area
+        let available_height = ui.available_height();
+        
+        // Call the demo table renderer
+        crate::ui_demo::render_event_table(ui, &mut app.ui_state, available_height);
     });
 }
 

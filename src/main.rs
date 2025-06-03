@@ -20,6 +20,7 @@ mod app;
 mod scraper;
 mod ui;
 mod help_content;
+mod ui_demo;
 
 // Create a global variable for application settings.
 // This will be available in other files.

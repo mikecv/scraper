@@ -19,6 +19,15 @@ pub enum FileDialogMessage {
     DialogClosed,
 }
 
+// Data that is scraped.
+#[derive(Debug)]
+pub struct ScrapedData {
+    pub date_time: String,
+    pub new_trip: bool,
+    pub event_type: String,
+    pub ev_detail: String,
+}
+
 // Scraper struct and methods.
 #[derive(Debug)]
 pub struct Scraper {
@@ -28,6 +37,7 @@ pub struct Scraper {
     pub processing_status: String,
     pub controller_id: String,
     pub controller_fw: String,
+    pub scrapings: Vec<ScrapedData>,
 }
 
 // Implement Scraper class.
@@ -43,6 +53,7 @@ impl Scraper {
             processing_status: "No file selected.".to_string(),
             controller_id: "".to_string(),
             controller_fw: "".to_string(),
+            scrapings: Vec::new(),
         }
     }
 }
@@ -196,7 +207,7 @@ impl Scraper {
 
         // Get the controller events.
         let ev_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}) EVENT ([0-9]+) ([0-9]+) ([-0-9]+)/([0-9]+)/([0-9]+)/([0-9]+)/([0-9]+) ([A-Z_]+) (.+)$")?;
-        let mut event_count = 0;
+        let mut _event_count = 0;
 
         // Process file line by line.
         for line_result in reader.lines() {
@@ -204,23 +215,31 @@ impl Scraper {
             
             // Check for event pattern
             if let Some(captures) = ev_pattern.captures(&line) {
-                event_count += 1;
+                _event_count += 1;
                 
                 // Extract some key fields for logging.
                 let date = captures.get(1).unwrap().as_str();
                 let time = captures.get(2).unwrap().as_str();
                 let event_type = captures.get(10).unwrap().as_str();
-                let event_id = captures.get(3).unwrap().as_str();
+                let event_detail = captures.get(11).unwrap().as_str();
                 
-                info!("Event #{}: {} {} - Type: {}, ID: {}", 
-                    event_count, date, time, event_type, event_id);
-                
-                // You could store these events in a Vec if needed:
-                // self.events.push(SomeEventStruct { ... });
+                // Create and populate the struct correctly
+                let ev_data = ScrapedData {
+                    date_time: format!("{} {}", date, time),
+                    new_trip: event_type == "SIGNON",
+                    event_type: event_type.to_string(),
+                    ev_detail: event_detail.to_string(),
+                };
+
+                // Push the struct onto the vector.
+                self.scrapings.push(ev_data);
             }
         }
 
-        info!("Found {} total events.", event_count);
+        for item in self.scrapings.iter() {
+            info!("Date: {:?} New trip: {:?} Event: {:?} Detail: {:?}", item.date_time, item.new_trip, item.event_type, item.ev_detail);
+        }
+
         Ok(0)
     }
        

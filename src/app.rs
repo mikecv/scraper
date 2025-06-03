@@ -6,6 +6,7 @@ use eframe::{egui, App, Frame};
 
 use crate::scraper::Scraper;
 use crate::ui;
+use crate::ui_demo::UiState;
 
 // Make the MyApp struct public.
 pub struct MyApp {
@@ -15,6 +16,7 @@ pub struct MyApp {
     pub help_detached: bool,
     pub about_icon: Option<egui::TextureHandle>,
     pub help_image_1: Option<egui::TextureHandle>,
+    pub ui_state: UiState,
 }
 
 impl Default for MyApp {
@@ -28,6 +30,7 @@ impl Default for MyApp {
             help_detached: false,
             about_icon: None,
             help_image_1: None,
+            ui_state: UiState::default(),
         }
     }
 }
