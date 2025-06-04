@@ -83,7 +83,7 @@ pub fn draw_bottom_panel(app: &mut MyApp, ctx: &egui::Context) {
                 
                 ui.add_space(0.5);
                 
-                // Second row: Status
+                // Second row: Program status.
                 ui.horizontal(|ui| {
                     ui.style_mut().text_styles.insert(
                         egui::TextStyle::Body,
@@ -99,14 +99,16 @@ pub fn draw_bottom_panel(app: &mut MyApp, ctx: &egui::Context) {
         });
 }
 
-// Function to draw the main content area.
+// Draw the central panel with the log data.
 pub fn draw_central_panel(app: &mut MyApp, ctx: &egui::Context) {
     egui::CentralPanel::default().show(ctx, |ui| {
-        // Calculate available height for the scrollable area
-        let available_height = ui.available_height();
+        // Update UI data with scraped data if available.
+        if !app.scraper.scrapings.is_empty() {
+            app.ui_state.update_with_scraped_data(&app.scraper.scrapings);
+        }
         
-        // Call the demo table renderer
-        crate::ui_demo::render_event_table(ui, &mut app.ui_state, available_height);
+        let available_height = ui.available_height();
+        crate::log_display::render_event_table(ui, &mut app.ui_state, available_height);
     });
 }
 

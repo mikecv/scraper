@@ -6,7 +6,7 @@ use eframe::{egui, App, Frame};
 
 use crate::scraper::Scraper;
 use crate::ui;
-use crate::ui_demo::UiState;
+use crate::log_display::UiState;
 
 // Make the MyApp struct public.
 pub struct MyApp {
