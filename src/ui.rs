@@ -102,13 +102,20 @@ pub fn draw_bottom_panel(app: &mut MyApp, ctx: &egui::Context) {
 // Draw the central panel with the log data.
 pub fn draw_central_panel(app: &mut MyApp, ctx: &egui::Context) {
     egui::CentralPanel::default().show(ctx, |ui| {
-        // Update UI data with scraped data if available.
+        // Update UI state with scraped data if available
         if !app.scraper.scrapings.is_empty() {
             app.ui_state.update_with_scraped_data(&app.scraper.scrapings);
         }
         
         let available_height = ui.available_height();
-        crate::log_display::render_event_table(ui, &mut app.ui_state, available_height);
+        
+        // Call the rendering function.
+        crate::log_display::render_scraped_data(
+            ui, 
+            &mut app.ui_state, 
+            &app.scraper.scrapings, 
+            available_height
+        );
     });
 }
 
