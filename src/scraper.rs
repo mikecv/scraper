@@ -23,7 +23,8 @@ pub enum FileDialogMessage {
 #[derive(Debug)]
 pub struct ScrapedData {
     pub date_time: String,
-    pub new_trip: bool,
+    pub _new_trip: bool,
+    pub trip_num: String,
     pub event_type: String,
     pub ev_detail: String,
 }
@@ -73,7 +74,7 @@ impl Scraper {
         let file_path = open_file_dialog(
             "Select log file",
             "",
-            Some((&["*.bak", "*.csv"], "Log files (bak, csv)")),
+            Some((&["*.log", "*.bak", "*.csv"], "Log files (log, bak, csv)")),
         );
 
         match file_path {
@@ -96,19 +97,22 @@ impl Scraper {
     // This is required as there is no close file menu option.
     pub fn reinitialize_data(&mut self) {
         info!("Reinitializing scraper data for new file.");
-        self.selected_file = None;
-        // self.processed_data.clear();
+        // self.selected_file = None;
         self.processing_status = "Loading new file...".to_string();
         self.controller_id = "".to_string();
         self.controller_fw = "".to_string();
         // Clear any ongoing file dialog state.
         self.file_dialog_open = false;
         self.file_receiver = None;
+        self.scrapings.clear();
     }
 
     // Method to load file from a given path.
     // Required for drag and drop files.
     pub fn load_file_from_path(&mut self, path: &std::path::Path) {
+        // First initialize scraped data.
+        self.reinitialize_data();
+
         info!("Loading file from path: {:?}", path);
         
         let path_buf = path.to_path_buf();
@@ -118,6 +122,9 @@ impl Scraper {
 
     // Method to scrape the selected file.
     fn process_file(&mut self, path: &PathBuf) {
+        // First initialize scraped data.
+        self.reinitialize_data();
+
         info!("Processing file: {:?}", path);
 
         match self.read_and_process_file(path) {
@@ -135,7 +142,7 @@ impl Scraper {
     // Main file processing logic.
     fn read_and_process_file(&mut self, path: &PathBuf) -> Result<usize, Box<dyn std::error::Error>> {
 
-        // Clear fields at start of processing to ensure clean state
+        // Clear fields at start of processing to ensure clean state.
         self.controller_id.clear();
         self.controller_fw.clear();
 
@@ -176,28 +183,28 @@ impl Scraper {
         info!("Searching file for controller firmware version.");
        
         // Get the controller firmware version.
-        let fw_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}) EVENT ([0-9]+) ([0-9]+) ([-0-9]+)/([0-9]+)/([0-9]+)/([0-9]+)/([0-9]+) ([A-Z_]+) ([0-9]+) ([A-Z]+) (.+)$")?;
-        let mut _found_fw = false;
+        let fw_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}) EVENT ([0-9]+) ([0-9]+) (.+)/(.+)/(.+)/([-0-9]+)/([0-9]+) SWSTART (.+) ([.0-9]+.+) v(.+)$")?;
+        let mut found_fw = false;
 
 
         // Process file line by line,
         for line_result in reader.lines() {
             let line = line_result?;
             
-            // Check if we should stop processing.
+            // Check if we should stop uprocessing.
             if let Some(captures) = fw_pattern.captures(&line) {
-                _found_fw = true;
+                found_fw = true;
                 // Group 11 contains the firmware version.
                 let fw_str = captures.get(11).unwrap().as_str();
                 self.controller_fw = fw_str.to_string();
                 info!("Found controller firmware: {:?}", fw_str); 
             }
-            if _found_fw == true {
+            if found_fw == true {
                 break
             }
         }
-        if _found_fw == false {
-                info!("Failed to find controller firmware version."); 
+        if found_fw == false {
+            info!("Failed to find controller firmware version."); 
         }
 
         // Initialise file reader again.
@@ -222,11 +229,13 @@ impl Scraper {
                 let time = captures.get(2).unwrap().as_str();
                 let event_type = captures.get(10).unwrap().as_str();
                 let event_detail = captures.get(11).unwrap().as_str();
+                let trip_id = captures.get(3).unwrap().as_str();
                 
                 // Create and populate the struct correctly
                 let ev_data = ScrapedData {
                     date_time: format!("{} {}", date, time),
-                    new_trip: event_type == "SIGNON",
+                    _new_trip: event_type == "SIGNON",
+                    trip_num: trip_id.to_string(),
                     event_type: event_type.to_string(),
                     ev_detail: event_detail.to_string(),
                 };
@@ -235,11 +244,6 @@ impl Scraper {
                 self.scrapings.push(ev_data);
             }
         }
-
-        for item in self.scrapings.iter() {
-            info!("Date: {:?} New trip: {:?} Event: {:?} Detail: {:?}", item.date_time, item.new_trip, item.event_type, item.ev_detail);
-        }
-
         Ok(0)
     }
        

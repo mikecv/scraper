@@ -74,7 +74,12 @@ pub fn draw_bottom_panel(app: &mut MyApp, ctx: &egui::Context) {
                         if !app.scraper.controller_fw.is_empty() {
                             ui.separator();
                             ui.label("Firmware Version:");
-                            ui.strong(format!("{:?}", app.scraper.controller_fw));
+                            ui.strong(format!("{}", app.scraper.controller_fw));
+                        }
+                        else {
+                            ui.separator();
+                            ui.label("Firmware Version:");
+                            ui.strong("Not defined.");
                         }
                     } else {
                         ui.label("No file selected");
@@ -102,11 +107,12 @@ pub fn draw_bottom_panel(app: &mut MyApp, ctx: &egui::Context) {
 // Draw the central panel with the log data.
 pub fn draw_central_panel(app: &mut MyApp, ctx: &egui::Context) {
     egui::CentralPanel::default().show(ctx, |ui| {
-        // Update UI state with scraped data if available
+        // Update UI state with scraped data if available.
         if !app.scraper.scrapings.is_empty() {
             app.ui_state.update_with_scraped_data(&app.scraper.scrapings);
         }
-        
+
+        // Set the us height to full available space.
         let available_height = ui.available_height();
         
         // Call the rendering function.
