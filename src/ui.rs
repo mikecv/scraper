@@ -12,6 +12,8 @@ use crate::DETAILS;
 pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
     egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
         egui::menu::bar(ui, |ui| {
+
+            // File menu.
             ui.menu_button("File", |ui| {
                 if ui.button("Open").clicked() {
                     info!("Open file button clicked.");
@@ -19,6 +21,15 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
                     ui.close_menu();
                 }
             });
+            // Show menu.
+            ui.menu_button("Show", |ui| {
+                ui.checkbox(&mut app.show_oot_events, "Out of trip events");
+                ui.checkbox(&mut app.show_input_events, "Input events");
+                ui.checkbox(&mut app.show_report_events, "Report events");
+                ui.separator();                
+                ui.checkbox(&mut app.show_debug_events, "Debug events");
+            });
+            // Help menu.
             ui.menu_button("Help", |ui| {
                 if ui.button("Help").clicked() {
                     info!("Help button clicked.");
@@ -31,6 +42,7 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
                     ui.close_menu();
                 }
             });
+            // Quit menu.
             ui.menu_button("Quit", |ui| {
                 if ui.button("Quit").clicked() {
                     ctx.send_viewport_cmd(egui::ViewportCommand::Close);

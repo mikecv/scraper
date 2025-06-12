@@ -11,6 +11,10 @@ use crate::log_display::UiState;
 // Make the MyApp struct public.
 pub struct MyApp {
     pub scraper: Scraper,
+    pub show_oot_events: bool,
+    pub show_input_events: bool,
+    pub show_report_events: bool,
+    pub show_debug_events: bool,
     pub show_about: bool,
     pub show_help: bool,
     pub help_detached: bool,
@@ -25,6 +29,10 @@ impl Default for MyApp {
 
         Self {
             scraper: Scraper::default(),
+            show_oot_events: true,
+            show_input_events: true,
+            show_report_events: true,
+            show_debug_events: true,
             show_about: false,
             show_help: false,
             help_detached: false,
