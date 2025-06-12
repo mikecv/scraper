@@ -315,6 +315,46 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
             }
         },
 
+        // Search for the event sub-data for the INPUT event.
+        "INPUT" => {
+            let sub_input_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+)(.*)$")
+                .expect("Invalid INPUT regex pattern");
+
+            if let Some(captures) = sub_input_pattern.captures(sub_data) {
+                if let Some(input_num) = captures.get(1) {
+                    result.push(("Input number".to_string(), input_num.as_str().to_string()));
+                }
+                if let Some(input_state) = captures.get(2) {
+                    result.push(("Active state".to_string(), input_state.as_str().to_string()));
+                }
+                if let Some(active_time) = captures.get(3) {
+                    result.push(("Time active".to_string(), active_time.as_str().to_string()));
+                }
+            } else {
+                warn!("Failed to extract sub-data from INPUT");
+            }
+        },
+
+                // Search for the event sub-data for the REPORT event.
+        "REPORT" => {
+            let sub_report_pattern = Regex::new(r"(\*|[0-9]+) ([0-9]+) ([0-9]+)(.*)$")
+                .expect("Invalid INPUT regex pattern");
+
+            if let Some(captures) = sub_report_pattern.captures(sub_data) {
+                if let Some(trip_id) = captures.get(1) {
+                    result.push(("Trip id".to_string(), trip_id.as_str().to_string()));
+                }
+                if let Some(speed) = captures.get(2) {
+                    result.push(("Speed".to_string(), speed.as_str().to_string()));
+                }
+                if let Some(dirn) = captures.get(3) {
+                    result.push(("Direction".to_string(), dirn.as_str().to_string()));
+                }
+            } else {
+                warn!("Failed to extract sub-data from REPORT");
+            }
+        },
+
         // Search for the event sub-data for the ZONECHANGE event.
         "ZONECHANGE" => {
             let sub_zone_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+)(.*)$")
@@ -328,7 +368,7 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
                     result.push(("From zone".to_string(), from_zone.as_str().to_string()));
                 }
                 if let Some(to_zone) = captures.get(3) {
-                    result.push(("To zone".to_string(), to_zone.as_str().to_string())); // FIXED: Label
+                    result.push(("To zone".to_string(), to_zone.as_str().to_string()));
                 }
                 if let Some(zone_output) = captures.get(4) {
                     result.push(("Zone output".to_string(), zone_output.as_str().to_string()));
