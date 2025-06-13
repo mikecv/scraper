@@ -335,7 +335,50 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
             }
         },
 
-                // Search for the event sub-data for the REPORT event.
+        // Search for the event sub-data for the CHECKLIST event.
+        "CHECKLIST" => {
+            let sub_checklist_pattern = Regex::new(r"([0-9]+) (OK|CANCEL|NOFILE) ([0-9]+) ([0-9]+) ([0-9]+) ([\-a-zA-Z]+)(.*)$")
+                .expect("Invalid CHECKLIST regex pattern");
+
+            if let Some(captures) = sub_checklist_pattern.captures(sub_data) {
+                if let Some(trip_id) = captures.get(1) {
+                    result.push(("Trip id".to_string(), trip_id.as_str().to_string()));
+                }
+                if let Some(chk_result) = captures.get(2) {
+                    result.push(("Result".to_string(), chk_result.as_str().to_string()));
+                }
+                if let Some(failed_q) = captures.get(3) {
+                    result.push(("Failed questions".to_string(), failed_q.as_str().to_string()));
+                }
+                if let Some(chklist_dur) = captures.get(4) {
+                    result.push(("Checklist duration".to_string(), chklist_dur.as_str().to_string()));
+                }
+                if let Some(chklist_ver) = captures.get(5) {
+                    result.push(("Checklist version".to_string(), chklist_ver.as_str().to_string()));
+                }
+                if let Some(chklist_type) = captures.get(6) {
+                    result.push(("Checklist type".to_string(), chklist_type.as_str().to_string()));
+                }
+            } else {
+                warn!("Failed to extract sub-data from CHECKLIST");
+            }
+        },
+
+        // Search for the event sub-data for the DEBUG event.
+        "DEBUG" => {
+            let sub_debug_pattern = Regex::new(r"(.+) (v:[0-9]+)$")
+                .expect("Invalid DEBUG regex pattern");
+
+            if let Some(captures) = sub_debug_pattern.captures(sub_data) {
+                if let Some(error) = captures.get(1) {
+                    result.push(("Debug error".to_string(), error.as_str().to_string()));
+                }
+            } else {
+                warn!("Failed to extract sub-data from DEBUG");
+            }
+        },
+
+        // Search for the event sub-data for the REPORT event.
         "REPORT" => {
             let sub_report_pattern = Regex::new(r"(\*|[0-9]+) ([0-9]+) ([0-9]+)(.*)$")
                 .expect("Invalid INPUT regex pattern");
@@ -375,6 +418,32 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
                 }
             } else {
                 warn!("Failed to extract sub-data from ZONECHANGE");
+            }
+        },
+
+        // Search for the event sub-data for the ZONETRANSITION event.
+        "ZONETRANSITION" => {
+            let sub_trans_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+) (ENTRY|EXIT) (.*)$")
+                .expect("Invalid ZONETRANSITION regex pattern");
+
+            if let Some(captures) = sub_trans_pattern.captures(sub_data) {
+                if let Some(trip_id) = captures.get(1) {
+                    result.push(("Trip id".to_string(), trip_id.as_str().to_string()));
+                }
+                if let Some(from_zone) = captures.get(2) {
+                    result.push(("From zone".to_string(), from_zone.as_str().to_string()));
+                }
+                if let Some(to_zone) = captures.get(3) {
+                    result.push(("To zone".to_string(), to_zone.as_str().to_string()));
+                }
+                if let Some(to_zone_output) = captures.get(4) {
+                    result.push(("Zone output".to_string(), to_zone_output.as_str().to_string()));
+                }
+                if let Some(transition) = captures.get(5) {
+                    result.push(("Transition".to_string(), transition.as_str().to_string()));
+                }
+            } else {
+                warn!("Failed to extract sub-data from ZONETRANSITION");
             }
         },
 
