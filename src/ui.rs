@@ -132,7 +132,12 @@ pub fn draw_central_panel(app: &mut MyApp, ctx: &egui::Context) {
             ui, 
             &mut app.ui_state, 
             &app.scraper.scrapings, 
-            available_height
+            available_height,
+            app.show_oot_events,
+            app.show_input_events,
+            app.show_report_events,
+            app.show_debug_events,
+ 
         );
     });
 }

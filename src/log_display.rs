@@ -34,7 +34,13 @@ impl UiState {
 
 // Main rendering function.
 // The display entry point.
-pub fn render_scraped_data(ui: &mut Ui, ui_state: &mut UiState, scraped_data: &[ScrapedData], available_height: f32) {
+pub fn render_scraped_data(ui: &mut Ui, ui_state: &mut UiState, scraped_data: &[ScrapedData], 
+        available_height: f32,
+        show_oot_events: bool,
+        show_input_events: bool,
+        show_report_events: bool,
+        show_debug_events: bool,
+) {
     ScrollArea::vertical()
     .max_height(available_height - 10.0)
     .show(ui, |ui| {
@@ -47,11 +53,18 @@ pub fn render_scraped_data(ui: &mut Ui, ui_state: &mut UiState, scraped_data: &[
             return;
         }
 
+        // Filter the data based on current menu settings.
+        let filtered_data: Vec<(usize, &ScrapedData)> = scraped_data
+            .iter()
+            .enumerate()
+            .filter(|(_, item)| should_show_event(item, show_oot_events, show_input_events, show_report_events, show_debug_events))
+            .collect();
+
         let mut current_trip_header: Option<&ScrapedData> = None;
         let mut trip_events: Vec<(usize, &ScrapedData)> = Vec::new();
         let mut in_trip = false;
 
-        for (index, item) in scraped_data.iter().enumerate() {
+        for (index, item) in filtered_data {
             match item.event_type.as_str() {
                 "SIGNON" => {
                     // Start a new trip.
@@ -98,6 +111,33 @@ pub fn render_scraped_data(ui: &mut Ui, ui_state: &mut UiState, scraped_data: &[
             }
         }
     });
+}
+
+// Function to determine if an event should be shown based on current menu filter settings.
+fn should_show_event(
+    item: &ScrapedData,
+    show_oot_events: bool,
+    show_input_events: bool,
+    show_report_events: bool,
+    show_debug_events: bool,
+) -> bool {
+    match item.event_type.as_str() {
+        "INPUT" => show_input_events,
+        "SIGNON" | "TRIP" => true, // Always show these core events
+        // "ZONECHANGE" => show_oot_events, // Assuming this is an out-of-trip event
+        // Add more event type mappings as needed
+        "REPORT" => show_report_events,
+        "DEBUG" => show_debug_events,
+        _ => {
+            // For unknown events, decide based on whether they're in trip or out of trip
+            // You might need to adjust this logic based on your specific event types
+            if item._on_trip {
+                true // Show in-trip events by default
+            } else {
+                show_oot_events // Show out-of-trip events based on setting
+            }
+        }
+    }
 }
 
 // Helper function to render a complete trip.
