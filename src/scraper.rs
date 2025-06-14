@@ -24,8 +24,7 @@ pub enum FileDialogMessage {
 #[derive(Debug)]
 pub struct ScrapedData {
     pub date_time: String,
-    pub _on_trip: bool,
-    pub _new_trip: bool,
+    pub on_trip: bool,
     pub trip_num: String,
     pub event_type: String,
     pub ev_detail: Vec<(String, String)>,
@@ -240,14 +239,13 @@ impl Scraper {
                 if event_type == "SIGNON" {
                     intrip = true;
                 } else if event_type == "TRIP" {
-                    intrip = false;
+                    intrip = true;
                 }
 
                 // Create and populate the struct correctly
                 let ev_data = ScrapedData {
                     date_time: format!("{} {}", date, time),
-                    _on_trip: intrip,
-                    _new_trip: intrip,
+                    on_trip: intrip,
                     trip_num: trip_id.to_string(),
                     event_type: event_type.to_string(),
                     ev_detail: ev_key_vals,
@@ -255,6 +253,12 @@ impl Scraper {
 
                 // Push the struct onto the vector.
                 self.scrapings.push(ev_data);
+
+                // Clear on trip flag after TRIP event.
+                // This makes TRIP still part of the trip.
+                if event_type == "TRIP" {
+                   intrip = false;
+                }
             }
         }
         Ok(0)

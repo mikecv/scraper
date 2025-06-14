@@ -5,6 +5,8 @@ use crate::egui::RichText;
 use crate::egui::{ScrollArea, Ui};
 
 use crate::scraper::ScrapedData;
+use crate::DETAILS;
+
 
 // Simple UI state to hold processed display data.
 #[derive(Debug, Clone)]
@@ -41,12 +43,16 @@ pub fn render_scraped_data(ui: &mut Ui, ui_state: &mut UiState, scraped_data: &[
         show_report_events: bool,
         show_debug_events: bool,
 ) {
+    // Program settings.
+    // Not user setable.
+    let details = DETAILS.lock().unwrap().clone();
+
     ScrollArea::vertical()
     .max_height(available_height - 10.0)
     .show(ui, |ui| {
 
         // Set content area where scroll bar will appear.
-        ui.set_min_width(500.0);
+        ui.set_min_width(details.scroll_win_width);
 
         // If UI not ready or nothing to render then return.
         if !ui_state.display_ready || scraped_data.is_empty() {
@@ -64,6 +70,8 @@ pub fn render_scraped_data(ui: &mut Ui, ui_state: &mut UiState, scraped_data: &[
         let mut trip_events: Vec<(usize, &ScrapedData)> = Vec::new();
         let mut in_trip = false;
 
+        // Go through all events and if applicable render them to the UI.
+        // If "Show" menu settings that events should be ignored then don't render.
         for (index, item) in filtered_data {
             match item.event_type.as_str() {
                 "SIGNON" => {
@@ -122,19 +130,21 @@ fn should_show_event(
     show_debug_events: bool,
 ) -> bool {
     match item.event_type.as_str() {
-        "INPUT" => show_input_events,
-        "SIGNON" | "TRIP" => true, // Always show these core events
-        // "ZONECHANGE" => show_oot_events, // Assuming this is an out-of-trip event
-        // Add more event type mappings as needed
-        "REPORT" => show_report_events,
-        "DEBUG" => show_debug_events,
+        // Always show SIGNON events.
+        "SIGNON" => true,
+        // Show TRIP events unless not on trip.
+        "TRIP" => item.on_trip,
+        // Show these events according to the Show menut settings,
+        // unless they are out of trip.
+        "REPORT" => show_report_events && item.on_trip,
+        "DEBUG" => show_debug_events && item.on_trip,
+        "INPUT" => show_input_events && item.on_trip,
         _ => {
-            // For unknown events, decide based on whether they're in trip or out of trip
-            // You might need to adjust this logic based on your specific event types
-            if item._on_trip {
-                true // Show in-trip events by default
+            // For other events, decide based on whether they're on trip.
+            if item.on_trip {
+                true
             } else {
-                show_oot_events // Show out-of-trip events based on setting
+                show_oot_events
             }
         }
     }

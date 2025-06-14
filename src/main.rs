@@ -48,6 +48,9 @@ lazy_static! {
             program_date: "2025".to_string(),
             program_devs: vec!["mdc".to_string()],
             program_web: "galacticwingcommander".to_string(),
+            scroll_win_width: 300.0,
+            win_width: 600.0,
+            win_height: 600.0,
         };
         Mutex::new(details)
     };
@@ -63,7 +66,7 @@ async fn main() -> Result<(), eframe::Error> {
     log4rs::init_file("log4rs.yml", Default::default()).unwrap();
 
     // Get application settings in scope.
-    let settings: Settings = SETTINGS.lock().unwrap().clone();
+    let _settings: Settings = SETTINGS.lock().unwrap().clone();
 
     // Get application details in scope.
     let details: Details = DETAILS.lock().unwrap().clone();
@@ -75,8 +78,8 @@ async fn main() -> Result<(), eframe::Error> {
     info!("Configuring the options for the window.");
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_min_inner_size([settings.win_width, settings.win_height])
-            .with_inner_size([settings.win_width, settings.win_height]),
+            .with_min_inner_size([details.win_width, details.win_height])
+            .with_inner_size([details.win_width, details.win_height]),
         ..Default::default()
     };
 

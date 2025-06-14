@@ -155,7 +155,8 @@ pub fn draw_about_dialog(app: &mut MyApp, ctx: &egui::Context) {
         egui::Window::new("About Scraper")
             .collapsible(false)
             .resizable(false)
-            .default_width(300.0)
+            // .default_width(300.0)
+            .default_width(details.scroll_win_width)
             .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
             .show(ctx, |ui| {
                 ui.vertical_centered(|ui| {

@@ -29,10 +29,10 @@ impl Default for MyApp {
 
         Self {
             scraper: Scraper::default(),
-            show_oot_events: true,
-            show_input_events: true,
-            show_report_events: true,
-            show_debug_events: true,
+            show_oot_events: false,
+            show_input_events: false,
+            show_report_events: false,
+            show_debug_events: false,
             show_about: false,
             show_help: false,
             help_detached: false,
