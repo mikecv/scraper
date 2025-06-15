@@ -38,6 +38,7 @@ impl UiState {
 // The display entry point.
 pub fn render_scraped_data(ui: &mut Ui, ui_state: &mut UiState, scraped_data: &[ScrapedData], 
         available_height: f32,
+        available_width: f32,
         show_oot_events: bool,
         show_input_events: bool,
         show_report_events: bool,
@@ -45,19 +46,22 @@ pub fn render_scraped_data(ui: &mut Ui, ui_state: &mut UiState, scraped_data: &[
 ) {
     // Program settings.
     // Not user setable.
-    let details = DETAILS.lock().unwrap().clone();
+    let _details = DETAILS.lock().unwrap().clone();
 
     ScrollArea::vertical()
     .max_height(available_height - 10.0)
-    .show(ui, |ui| {
+    .max_width(available_width - 10.0)
 
-        // Set content area where scroll bar will appear.
-        ui.set_min_width(details.scroll_win_width);
+    .show(ui, |ui| {
 
         // If UI not ready or nothing to render then return.
         if !ui_state.display_ready || scraped_data.is_empty() {
             return;
         }
+
+        // Set the scrollable width of the centre panel
+        // to fulll available width less a margin.
+        ui.set_min_width(available_width - 10.0);
 
         // Filter the data based on current menu settings.
         let filtered_data: Vec<(usize, &ScrapedData)> = scraped_data
@@ -166,7 +170,7 @@ fn render_trip_section(ui: &mut Ui, trip_data: &ScrapedData, trip_events: &[(usi
                             for (key, value) in &item.ev_detail {
                                 ui.horizontal(|ui| {
                                     ui.label(format!("{}:", key));
-                                    ui.colored_label(Color32::YELLOW, value);
+                                    ui.colored_label(Color32::GOLD, value);
                                 });
                             }
                         }
@@ -182,16 +186,16 @@ fn render_trip_section(ui: &mut Ui, trip_data: &ScrapedData, trip_events: &[(usi
 fn render_top_level_event(ui: &mut Ui, index: usize, item: &ScrapedData) {
     let event_id = format!("{}_{}", index, &item.event_type);
     ui.push_id(&event_id, |ui| {
-        ui.collapsing(
-            RichText::new(&item.event_type).color(Color32::GREEN),
-            |ui| {
-                for (key, value) in &item.ev_detail {
-                    ui.horizontal(|ui| {
-                        ui.label(format!("{}:", key));
-                        ui.colored_label(Color32::YELLOW, value);
-                    });
-                }
+    ui.collapsing(
+        RichText::new(&item.event_type).color(Color32::GRAY),
+        |ui| {
+            for (key, value) in &item.ev_detail {
+                ui.horizontal(|ui| {
+                    ui.label(format!("{}:", key));
+                    ui.colored_label(Color32::GOLD, value);
+                });
             }
-        );
+        }
+    );
     });
 }

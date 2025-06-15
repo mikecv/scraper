@@ -35,7 +35,7 @@ impl Default for MyApp {
             show_debug_events: false,
             show_about: false,
             show_help: false,
-            help_detached: false,
+            help_detached: true,
             about_icon: None,
             help_image_1: None,
             ui_state: UiState::default(),

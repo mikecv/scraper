@@ -48,8 +48,7 @@ lazy_static! {
             program_date: "2025".to_string(),
             program_devs: vec!["mdc".to_string()],
             program_web: "galacticwingcommander".to_string(),
-            scroll_win_width: 300.0,
-            win_width: 600.0,
+            win_width: 500.0,
             win_height: 600.0,
         };
         Mutex::new(details)

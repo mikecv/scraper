@@ -124,8 +124,9 @@ pub fn draw_central_panel(app: &mut MyApp, ctx: &egui::Context) {
             app.ui_state.update_with_scraped_data(&app.scraper.scrapings);
         }
 
-        // Set the us height to full available space.
+        // Set the ui height to full available space.
         let available_height = ui.available_height();
+        let available_width = ui.available_width();
         
         // Call the rendering function.
         crate::log_display::render_scraped_data(
@@ -133,6 +134,7 @@ pub fn draw_central_panel(app: &mut MyApp, ctx: &egui::Context) {
             &mut app.ui_state, 
             &app.scraper.scrapings, 
             available_height,
+            available_width,
             app.show_oot_events,
             app.show_input_events,
             app.show_report_events,
@@ -155,8 +157,6 @@ pub fn draw_about_dialog(app: &mut MyApp, ctx: &egui::Context) {
         egui::Window::new("About Scraper")
             .collapsible(false)
             .resizable(false)
-            // .default_width(300.0)
-            .default_width(details.scroll_win_width)
             .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
             .show(ctx, |ui| {
                 ui.vertical_centered(|ui| {
