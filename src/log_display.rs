@@ -159,7 +159,6 @@ fn should_show_event(
 fn render_trip_section(ui: &mut Ui, trip_data: &ScrapedData, trip_events: &[(usize, &ScrapedData)]) {
     ui.collapsing(
         RichText::new(format!("Trip {} at {}", trip_data.trip_num, &trip_data.date_time))
-            // .family(egui::FontFamily::Monospace)
             .color(Color32::WHITE)
             .strong(), 
         |ui| {
