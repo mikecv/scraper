@@ -1,5 +1,6 @@
 // Log display on UI.
 
+use eframe::egui;
 use crate::egui::Color32;
 use crate::egui::RichText;
 use crate::egui::{ScrollArea, Ui};
@@ -158,7 +159,9 @@ fn should_show_event(
 fn render_trip_section(ui: &mut Ui, trip_data: &ScrapedData, trip_events: &[(usize, &ScrapedData)]) {
     ui.collapsing(
         RichText::new(format!("Trip {} at {}", trip_data.trip_num, &trip_data.date_time))
-            .color(Color32::WHITE), 
+            // .family(egui::FontFamily::Monospace)
+            .color(Color32::WHITE)
+            .strong(), 
         |ui| {
             // Display all events for this trip.
             for (index, item) in trip_events {
@@ -169,8 +172,14 @@ fn render_trip_section(ui: &mut Ui, trip_data: &ScrapedData, trip_events: &[(usi
                         |ui| {
                             for (key, value) in &item.ev_detail {
                                 ui.horizontal(|ui| {
-                                    ui.label(format!("{}:", key));
-                                    ui.colored_label(Color32::GOLD, value);
+                                    ui.label(RichText::new(format!("{:20}", key))
+                                        .color(Color32::GOLD)
+                                        .family(egui::FontFamily::Monospace)
+                                        .italics());
+                                    ui.label(RichText::new(format!(": {}", value))
+                                        .color(Color32::WHITE)
+                                        .family(egui::FontFamily::Monospace)
+                                        .italics());
                                 });
                             }
                         }

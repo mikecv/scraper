@@ -292,7 +292,7 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
     // Search for the event sub-data for the SIGNON event.
     match event_type.as_str() {
         "SIGNON" => {
-            let sub_signon_pattern = Regex::new(r"([-\*\+0-9]+) ([0-9a-fA-F]+) (.+?) ([0-9]+) ([0-9]+) ([0-9]+) (.+?)$")
+            let sub_signon_pattern = Regex::new(r"([-\*\+0-9]+) ([0-9a-fA-F]+) (.+?) ([0-9]+) ([0-9]+) ([0-9]+) v:(.+?)$")
                 .expect("Invalid SIGNON regex pattern");
 
             if let Some(captures) = sub_signon_pattern.captures(sub_data) {
@@ -314,14 +314,20 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
                 if let Some(card_reader) = captures.get(6) {
                     result.push(("Card reader".to_string(), card_reader.as_str().to_string()));
                 }
+                if let Some(battery) = captures.get(7) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
             } else {
-                warn!("Failed to extract sub-data from SIGNON");
+                    warn!("Failed to extract sub-data from SIGNON");
             }
         },
 
         // Search for the event sub-data for the INPUT event.
         "INPUT" => {
-            let sub_input_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+)(.*)$")
+            let sub_input_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+) v:(.+?)$")
                 .expect("Invalid INPUT regex pattern");
 
             if let Some(captures) = sub_input_pattern.captures(sub_data) {
@@ -334,6 +340,12 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
                 if let Some(active_time) = captures.get(3) {
                     result.push(("Time active".to_string(), active_time.as_str().to_string()));
                 }
+                if let Some(battery) = captures.get(4) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
             } else {
                 warn!("Failed to extract sub-data from INPUT");
             }
@@ -341,7 +353,7 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
 
         // Search for the event sub-data for the CHECKLIST event.
         "CHECKLIST" => {
-            let sub_checklist_pattern = Regex::new(r"([0-9]+) (OK|CANCEL|NOFILE) ([0-9]+) ([0-9]+) ([0-9]+) ([\-a-zA-Z]+)(.*)$")
+            let sub_checklist_pattern = Regex::new(r"([0-9]+) (OK|CANCEL|NOFILE) ([0-9]+) ([0-9]+) ([0-9]+) ([\-a-zA-Z]+) v:(.+?)$")
                 .expect("Invalid CHECKLIST regex pattern");
 
             if let Some(captures) = sub_checklist_pattern.captures(sub_data) {
@@ -363,6 +375,12 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
                 if let Some(chklist_type) = captures.get(6) {
                     result.push(("Checklist type".to_string(), chklist_type.as_str().to_string()));
                 }
+                if let Some(battery) = captures.get(7) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
             } else {
                 warn!("Failed to extract sub-data from CHECKLIST");
             }
@@ -370,12 +388,18 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
 
         // Search for the event sub-data for the DEBUG event.
         "DEBUG" => {
-            let sub_debug_pattern = Regex::new(r"(.+) (v:[0-9]+)$")
+            let sub_debug_pattern = Regex::new(r"(.+) v:(.+?)$")
                 .expect("Invalid DEBUG regex pattern");
 
             if let Some(captures) = sub_debug_pattern.captures(sub_data) {
                 if let Some(error) = captures.get(1) {
                     result.push(("Debug error".to_string(), error.as_str().to_string()));
+                }
+                if let Some(battery) = captures.get(2) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
                 }
             } else {
                 warn!("Failed to extract sub-data from DEBUG");
@@ -384,7 +408,7 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
 
         // Search for the event sub-data for the REPORT event.
         "REPORT" => {
-            let sub_report_pattern = Regex::new(r"(\*|[0-9]+) ([0-9]+) ([0-9]+)(.*)$")
+            let sub_report_pattern = Regex::new(r"(\*|[0-9]+) ([0-9]+) ([0-9]+) v:(.+?)$")
                 .expect("Invalid INPUT regex pattern");
 
             if let Some(captures) = sub_report_pattern.captures(sub_data) {
@@ -397,6 +421,12 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
                 if let Some(dirn) = captures.get(3) {
                     result.push(("Direction".to_string(), dirn.as_str().to_string()));
                 }
+                if let Some(battery) = captures.get(4) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
             } else {
                 warn!("Failed to extract sub-data from REPORT");
             }
@@ -404,7 +434,7 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
 
         // Search for the event sub-data for the ZONECHANGE event.
         "ZONECHANGE" => {
-            let sub_zone_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+)(.*)$")
+            let sub_zone_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+) v:(.+?)$")
                 .expect("Invalid ZONECHANGE regex pattern");
 
             if let Some(captures) = sub_zone_pattern.captures(sub_data) {
@@ -420,6 +450,12 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
                 if let Some(zone_output) = captures.get(4) {
                     result.push(("Zone output".to_string(), zone_output.as_str().to_string()));
                 }
+                if let Some(battery) = captures.get(5) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
             } else {
                 warn!("Failed to extract sub-data from ZONECHANGE");
             }
@@ -427,7 +463,7 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
 
         // Search for the event sub-data for the ZONETRANSITION event.
         "ZONETRANSITION" => {
-            let sub_trans_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+) (ENTRY|EXIT) (.*)$")
+            let sub_trans_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+) (ENTRY|EXIT) v:(.+?)$")
                 .expect("Invalid ZONETRANSITION regex pattern");
 
             if let Some(captures) = sub_trans_pattern.captures(sub_data) {
@@ -446,6 +482,12 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
                 if let Some(transition) = captures.get(5) {
                     result.push(("Transition".to_string(), transition.as_str().to_string()));
                 }
+                if let Some(battery) = captures.get(6) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
             } else {
                 warn!("Failed to extract sub-data from ZONETRANSITION");
             }
@@ -453,7 +495,7 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
 
         // Search for the event sub-data for the TRIP event.
         "TRIP" => {
-            let sub_trip_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+)(.*)$")
+            let sub_trip_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+)(.*) v:(.+?)$")
                 .expect("Invalid TRIP regex pattern");
 
             if let Some(captures) = sub_trip_pattern.captures(sub_data) {
@@ -474,6 +516,12 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
                 }
                 if let Some(time_on_seat) = captures.get(6) {
                     result.push(("Time on seat".to_string(), time_on_seat.as_str().to_string()));
+                }
+                if let Some(battery) = captures.get(8) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
                 }
             } else {
                 warn!("Failed to extract sub-data from TRIP");
