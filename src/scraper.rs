@@ -8,6 +8,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::sync::mpsc;
+use std::time::{Instant, Duration};
 use tinyfiledialogs::open_file_dialog;
 
 use crate::egui;
@@ -37,6 +38,7 @@ pub struct Scraper {
     pub file_dialog_open: bool,
     pub file_receiver: Option<mpsc::Receiver<FileDialogMessage>>,
     pub processing_status: String,
+    pub processing_duration: Duration,
     pub controller_id: String,
     pub controller_fw: String,
     pub scrapings: Vec<ScrapedData>,
@@ -53,6 +55,7 @@ impl Scraper {
             file_dialog_open: false,
             file_receiver: None,
             processing_status: "No file selected.".to_string(),
+            processing_duration: Duration::new(0, 0),
             controller_id: "".to_string(),
             controller_fw: "".to_string(),
             scrapings: Vec::new(),
@@ -123,6 +126,10 @@ impl Scraper {
 
     // Method to scrape the selected file.
     fn process_file(&mut self, path: &PathBuf) {
+
+        // Initialise timer for proocessing.
+        let processing_start = Instant::now();
+
         // First initialize scraped data.
         self.reinitialize_data();
 
@@ -130,8 +137,9 @@ impl Scraper {
 
         match self.read_and_process_file(path) {
             Ok(_sn) => {
-                self.processing_status = format!("Successfully completed processing.");
-                info!("Successfully completed processing.");
+                self.processing_duration = processing_start.elapsed();
+                self.processing_status = format!("Successfully completed processing in {:?}.", self.processing_duration);
+                info!("Successfully completed processing in {:?}", self.processing_duration);
             }
             Err(e) => {
                 self.processing_status = format!("Error processing file: {}", e);
