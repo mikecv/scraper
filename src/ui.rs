@@ -8,6 +8,8 @@ use crate::app::MyApp;
 use crate::help_content;
 use crate::DETAILS;
 
+// use crate::settings::Settings;
+
 // Function to draw the menu bar.
 pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
     egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -195,61 +197,32 @@ pub fn draw_about_dialog(app: &mut MyApp, ctx: &egui::Context) {
 
 // Function to draw the detachable Help panel/window.
 pub fn draw_help_panel(app: &mut MyApp, ctx: &egui::Context) {
-    if app.show_help {
 
+    // Lock the global DETAILS to obtain access to the Details object.
+    let details = DETAILS.lock().unwrap().clone();
+
+    if app.show_help {
         // Load help images if not loaded.
         app.load_help_images(ctx);
 
-        if app.help_detached {
-            // Create a detached window in its own viewport.
-            ctx.show_viewport_immediate(
-                egui::ViewportId::from_hash_of("help_window"),
-                egui::ViewportBuilder::default()
-                    .with_title("Help - Scraper")
-                    .with_inner_size([600.0, 500.0])
-                    .with_resizable(true),
-                |ctx, class| {
-                    assert!(class == egui::ViewportClass::Immediate);
-                    egui::CentralPanel::default().show(ctx, |ui| {
-                        ui.horizontal(|ui| {
-                            // Show help attached to main window.
-                            if ui.button("Help").clicked() {
-                                info!("Help button clicked.");
-                                app.show_help = true;
-                                app.help_detached = true;
-                                ui.close_menu();
-                            }
-                            // Attach help dialog to main window.
-                            if ui.button("Attach to Main Window").clicked() {
-                                app.help_detached = false;
-                            }
-                            // Close help menu.
-                            ui.separator();
-                            if ui.button("Close").clicked() {
-                                app.show_help = false;
-                                app.help_detached = false;
-                            }
-
-                        });
-                        ui.separator();
-                        
-                        egui::ScrollArea::vertical().show(ui, |ui| {
-                            help_content::draw_help_content(ui, app);
-                        });
-                    });
-                },
-            );
-        } else {
-            // Regular attached window.
-            egui::Window::new("Help")
-                .default_width(500.0)
-                .default_height(400.0)
-                .resizable(true)
-                .show(ctx, |ui| {
+        // Create a detached window in its own viewport.
+        ctx.show_viewport_immediate(
+            egui::ViewportId::from_hash_of("help_window"),
+            egui::ViewportBuilder::default()
+                .with_title("Scraper Help")
+                .with_inner_size([details.help_win_height, details.help_win_width])
+                .with_resizable(true),
+            |ctx, class| {
+                assert!(class == egui::ViewportClass::Immediate);
+                
+                // Check if close was requested via the window's X button.
+                if ctx.input(|i| i.viewport().close_requested()) {
+                    app.show_help = false;
+                }
+                
+                egui::CentralPanel::default().show(ctx, |ui| {
                     ui.horizontal(|ui| {
-                        if ui.button("Detach Window").clicked() {
-                            app.help_detached = true;
-                        }
+                        // Close help menu.
                         ui.separator();
                         if ui.button("Close").clicked() {
                             app.show_help = false;
@@ -261,6 +234,7 @@ pub fn draw_help_panel(app: &mut MyApp, ctx: &egui::Context) {
                         help_content::draw_help_content(ui, app);
                     });
                 });
-        }
+            },
+        );
     }
 }

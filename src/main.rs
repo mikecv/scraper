@@ -50,6 +50,8 @@ lazy_static! {
             program_web: "galacticwingcommander".to_string(),
             win_width: 500.0,
             win_height: 600.0,
+            help_win_width: 400.0,
+            help_win_height: 600.0,
         };
         Mutex::new(details)
     };

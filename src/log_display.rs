@@ -8,7 +8,6 @@ use crate::egui::{ScrollArea, Ui};
 use crate::scraper::ScrapedData;
 use crate::DETAILS;
 
-
 // Simple UI state to hold processed display data.
 #[derive(Debug, Clone)]
 pub struct UiState {
@@ -167,15 +166,20 @@ fn render_trip_section(ui: &mut Ui, trip_data: &ScrapedData, trip_events: &[(usi
                 let event_id = format!("{}_{}", index, &item.event_type);
                 ui.push_id(&event_id, |ui| {
                     ui.collapsing(
-                        RichText::new(&item.event_type).color(Color32::GREEN), 
+                        // Event name and the date/time.
+                        RichText::new(format!("{:20} {}",&item.event_type, &item.date_time))
+                            .color(Color32::GREEN)
+                            .family(egui::FontFamily::Monospace),
+
                         |ui| {
+                            // Do the event data key value pairs.
                             for (key, value) in &item.ev_detail {
                                 ui.horizontal(|ui| {
                                     ui.label(RichText::new(format!("{:20}", key))
                                         .color(Color32::GOLD)
                                         .family(egui::FontFamily::Monospace)
                                         .italics());
-                                    ui.label(RichText::new(format!(": {}", value))
+                                    ui.label(RichText::new(format!("{}", value))
                                         .color(Color32::WHITE)
                                         .family(egui::FontFamily::Monospace)
                                         .italics());
@@ -195,12 +199,24 @@ fn render_top_level_event(ui: &mut Ui, index: usize, item: &ScrapedData) {
     let event_id = format!("{}_{}", index, &item.event_type);
     ui.push_id(&event_id, |ui| {
     ui.collapsing(
-        RichText::new(&item.event_type).color(Color32::GRAY),
+
+        // Event name and the date/time.
+        RichText::new(format!("{:20} {}",&item.event_type, &item.date_time))
+            .color(Color32::GRAY)
+            .family(egui::FontFamily::Monospace),
+
         |ui| {
+            // Do the event data key value pairs.
             for (key, value) in &item.ev_detail {
                 ui.horizontal(|ui| {
-                    ui.label(format!("{}:", key));
-                    ui.colored_label(Color32::GOLD, value);
+                    ui.label(RichText::new(format!("{:20}", key))
+                        .color(Color32::GOLD)
+                        .family(egui::FontFamily::Monospace)
+                        .italics());
+                    ui.label(RichText::new(format!("{}", value))
+                        .color(Color32::WHITE)
+                        .family(egui::FontFamily::Monospace)
+                        .italics());
                 });
             }
         }

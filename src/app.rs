@@ -17,7 +17,6 @@ pub struct MyApp {
     pub show_debug_events: bool,
     pub show_about: bool,
     pub show_help: bool,
-    pub help_detached: bool,
     pub about_icon: Option<egui::TextureHandle>,
     pub help_image_1: Option<egui::TextureHandle>,
     pub ui_state: UiState,
@@ -35,7 +34,6 @@ impl Default for MyApp {
             show_debug_events: false,
             show_about: false,
             show_help: false,
-            help_detached: true,
             about_icon: None,
             help_image_1: None,
             ui_state: UiState::default(),
@@ -105,7 +103,7 @@ impl App for MyApp {
         // in the ui module. We pass `self` (or parts of it)
         // so the UI functions can access and modify the state.
         ui::draw_menu_bar(self, ctx);
-        ui::draw_bottom_panel(self, ctx); // Add the bottom panel
+        ui::draw_bottom_panel(self, ctx);
         ui::draw_central_panel(self, ctx);
 
         // Handle modal dialogs.

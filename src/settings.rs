@@ -1,8 +1,10 @@
-use serde::{Deserialize};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Clone)]
-// User settings to be defines as necessary.
+// Settings that the user can control.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
+    // Add settings fields here as needed.
+    // For now, keeping it empty but with proper serde derives.
 }
 
 #[derive(Debug, Clone)]
@@ -15,4 +17,6 @@ pub struct Details {
     pub program_web:        String,
     pub win_width:          f32,
     pub win_height:         f32,
+    pub help_win_width:     f32,
+    pub help_win_height:    f32,
 }
