@@ -75,7 +75,6 @@ async fn main() -> Result<(), eframe::Error> {
     // Do initial application information.
     info!("Application: {:?} v({:?})", details.program_name, details.program_ver);  
 
-    // Configure the native options for the window.
     info!("Configuring the options for the window.");
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
@@ -89,6 +88,10 @@ async fn main() -> Result<(), eframe::Error> {
     eframe::run_native(
         "Scraper",
         options,
-        Box::new(|_cc| Ok(Box::new(MyApp::default()))),
+        Box::new(|cc| {
+            // Force dark theme.
+            cc.egui_ctx.set_visuals(egui::Visuals::dark());
+            Ok(Box::new(MyApp::default()))
+        }),
     )
 }
