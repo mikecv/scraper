@@ -21,6 +21,13 @@ pub enum FileDialogMessage {
     DialogClosed,
 }
 
+// GPS location (lat, long)
+#[derive(Debug)]
+pub struct GpsLocation {
+    pub lat: f64,
+    pub long: f64,
+}
+
 // Data that is scraped.
 #[derive(Debug)]
 pub struct ScrapedData {
@@ -29,6 +36,9 @@ pub struct ScrapedData {
     pub trip_num: String,
     pub event_type: String,
     pub ev_detail: Vec<(String, String)>,
+    pub gps_rssi: u32,
+    pub gps_speed: u32,
+    pub gps_locn: GpsLocation,
 }
 
 // Scraper struct and methods.
@@ -242,6 +252,38 @@ impl Scraper {
                 let ev_key_vals = ungroup_event_data(event_type.to_string(), event_detail);
                 let trip_id = captures.get(3).unwrap().as_str();
 
+                // Get the gps location from the event data.
+                // While gps location is included in the event string,
+                // it's not part of the event detail.
+                let gps_latitude = captures.get(5)
+                    .expect("Latitude capture group not found.")
+                    .as_str()
+                    .parse::<f64>()
+                    .expect("Failed to parse latitude as f64");
+                let gps_longitude = captures.get(6)
+                    .expect("Longitude capture group not found.")
+                    .as_str()
+                    .parse::<f64>()
+                    .expect("Failed to parse longitude as f64");
+                let gps_locn = GpsLocation {
+                    lat: gps_latitude / 10_000_000.0,
+                    long: gps_longitude / 10_000_000.0,
+                };
+
+                // Get the gps RSSI from the event data.
+                let gps_rssi = captures.get(8)
+                    .expect("GPS RSSI capture group not found.")
+                    .as_str()
+                    .parse::<u32>()
+                    .expect("Failed to parse gps rssi as u32");
+
+                // Get the gps speed from the event data.
+                let gps_speed = captures.get(9)
+                    .expect("GPS speed capture group not found.")
+                    .as_str()
+                    .parse::<u32>()
+                    .expect("Failed to parse gps speed as u32");
+
                 // Keep track of on-trip state.
                 // SIGNON sets TRIP clears.
                 if event_type == "SIGNON" {
@@ -257,6 +299,9 @@ impl Scraper {
                     trip_num: trip_id.to_string(),
                     event_type: event_type.to_string(),
                     ev_detail: ev_key_vals,
+                    gps_locn: gps_locn,
+                    gps_rssi: gps_rssi,
+                    gps_speed: gps_speed,
                 };
 
                 // Push the struct onto the vector.
@@ -333,32 +378,6 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
             }
         },
 
-        // Search for the event sub-data for the INPUT event.
-        "INPUT" => {
-            let sub_input_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+) v:(.+?)$")
-                .expect("Invalid INPUT regex pattern");
-
-            if let Some(captures) = sub_input_pattern.captures(sub_data) {
-                if let Some(input_num) = captures.get(1) {
-                    result.push(("Input number".to_string(), input_num.as_str().to_string()));
-                }
-                if let Some(input_state) = captures.get(2) {
-                    result.push(("Active state".to_string(), input_state.as_str().to_string()));
-                }
-                if let Some(active_time) = captures.get(3) {
-                    result.push(("Time active".to_string(), active_time.as_str().to_string()));
-                }
-                if let Some(battery) = captures.get(4) {
-                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
-                        let voltage_volts = voltage_tens / 10.0;
-                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
-                    }
-                }
-            } else {
-                warn!("Failed to extract sub-data from INPUT");
-            }
-        },
-
         // Search for the event sub-data for the CHECKLIST event.
         "CHECKLIST" => {
             let sub_checklist_pattern = Regex::new(r"([0-9]+) (OK|CANCEL|NOFILE) ([0-9]+) ([0-9]+) ([0-9]+) ([\-a-zA-Z]+) v:(.+?)$")
@@ -414,10 +433,200 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
             }
         },
 
+        // Search for the event sub-data for the ENGINEOVERSPEED event.
+        "ENGINEOVERSPEED" => {
+            let sub_engine_overspeed_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+) v:(.+?)$")
+                .expect("Invalid ENGINEOVERSPEED regex pattern");
+
+            if let Some(captures) = sub_engine_overspeed_pattern.captures(sub_data) {
+                if let Some(trip_id) = captures.get(1) {
+                    result.push(("Trip id".to_string(), trip_id.as_str().to_string()));
+                }
+                if let Some(duration) = captures.get(2) {
+                    result.push(("Duration".to_string(), duration.as_str().to_string()));
+                }
+                if let Some(max_rpm) = captures.get(3) {
+                    result.push(("Max RPM".to_string(), max_rpm.as_str().to_string()));
+                }
+                if let Some(battery) = captures.get(4) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
+            } else {
+                warn!("Failed to extract sub-data from ENGINEOVERSPEED");
+            }
+        },
+
+         // Search for the event sub-data for the ENGINETEMP event.
+        "ENGINETEMP" => {
+            let sub_enginetemp_pattern = Regex::new(r"([0-9]+) ([0-9]+)(.*) v:(.+?)$")
+                .expect("Invalid ENGINETEMP regex pattern");
+
+            if let Some(captures) = sub_enginetemp_pattern.captures(sub_data) {
+                if let Some(trip_id) = captures.get(1) {
+                    result.push(("Trip id".to_string(), trip_id.as_str().to_string()));
+                }
+                if let Some(duration) = captures.get(2) {
+                    result.push(("Duration".to_string(), duration.as_str().to_string()));
+                }
+                if let Some(battery) = captures.get(3) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
+            } else {
+                warn!("Failed to extract sub-data from ENGINETEMP");
+            }
+        },
+
+        // Search for the event sub-data for the INPUT event.
+        "INPUT" => {
+            let sub_input_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+) v:(.+?)$")
+                .expect("Invalid INPUT regex pattern");
+
+            if let Some(captures) = sub_input_pattern.captures(sub_data) {
+                if let Some(input_num) = captures.get(1) {
+                    result.push(("Input number".to_string(), input_num.as_str().to_string()));
+                }
+                if let Some(input_state) = captures.get(2) {
+                    result.push(("Active state".to_string(), input_state.as_str().to_string()));
+                }
+                if let Some(active_time) = captures.get(3) {
+                    result.push(("Time active".to_string(), active_time.as_str().to_string()));
+                }
+                if let Some(battery) = captures.get(4) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
+            } else {
+                warn!("Failed to extract sub-data from INPUT");
+            }
+        },
+
+         // Search for the event sub-data for the LOWCOOLANT event.
+        "LOWCOOLANT" => {
+            let sub_lowcoolant_pattern = Regex::new(r"([0-9]+) ([0-9]+)(.*) v:(.+?)$")
+                .expect("Invalid LOWCOOLANT regex pattern");
+
+            if let Some(captures) = sub_lowcoolant_pattern.captures(sub_data) {
+                if let Some(trip_id) = captures.get(1) {
+                    result.push(("Trip id".to_string(), trip_id.as_str().to_string()));
+                }
+                if let Some(duration) = captures.get(2) {
+                    result.push(("Duration".to_string(), duration.as_str().to_string()));
+                }
+                if let Some(battery) = captures.get(3) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
+            } else {
+                warn!("Failed to extract sub-data from LOWCOOLANT");
+            }
+        },
+
+         // Search for the event sub-data for the OFFSEAT event.
+        "OFFSEAT" => {
+            let sub_off_seat_pattern = Regex::new(r"([0-9]+) ([0-9]+)(.*) v:(.+?)$")
+                .expect("Invalid OFFSEAT regex pattern");
+
+            if let Some(captures) = sub_off_seat_pattern.captures(sub_data) {
+                if let Some(trip_id) = captures.get(1) {
+                    result.push(("Trip id".to_string(), trip_id.as_str().to_string()));
+                }
+                if let Some(duration) = captures.get(2) {
+                    result.push(("Duration".to_string(), duration.as_str().to_string()));
+                }
+                if let Some(battery) = captures.get(3) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
+            } else {
+                warn!("Failed to extract sub-data from OFFSEAT");
+            }
+        },
+
+         // Search for the event sub-data for the OILPRESSURE event.
+        "OILPRESSURE" => {
+            let sub_oilpressure_pattern = Regex::new(r"([0-9]+) ([0-9]+)(.*) v:(.+?)$")
+                .expect("Invalid OILPRESSURE regex pattern");
+
+            if let Some(captures) = sub_oilpressure_pattern.captures(sub_data) {
+                if let Some(trip_id) = captures.get(1) {
+                    result.push(("Trip id".to_string(), trip_id.as_str().to_string()));
+                }
+                if let Some(duration) = captures.get(2) {
+                    result.push(("Duration".to_string(), duration.as_str().to_string()));
+                }
+                if let Some(battery) = captures.get(3) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
+            } else {
+                warn!("Failed to extract sub-data from OILPRESSURE");
+            }
+        },
+
+         // Search for the event sub-data for the OVERLOAD event.
+        "OVERLOAD" => {
+            let sub_overload_pattern = Regex::new(r"([0-9]+) ([0-9]+)(.*) v:(.+?)$")
+                .expect("Invalid OVERLOAD regex pattern");
+
+            if let Some(captures) = sub_overload_pattern.captures(sub_data) {
+                if let Some(trip_id) = captures.get(1) {
+                    result.push(("Trip id".to_string(), trip_id.as_str().to_string()));
+                }
+                if let Some(duration) = captures.get(2) {
+                    result.push(("Duration".to_string(), duration.as_str().to_string()));
+                }
+                if let Some(battery) = captures.get(3) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
+            } else {
+                warn!("Failed to extract sub-data from OVERLOAD");
+            }
+        },
+
+        // Search for the event sub-data for the OVERSPEED event.
+        "OVERSPEED" => {
+            let sub_overspeed_pattern = Regex::new(r"([0-9]+) ([0-9]+) v:(.+?)$")
+                .expect("Invalid OVERSPEED regex pattern");
+
+            if let Some(captures) = sub_overspeed_pattern.captures(sub_data) {
+                if let Some(trip_id) = captures.get(1) {
+                    result.push(("Trip id".to_string(), trip_id.as_str().to_string()));
+                }
+                if let Some(duration) = captures.get(2) {
+                    result.push(("Duration".to_string(), duration.as_str().to_string()));
+                }
+                if let Some(battery) = captures.get(3) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
+            } else {
+                warn!("Failed to extract sub-data from OVERSPEED");
+            }
+        },
+
         // Search for the event sub-data for the REPORT event.
         "REPORT" => {
             let sub_report_pattern = Regex::new(r"(\*|[0-9]+) ([0-9]+) ([0-9]+) v:(.+?)$")
-                .expect("Invalid INPUT regex pattern");
+                .expect("Invalid REPORT regex pattern");
 
             if let Some(captures) = sub_report_pattern.captures(sub_data) {
                 if let Some(trip_id) = captures.get(1) {
@@ -439,6 +648,65 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
                 warn!("Failed to extract sub-data from REPORT");
             }
         },
+
+        // Search for the event sub-data for the UNBUCKLED event.
+        "UNBUCKLED" => {
+            let sub_unbuckled_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([DP]) v:(.+?)$")
+                .expect("Invalid UNBUCKLED regex pattern");
+
+            if let Some(captures) = sub_unbuckled_pattern.captures(sub_data) {
+                if let Some(trip_id) = captures.get(1) {
+                    result.push(("Trip id".to_string(), trip_id.as_str().to_string()));
+                }
+                if let Some(duration) = captures.get(2) {
+                    result.push(("Duration".to_string(), duration.as_str().to_string()));
+                }
+                if let Some(owner) = captures.get(3) {
+                    result.push(("Seat owner".to_string(), owner.as_str().to_string()));
+                }
+                if let Some(battery) = captures.get(4) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                    else {
+                        result.push(("Battery voltage".to_string(), "?".to_string()));
+                    }
+                }
+            } else {
+                warn!("Failed to extract sub-data from UNBUCKLED");
+            }
+        },
+
+        // Search for the event sub-data for the ZONEOVERSPEED event.
+        "ZONEOVERSPEED" => {
+            let sub_zone_overspeed_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+)(.*)$")
+                .expect("Invalid ZONEOVERSPEED regex pattern");
+
+            if let Some(captures) = sub_zone_overspeed_pattern.captures(sub_data) {
+                if let Some(trip_id) = captures.get(1) {
+                    result.push(("Trip id".to_string(), trip_id.as_str().to_string()));
+                }
+                if let Some(duration) = captures.get(2) {
+                    result.push(("Duration".to_string(), duration.as_str().to_string()));
+                }
+                if let Some(max_speed) = captures.get(3) {
+                    result.push(("Maximum speed".to_string(), max_speed.as_str().to_string()));
+                }
+                if let Some(zone_output) = captures.get(4) {
+                    result.push(("Zone output".to_string(), zone_output.as_str().to_string()));
+                }
+                if let Some(battery) = captures.get(5) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
+            } else {
+                warn!("Failed to extract sub-data from ZONEOVERSPEED");
+            }
+        },
+
 
         // Search for the event sub-data for the ZONECHANGE event.
         "ZONECHANGE" => {
