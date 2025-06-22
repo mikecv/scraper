@@ -9,9 +9,16 @@ use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::sync::mpsc;
 use std::time::{Instant, Duration};
-use tinyfiledialogs::open_file_dialog;
-
 use crate::egui;
+
+// Use conditional includes for linux and Windows,
+// as tinyfiledialogs doesn't readily compile and
+// build for windows.
+
+#[cfg(target_os = "windows")]
+use rfd::FileDialog;
+#[cfg(target_os = "linux")]
+use tinyfiledialogs::open_file_dialog;
 
 #[allow(dead_code)]
 
@@ -84,12 +91,30 @@ impl Scraper {
 
         self.file_dialog_open = true;
 
-        // Use tinyfiledialogs synchronous dialog.
-        let file_path = open_file_dialog(
-            "Select log file",
-            "",
-            Some((&["*.log", "*.bak", "*.csv"], "Log files (log, bak, csv)")),
-        );
+        // Alternate file dialoges used for
+        // linux and Windows builds, as tinyfiledialogs
+        // doesn't readily build for Windows because of
+        // the available toolchain.
+
+        let file_path = {
+            #[cfg(target_os = "windows")]
+            {
+                // For windows use FileDialog.
+                FileDialog::new()
+                    .add_filter("text", &["txt"])
+                    .pick_file()
+                    .map(|path| path.to_string_lossy().to_string())
+            }
+            #[cfg(target_os = "linux")]
+            {
+                // Use tinyfiledialogs synchronous dialog.
+                open_file_dialog(
+                    "Select log file",
+                    "",
+                    Some((&["*.log", "*.bak", "*.csv"], "Log files (log, bak, csv)")),
+                )
+            }
+        };
 
         match file_path {
             Some(path_string) => {
