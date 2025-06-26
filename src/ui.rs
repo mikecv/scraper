@@ -87,35 +87,49 @@ pub fn draw_bottom_panel(app: &mut MyApp, ctx: &egui::Context) {
                         // Add controller firmware version if available.
                         if !app.scraper.controller_fw.is_empty() {
                             ui.separator();
-                            ui.label("Firmware Version:");
+                            ui.label("Firmware:");
                             ui.strong(format!("{}", app.scraper.controller_fw));
                         }
                         else {
                             ui.separator();
-                            ui.label("Firmware Version:");
+                            ui.label("Firmware:");
                             ui.strong("Not defined.");
                         }
                     } else {
-                        ui.label("No file selected");
+                        ui.label("No file selected.");
                     }
                 });
                 
                 ui.add_space(0.5);
-                
-                // Second row: Program status.
+
+                // Second row: Program status, and selected trip.
                 ui.horizontal(|ui| {
                     ui.style_mut().text_styles.insert(
                         egui::TextStyle::Body,
                         egui::FontId::new(10.0, egui::FontFamily::Proportional)
                     );
-                    
+
+                    // Program status.
                     ui.label("Status:");
-                    ui.label(app.scraper.get_processing_status());
-                });
-                
-                ui.add_space(0.5);
+                    ui.strong(app.scraper.get_processing_status());
+
+                    // Selected trip at any level.
+                    ui.separator();
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        
+                        // Right justified so add labels from right to left.
+                        if let Some(id) = &app.selected_id {
+                            ui.strong(format!("{:<10}", id));
+                        } else {
+                            ui.strong(format!("{:>10}", ""));
+                        }                   
+                        ui.label("Trip: ");
+                    });
+
+                    ui.add_space(0.5);
             });
         });
+    });
 }
 
 // Draw the central panel with the log data.
@@ -141,7 +155,7 @@ pub fn draw_central_panel(app: &mut MyApp, ctx: &egui::Context) {
             app.show_input_events,
             app.show_report_events,
             app.show_debug_events,
- 
+            &mut app.selected_id, 
         );
     });
 }

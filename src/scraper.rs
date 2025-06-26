@@ -9,6 +9,7 @@ use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::sync::mpsc;
 use std::time::{Instant, Duration};
+
 use crate::egui;
 
 // Use conditional includes for linux and Windows,
@@ -88,6 +89,9 @@ impl Scraper {
         if self.file_dialog_open {
             return;
         }
+
+        // Before we start we can delete any previously selected trip.
+
 
         self.file_dialog_open = true;
 

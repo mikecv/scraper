@@ -20,6 +20,7 @@ pub struct MyApp {
     pub about_icon: Option<egui::TextureHandle>,
     pub help_image_1: Option<egui::TextureHandle>,
     pub ui_state: UiState,
+    pub selected_id: Option<String>,
 }
 
 impl Default for MyApp {
@@ -37,6 +38,7 @@ impl Default for MyApp {
             about_icon: None,
             help_image_1: None,
             ui_state: UiState::default(),
+            selected_id: Some("".to_string()),
         }
     }
 }
