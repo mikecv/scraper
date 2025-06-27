@@ -1,4 +1,6 @@
-// Log display on UI.
+// Log display on UI.use log::info;
+
+use log::info;
 
 use eframe::egui;
 use crate::egui::Color32;
@@ -336,10 +338,10 @@ fn render_top_level_event(ui: &mut Ui, index: usize, item: &ScrapedData) {
 
 // Handler functions for trip header selection.
 fn handle_trip_selected(trip_num: &str) {
-    println!("Trip selected: {}", trip_num);
+    info!("Trip selected: {}", trip_num);
 }
 
 // Handler functions for event selection.
 fn handle_event_selected(trip_num: &str, event_type: &str) {
-    println!("Trip selected: {}, event {}", trip_num, event_type);
+    info!("Trip selected: {}, event {}", trip_num, event_type);
 }

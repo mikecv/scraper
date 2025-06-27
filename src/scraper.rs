@@ -82,7 +82,9 @@ impl Scraper {
 }
 
 impl Scraper {
-    pub fn load_file(&mut self, ctx: &egui::Context) {
+    // Load log file for processing.
+    // The load file triggers a clearing of any previous selection id.
+    pub fn load_file(&mut self, ctx: &egui::Context, selected_id: &mut Option<String>) {
         info!("Browsing for file to open.");
 
         // Prevent multiple dialogs.
@@ -91,8 +93,9 @@ impl Scraper {
         }
 
         // Before we start we can delete any previously selected trip.
-
-
+        // Reset selected_id before loading new file
+        *selected_id = Some("".to_string());
+ 
         self.file_dialog_open = true;
 
         // Alternate file dialoges used for

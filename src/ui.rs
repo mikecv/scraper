@@ -19,7 +19,7 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
             ui.menu_button("File", |ui| {
                 if ui.button("Open").clicked() {
                     info!("Open file button clicked.");
-                    app.scraper.load_file(ctx);
+                    app.scraper.load_file(ctx, &mut app.selected_id);
                     ui.close_menu();
                 }
             });
