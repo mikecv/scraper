@@ -31,6 +31,20 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
                 ui.separator();                
                 ui.checkbox(&mut app.show_debug_events, "Debug events");
             });
+            // View menu.
+            // For toggling dark and light mode.
+            ui.menu_button("View", |ui| {
+                let (icon, text) = if app.dark_mode { 
+                    ("☀", "Light Mode")
+                } else { 
+                    ("🌙", "Dark Mode")
+                };
+                
+                if ui.button(format!("{} {}", icon, text)).clicked() {
+                    app.dark_mode = !app.dark_mode;
+                    ui.close_menu();
+                }
+            });
             // Help menu.
             ui.menu_button("Help", |ui| {
                 if ui.button("Help").clicked() {
@@ -155,7 +169,8 @@ pub fn draw_central_panel(app: &mut MyApp, ctx: &egui::Context) {
             app.show_input_events,
             app.show_report_events,
             app.show_debug_events,
-            &mut app.selected_id, 
+            &mut app.selected_id,
+            app.dark_mode,
         );
     });
 }

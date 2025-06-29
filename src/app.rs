@@ -2,7 +2,7 @@
 
 use log::info;
 
-use eframe::{egui, App, Frame};
+use eframe::{egui, App};
 
 use crate::scraper::Scraper;
 use crate::ui;
@@ -21,6 +21,7 @@ pub struct MyApp {
     pub help_image_1: Option<egui::TextureHandle>,
     pub ui_state: UiState,
     pub selected_id: Option<String>,
+    pub dark_mode: bool,
 }
 
 impl Default for MyApp {
@@ -39,6 +40,7 @@ impl Default for MyApp {
             help_image_1: None,
             ui_state: UiState::default(),
             selected_id: Some("".to_string()),
+            dark_mode: true,
         }
     }
 }
@@ -85,7 +87,16 @@ impl MyApp {
 
 // Implement the eframe::App trait for MyApp.
 impl App for MyApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut Frame) {
+    // fn update(&mut self, ctx: &egui::Context, _frame: &mut Frame) {
+
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Apply theme according to menu selection.
+        if self.dark_mode {
+            ctx.set_visuals(egui::Visuals::dark());
+        } else {
+            ctx.set_visuals(egui::Visuals::light());
+        }
+
         // Check for dropped file first.
         // Then check for file dialog file.
         if !ctx.input(|i| i.raw.dropped_files.is_empty()) {

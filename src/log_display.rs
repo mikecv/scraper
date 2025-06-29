@@ -3,10 +3,11 @@
 use log::info;
 
 use eframe::egui;
-use crate::egui::Color32;
-use crate::egui::RichText;
+use eframe::egui::{Color32, RichText};
+
 use crate::egui::{ScrollArea, Ui};
 
+use crate::colours;
 use crate::scraper::ScrapedData;
 use crate::DETAILS;
 
@@ -38,7 +39,10 @@ impl UiState {
 
 // Main rendering function.
 // The display entry point.
-pub fn render_scraped_data(ui: &mut Ui, ui_state: &mut UiState, scraped_data: &[ScrapedData], 
+pub fn render_scraped_data(
+        ui: &mut Ui,
+        ui_state: &mut UiState,
+        scraped_data: &[ScrapedData], 
         available_height: f32,
         available_width: f32,
         show_oot_events: bool,
@@ -46,6 +50,7 @@ pub fn render_scraped_data(ui: &mut Ui, ui_state: &mut UiState, scraped_data: &[
         show_report_events: bool,
         show_debug_events: bool,
         selected_id: &mut Option<String>,
+        dark_mode: bool,
 ) {
     // Program settings.
     // Not user setable.
@@ -93,7 +98,7 @@ pub fn render_scraped_data(ui: &mut Ui, ui_state: &mut UiState, scraped_data: &[
                         // Add TRIP event to current trip and then render the complete trip.
                         trip_events.push((index, item));
                         if let Some(trip_data) = current_trip_header {
-                            render_trip_section(ui, trip_data, &trip_events, selected_id);
+                            render_trip_section(ui, trip_data, &trip_events, selected_id, dark_mode);
                         }
                         // End the trip.
                         current_trip_header = None;
@@ -122,7 +127,7 @@ pub fn render_scraped_data(ui: &mut Ui, ui_state: &mut UiState, scraped_data: &[
         // Handle case where data ends without a TRIP event (incomplete trip).
         if in_trip && !trip_events.is_empty() {
             if let Some(trip_data) = current_trip_header {
-                render_trip_section(ui, trip_data, &trip_events, selected_id);
+                render_trip_section(ui, trip_data, &trip_events, selected_id, dark_mode);
             }
         }
     });
@@ -158,19 +163,21 @@ fn should_show_event(
 }
 
 // Helper function to render a complete trip.
-fn render_trip_section(ui: &mut Ui,
+fn render_trip_section(
+    ui: &mut Ui,
     trip_data: &ScrapedData,
     trip_events: &[(usize, &ScrapedData)],
-    selected_id: &mut Option<String>
+    selected_id: &mut Option<String>,
+    dark_mode: bool,
 ) {
-    // Generate a unique trip ID
+    // Generate a unique trip ID.
     let trip_id = format!("{}", trip_data.trip_num);
     let _is_trip_selected = selected_id.as_ref() == Some(&trip_id);
     
     ui.push_id(&trip_id, |ui| {
         let trip_header_response = ui.collapsing(
             RichText::new(format!("TRIP {:} - {}", trip_data.trip_num, &trip_data.date_time))
-                .color(Color32::WHITE)
+                .color(colours::trip_colour(dark_mode))
                 .family(egui::FontFamily::Monospace)
                 .strong(),
             |ui| {
@@ -182,7 +189,7 @@ fn render_trip_section(ui: &mut Ui,
                         let event_header_response = ui.collapsing(
                             // Event name and the date/time.
                             RichText::new(format!("{:20} {}",&item.event_type, &item.date_time))
-                                .color(Color32::GREEN)
+                                .color(colours::event_colour(dark_mode))
                                 .family(egui::FontFamily::Monospace),
                             |ui| {
                                 // Do the event detail key-value pairs
