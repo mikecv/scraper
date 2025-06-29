@@ -69,9 +69,9 @@ impl MyApp {
 
     // Load all help images here.
     pub fn load_help_images(&mut self, ctx: &egui::Context) {
-        // Load first help image.
+        // Help image 1 - loaded log file.
         if self.help_image_1.is_none() {
-            let icon_bytes = include_bytes!("../assets/podaca.jpeg");
+            let icon_bytes = include_bytes!("../assets/help-1.png");
             match image::load_from_memory(icon_bytes) {
                 Ok(img) => {
                     let rgba = img.to_rgba8();

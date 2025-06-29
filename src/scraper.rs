@@ -444,6 +444,52 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
             }
         },
 
+        // Search for the event sub-data for the CLFAIL event.
+        "CLFAIL" => {
+            let sub_clfail_pattern = Regex::new(r"([0-9]+) ([0-9]+) v:(.+?)$")
+                .expect("Invalid CLFAIL regex pattern");
+
+            if let Some(captures) = sub_clfail_pattern.captures(sub_data) {
+                if let Some(trip_id) = captures.get(1) {
+                    result.push(("Trip id".to_string(), trip_id.as_str().to_string()));
+                }
+                if let Some(chk_fail_q) = captures.get(2) {
+                    result.push(("Failded question".to_string(), chk_fail_q.as_str().to_string()));
+                }
+                if let Some(battery) = captures.get(3) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
+            } else {
+                warn!("Failed to extract sub-data from CLFAIL");
+            }
+        },
+
+        // Search for the event sub-data for the CRITICALOUTPUTSET event.
+        "CRITICALOUTPUTSET" => {
+            let sub_co_pattern = Regex::new(r"([0-9]+) ([0-9]+) v:(.+?)$")
+                .expect("Invalid CRITICALOUTPUTSET regex pattern");
+
+            if let Some(captures) = sub_co_pattern.captures(sub_data) {
+                if let Some(trip_id) = captures.get(1) {
+                    result.push(("Trip id".to_string(), trip_id.as_str().to_string()));
+                }
+                if let Some(speed) = captures.get(2) {
+                    result.push(("Speed".to_string(), speed.as_str().to_string()));
+                }
+                if let Some(battery) = captures.get(3) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
+            } else {
+                warn!("Failed to extract sub-data from CRITICALOUTPUTSET");
+            }
+        },
+
         // Search for the event sub-data for the DEBUG event.
         "DEBUG" => {
             let sub_debug_pattern = Regex::new(r"(.+) v:(.+?)$")
@@ -721,20 +767,20 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
             }
         },
 
-        // Search for the event sub-data for the UNBUCKLED event.
-        "UNBUCKLED" => {
-            let sub_unbuckled_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([DP]) v:(.+?)$")
-                .expect("Invalid UNBUCKLED regex pattern");
+        // Search for the event sub-data for the XSIDLE event.
+        "XSIDLE" => {
+            let sub_xsidle_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+) v:(.+?)$")
+                .expect("Invalid XSIDLE regex pattern");
 
-            if let Some(captures) = sub_unbuckled_pattern.captures(sub_data) {
+            if let Some(captures) = sub_xsidle_pattern.captures(sub_data) {
                 if let Some(trip_id) = captures.get(1) {
                     result.push(("Trip id".to_string(), trip_id.as_str().to_string()));
                 }
-                if let Some(duration) = captures.get(2) {
-                    result.push(("Duration".to_string(), duration.as_str().to_string()));
+                if let Some(max_idle) = captures.get(2) {
+                    result.push(("Max idle".to_string(), max_idle.as_str().to_string()));
                 }
-                if let Some(owner) = captures.get(3) {
-                    result.push(("Seat owner".to_string(), owner.as_str().to_string()));
+                if let Some(xsidle_reason) = captures.get(3) {
+                    result.push(("Excess idle reason".to_string(), xsidle_reason.as_str().to_string()));
                 }
                 if let Some(battery) = captures.get(4) {
                     if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
@@ -746,7 +792,30 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
                     }
                 }
             } else {
-                warn!("Failed to extract sub-data from UNBUCKLED");
+                warn!("Failed to extract sub-data from XSIDLE");
+            }
+        },
+
+        // Search for the event sub-data for the XSIDLESTART event.
+        "XSIDLESTART" => {
+            let sub_xsidlest_pattern = Regex::new(r"(([0-9]+) v:(.+?)$")
+                .expect("Invalid XSIDLESTART regex pattern");
+
+            if let Some(captures) = sub_xsidlest_pattern.captures(sub_data) {
+                if let Some(trip_id) = captures.get(1) {
+                    result.push(("Trip id".to_string(), trip_id.as_str().to_string()));
+                }
+                if let Some(battery) = captures.get(2) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                    else {
+                        result.push(("Battery voltage".to_string(), "?".to_string()));
+                    }
+                }
+            } else {
+                warn!("Failed to extract sub-data from XSIDLESTART");
             }
         },
 
