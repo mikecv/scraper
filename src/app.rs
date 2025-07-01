@@ -18,10 +18,13 @@ pub struct MyApp {
     pub show_about: bool,
     pub show_help: bool,
     pub about_icon: Option<egui::TextureHandle>,
-    pub help_image_1: Option<egui::TextureHandle>,
     pub ui_state: UiState,
     pub selected_id: Option<String>,
     pub dark_mode: bool,
+
+    // Help images.
+    pub help_image_1: Option<egui::TextureHandle>,
+    pub help_image_2: Option<egui::TextureHandle>,
 }
 
 impl Default for MyApp {
@@ -37,10 +40,13 @@ impl Default for MyApp {
             show_about: false,
             show_help: false,
             about_icon: None,
-            help_image_1: None,
             ui_state: UiState::default(),
             selected_id: Some("".to_string()),
             dark_mode: true,
+
+            // Help images.
+            help_image_1: None,
+            help_image_2: None,
         }
     }
 }
@@ -82,12 +88,26 @@ impl MyApp {
                 Err(e) => info!("Failed to load help image 1: {}", e),
             }
         }
+
+        // Help image 2 - information panel.
+        if self.help_image_2.is_none() {
+            let icon_bytes = include_bytes!("../assets/help-2.png");
+            match image::load_from_memory(icon_bytes) {
+                Ok(img) => {
+                    let rgba = img.to_rgba8();
+                    let size = [img.width() as usize, img.height() as usize];
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    self.help_image_2 = Some(ctx.load_texture("help_image_2", color_image, Default::default()));
+                }
+                Err(e) => info!("Failed to load help image 2: {}", e),
+            }
+        }
+
     }
 }
 
 // Implement the eframe::App trait for MyApp.
 impl App for MyApp {
-    // fn update(&mut self, ctx: &egui::Context, _frame: &mut Frame) {
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Apply theme according to menu selection.

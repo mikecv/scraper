@@ -798,7 +798,7 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
 
         // Search for the event sub-data for the XSIDLESTART event.
         "XSIDLESTART" => {
-            let sub_xsidlest_pattern = Regex::new(r"(([0-9]+) v:(.+?)$")
+            let sub_xsidlest_pattern = Regex::new(r"([0-9]+) v:(.+?)$")
                 .expect("Invalid XSIDLESTART regex pattern");
 
             if let Some(captures) = sub_xsidlest_pattern.captures(sub_data) {
