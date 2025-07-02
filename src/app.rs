@@ -109,13 +109,16 @@ impl MyApp {
 // Implement the eframe::App trait for MyApp.
 impl App for MyApp {
 
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         // Apply theme according to menu selection.
         if self.dark_mode {
             ctx.set_visuals(egui::Visuals::dark());
         } else {
             ctx.set_visuals(egui::Visuals::light());
         }
+
+        // Add border to the main window.
+        self.draw_main_window_border(ctx, frame);
 
         // Check for dropped file first.
         // Then check for file dialog file.
@@ -142,5 +145,30 @@ impl App for MyApp {
         // Handle modal dialogs.
         ui::draw_about_dialog(self, ctx);
         ui::draw_help_panel(self, ctx);
+    }
+}
+
+impl MyApp {
+    // Draw border around the main window
+    fn draw_main_window_border(&self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let screen_rect = ctx.screen_rect();
+        let border_width = 3.0;
+        
+        // Get border color based on theme - using egui's built-in colours for consistency.
+        let border_color = if self.dark_mode {
+            ctx.style().visuals.widgets.noninteractive.bg_stroke.color
+        } else {
+            ctx.style().visuals.widgets.noninteractive.bg_stroke.color
+        };
+
+        // Draw the border using the painter at a higher layer.
+        let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground, egui::Id::new("main_border")));
+        
+        // Draw border as a frame (hollow rectangle).
+        painter.rect_stroke(
+            screen_rect.shrink(border_width / 2.0),
+            0.0,
+            egui::Stroke::new(border_width, border_color),
+        );
     }
 }

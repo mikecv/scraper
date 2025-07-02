@@ -27,7 +27,6 @@ futures-util = "0.3"
 
 # UI related.
 eframe = "0.29.1"
-egui = "0.31.1"
 image = "0.24"
 tokio = { version = "1.0", features = ["full"] }
 

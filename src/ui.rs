@@ -4,6 +4,7 @@ use log::info;
 
 use eframe::{egui};
 
+use crate::colours;
 use crate::app::MyApp;
 use crate::help_content;
 use crate::DETAILS;
@@ -189,6 +190,7 @@ pub fn draw_about_dialog(app: &mut MyApp, ctx: &egui::Context) {
             .collapsible(false)
             .resizable(false)
             .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
+            .frame(egui::Frame::window(&ctx.style()).stroke(egui::Stroke::new(3.0, colours::border_colour(app.dark_mode))))
             .show(ctx, |ui| {
                 ui.vertical_centered(|ui| {
                     // Try to display the loaded icon, fallback to the default one if not available.
@@ -230,6 +232,13 @@ pub fn draw_help_panel(app: &mut MyApp, ctx: &egui::Context) {
     // Lock the global DETAILS to obtain access to the Details object.
     let details = DETAILS.lock().unwrap().clone();
 
+    // Apply theme according to menu selection.
+    if app.dark_mode {
+        ctx.set_visuals(egui::Visuals::dark());
+    } else {
+        ctx.set_visuals(egui::Visuals::light());
+    }
+
     if app.show_help {
         // Load help images if not loaded.
         app.load_help_images(ctx);
@@ -249,21 +258,45 @@ pub fn draw_help_panel(app: &mut MyApp, ctx: &egui::Context) {
                     app.show_help = false;
                 }
                 
-                egui::CentralPanel::default().show(ctx, |ui| {
-                    ui.horizontal(|ui| {
-                        // Close help menu.
+                // Draw border around the help window.
+                draw_viewport_border(ctx, app.dark_mode);
+                
+                egui::CentralPanel::default()
+                    .frame(egui::Frame::default()
+                        .stroke(egui::Stroke::new(2.0, colours::border_colour(app.dark_mode)))
+                        .inner_margin(egui::Margin::same(8.0))
+                    )
+                    .show(ctx, |ui| {
+                        ui.horizontal(|ui| {
+                            // Close help menu.
+                            ui.separator();
+                            if ui.button("Close").clicked() {
+                                app.show_help = false;
+                            }
+                        });
                         ui.separator();
-                        if ui.button("Close").clicked() {
-                            app.show_help = false;
-                        }
+                        
+                        egui::ScrollArea::vertical().show(ui, |ui| {
+                            help_content::draw_help_content(ui, app);
+                        });
                     });
-                    ui.separator();
-                    
-                    egui::ScrollArea::vertical().show(ui, |ui| {
-                        help_content::draw_help_content(ui, app);
-                    });
-                });
             },
         );
     }
+}
+
+// Helper function to draw border around viewport windows.
+fn draw_viewport_border(ctx: &egui::Context, dark_mode: bool) {
+    let screen_rect = ctx.screen_rect();
+    let border_width = 3.0;
+    let border_color = colours::border_colour(dark_mode);
+
+    // Draw the border using rect_stroke for a cleaner look.
+    let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground, egui::Id::new("viewport_border")));
+    
+    painter.rect_stroke(
+        screen_rect.shrink(border_width / 2.0),
+        0.0,
+        egui::Stroke::new(border_width, border_color),
+    );
 }

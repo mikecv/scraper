@@ -68,3 +68,11 @@ pub fn gps_value_colour(dark_mode: bool) -> Color32 {
     }
 }
 
+// Colours for screen and dialog borders.
+pub fn border_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgb(100, 100, 100)
+    } else {
+        Color32::from_rgb(128, 128, 128)
+    }
+}
