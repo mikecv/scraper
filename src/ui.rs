@@ -226,18 +226,10 @@ pub fn draw_about_dialog(app: &mut MyApp, ctx: &egui::Context) {
     }
 }
 
-// Function to draw the detachable Help panel/window.
 pub fn draw_help_panel(app: &mut MyApp, ctx: &egui::Context) {
 
     // Lock the global DETAILS to obtain access to the Details object.
     let details = DETAILS.lock().unwrap().clone();
-
-    // Apply theme according to menu selection.
-    if app.dark_mode {
-        ctx.set_visuals(egui::Visuals::dark());
-    } else {
-        ctx.set_visuals(egui::Visuals::light());
-    }
 
     if app.show_help {
         // Load help images if not loaded.
@@ -252,6 +244,14 @@ pub fn draw_help_panel(app: &mut MyApp, ctx: &egui::Context) {
                 .with_resizable(true),
             |ctx, class| {
                 assert!(class == egui::ViewportClass::Immediate);
+
+                // Apply theme according to menu selection. This should be inside
+                // the closure to ensure it's re-evaluated every frame.
+                if app.dark_mode {
+                    ctx.set_visuals(egui::Visuals::dark());
+                } else {
+                    ctx.set_visuals(egui::Visuals::light());
+                }
                 
                 // Check if close was requested via the window's X button.
                 if ctx.input(|i| i.viewport().close_requested()) {
@@ -261,10 +261,18 @@ pub fn draw_help_panel(app: &mut MyApp, ctx: &egui::Context) {
                 // Draw border around the help window.
                 draw_viewport_border(ctx, app.dark_mode);
                 
+                // Determine the background color based on dark_mode.
+                let background_color = if app.dark_mode {
+                    ctx.style().visuals.widgets.noninteractive.bg_fill
+                } else {
+                    ctx.style().visuals.widgets.noninteractive.bg_fill
+                };
+
                 egui::CentralPanel::default()
                     .frame(egui::Frame::default()
                         .stroke(egui::Stroke::new(2.0, colours::border_colour(app.dark_mode)))
                         .inner_margin(egui::Margin::same(8.0))
+                        .fill(background_color)
                     )
                     .show(ctx, |ui| {
                         ui.horizontal(|ui| {

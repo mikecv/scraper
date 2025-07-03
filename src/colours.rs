@@ -10,7 +10,7 @@ pub fn event_colour(dark_mode: bool) -> Color32 {
     if dark_mode {
         Color32::from_rgb(58, 235, 14)
     } else {
-        Color32::from_rgb(43, 125, 22)
+        Color32::from_rgb(56, 218, 4)
     }
 }
 
@@ -28,16 +28,16 @@ pub fn key_colour(dark_mode: bool) -> Color32 {
     if dark_mode {
         Color32::from_rgb(255, 214, 51)
     } else {
-        Color32::from_rgb(230, 184, 0)
+        Color32::from_rgb(186, 92, 18)
     }
 }
 
 // Colours for event key / value pairs (value).
 pub fn value_colour(dark_mode: bool) -> Color32 {
     if dark_mode {
-        Color32::from_rgb(153, 255, 206)
+        Color32::from_rgb(112, 123, 124)
     } else {
-        Color32::from_rgb(0, 204, 105)
+        Color32::from_rgb(52, 73, 94)
     }
 }
 
@@ -53,18 +53,18 @@ pub fn subtle_colour(dark_mode: bool) -> Color32 {
 // Colours for gps key / value pairs (key).
 pub fn gps_key_colour(dark_mode: bool) -> Color32 {
     if dark_mode {
-        Color32::from_rgb(77, 77, 255)
+        Color32::from_rgb(178, 186, 187)
     } else {
-        Color32::from_rgb(128, 128, 255)
+        Color32::from_rgb(74, 35, 90)
     }
 }
 
 // Colours for gps key / value pairs (value).
 pub fn gps_value_colour(dark_mode: bool) -> Color32 {
     if dark_mode {
-        Color32::from_rgb(179, 179, 0)
+        Color32::from_rgb(112, 123, 124)
     } else {
-        Color32::from_rgb(230, 230, 0)
+        Color32::from_rgb(52, 73, 94)
     }
 }
 
