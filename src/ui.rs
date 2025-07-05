@@ -37,7 +37,8 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
             ui.menu_button("Plot", |ui| {
                 if ui.button("GPS Data").clicked() {
                     info!("Plot GPS Data button clicked.");
-                    plots::plot_gps_data(&app.scraper, &app.selected_id);
+                    app.show_gps_plot = true;
+                    ui.close_menu();
                 }
             });
             // View menu.
@@ -294,6 +295,82 @@ pub fn draw_help_panel(app: &mut MyApp, ctx: &egui::Context) {
                         
                         egui::ScrollArea::vertical().show(ui, |ui| {
                             help_content::draw_help_content(ui, app);
+                        });
+                    });
+            },
+        );
+    }
+}
+
+// New function to draw the GPS plot window as a separate viewport.
+pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
+    if app.show_gps_plot {
+        // Lock the global DETAILS to obtain access settings.
+        let details = DETAILS.lock().unwrap().clone();
+
+        ctx.show_viewport_immediate(
+            egui::ViewportId::from_hash_of("gps_plot_window"),
+            egui::ViewportBuilder::default()
+                .with_title("GPS Data Plot")
+                .with_inner_size([details.gps_win_height, details.gps_win_width])
+                .with_resizable(true),
+            |ctx, class| {
+                assert!(class == egui::ViewportClass::Immediate);
+
+                // Apply theme based on main app setting.
+                if app.dark_mode {
+                    ctx.set_visuals(egui::Visuals::dark());
+                } else {
+                    ctx.set_visuals(egui::Visuals::light());
+                }
+
+                // Crucial: Check if the viewport's native close button was clicked.
+                if ctx.input(|i| i.viewport().close_requested()) {
+                    // Set app state to false when window is closed.
+                    app.show_gps_plot = false;
+                }
+
+                // Draw border around the gps plot window.
+                draw_viewport_border(ctx, app.dark_mode);
+
+                // Determine the background color based on dark_mode.
+                let background_color = if app.dark_mode {
+                    ctx.style().visuals.widgets.noninteractive.bg_fill
+                } else {
+                    ctx.style().visuals.widgets.noninteractive.bg_fill
+                };
+
+                egui::CentralPanel::default()
+                    .frame(egui::Frame::default()
+                        .stroke(egui::Stroke::new(2.0, colours::border_colour(app.dark_mode)))
+                        .inner_margin(egui::Margin::same(8.0))
+                        .fill(background_color)
+                    )
+                    .show(ctx, |ui| {
+                        ui.vertical_centered(|ui| {
+                            ui.heading("GPS Plotting Window");
+                            ui.separator();
+
+                            // Call the plot_gps_data function.
+                            plots::plot_gps_data(&app.scraper, &app.selected_id);
+                            
+                            // <TODO> replace this message once data plotted.
+                            ui.label("GPS data processing complete. Plot will appear here.");
+
+                            if let Some(selected_id) = &app.selected_id {
+                                if selected_id.is_empty() {
+                                    ui.colored_label(egui::Color32::YELLOW, "Please select a trip to plot GPS data.");
+                                } else {
+                                    ui.label(format!("Plotting GPS data for Trip ID: {}", selected_id));
+                                }
+                            } else {
+                                ui.colored_label(egui::Color32::YELLOW, "No trip selected to plot GPS data.");
+                            }
+
+                            ui.separator();
+                            if ui.button("Close Plot").clicked() {
+                                app.show_gps_plot = false;
+                            }
                         });
                     });
             },

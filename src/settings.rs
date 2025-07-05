@@ -27,4 +27,6 @@ pub struct Details {
     pub win_height:         f32,
     pub help_win_width:     f32,
     pub help_win_height:    f32,
+    pub gps_win_width:      f32,
+    pub gps_win_height:     f32,
 }

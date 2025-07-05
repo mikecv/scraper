@@ -21,7 +21,7 @@ pub struct MyApp {
     pub ui_state: UiState,
     pub selected_id: Option<String>,
     pub dark_mode: bool,
-    pub plot_gps_data: bool,
+    pub show_gps_plot: bool,
     
     // Help images.
     pub help_image_1: Option<egui::TextureHandle>,
@@ -44,7 +44,7 @@ impl Default for MyApp {
             ui_state: UiState::default(),
             selected_id: Some("".to_string()),
             dark_mode: true,
-            plot_gps_data: false,
+            show_gps_plot: false,
 
             // Help images.
             help_image_1: None,
@@ -147,6 +147,11 @@ impl App for MyApp {
         // Handle modal dialogs.
         ui::draw_about_dialog(self, ctx);
         ui::draw_help_panel(self, ctx);
+
+        // Check if we need to plot gos data.
+        if self.show_gps_plot {
+            ui::draw_gps_plot_window(self, ctx);
+        }
     }
 }
 

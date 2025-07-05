@@ -68,6 +68,8 @@ lazy_static! {
             win_height: 600.0,
             help_win_width: 500.0,
             help_win_height: 600.0,
+            gps_win_width: 500.0,
+            gps_win_height: 500.0,
         };
         Mutex::new(details)
     };
