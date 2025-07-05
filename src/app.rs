@@ -21,7 +21,8 @@ pub struct MyApp {
     pub ui_state: UiState,
     pub selected_id: Option<String>,
     pub dark_mode: bool,
-
+    pub plot_gps_data: bool,
+    
     // Help images.
     pub help_image_1: Option<egui::TextureHandle>,
     pub help_image_2: Option<egui::TextureHandle>,
@@ -43,6 +44,7 @@ impl Default for MyApp {
             ui_state: UiState::default(),
             selected_id: Some("".to_string()),
             dark_mode: true,
+            plot_gps_data: false,
 
             // Help images.
             help_image_1: None,

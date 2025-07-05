@@ -4,6 +4,7 @@ use log::info;
 
 use eframe::{egui};
 
+use crate::plots;
 use crate::colours;
 use crate::app::MyApp;
 use crate::help_content;
@@ -31,6 +32,13 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
                 ui.checkbox(&mut app.show_report_events, "Report events");
                 ui.separator();                
                 ui.checkbox(&mut app.show_debug_events, "Debug events");
+            });
+            // Plot menu.
+            ui.menu_button("Plot", |ui| {
+                if ui.button("GPS Data").clicked() {
+                    info!("Plot GPS Data button clicked.");
+                    plots::plot_gps_data(&app.scraper, &app.selected_id);
+                }
             });
             // View menu.
             // For toggling dark and light mode.

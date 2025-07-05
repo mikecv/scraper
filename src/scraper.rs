@@ -62,7 +62,7 @@ pub struct Scraper {
     pub scrapings: Vec<ScrapedData>,
 }
 
-// Implement Scraper class.
+// Implement Sraper class.
 impl Scraper {
     // A function to create a new Scraper instance.
     pub fn new() -> Self {
@@ -265,8 +265,13 @@ impl Scraper {
 
         // Get the controller events.
         let ev_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2})(?:\.[0-9]{3})? EVENT ([0-9]+) ([0-9]+) ([-0-9]+)/([0-9]+)/([0-9]+)/([0-9]+)/([0-9]+) ([A-Z_]+) (.+)$")?;
+
         // Track if we are in or out of trip.
         let mut intrip = false;
+
+        // Trip number for signone event so that it can
+        // be copied to the other events in the trip.
+        let mut trip_num_id = "".to_string();
 
         // Process file line by line.
         for line_result in reader.lines() {
@@ -317,17 +322,20 @@ impl Scraper {
 
                 // Keep track of on-trip state.
                 // SIGNON sets TRIP clears.
-                if event_type == "SIGNON" {
+                if event_type == "SIGNON" { 
+                    // Save the trip number to apply to other events.
+                    trip_num_id = trip_id.to_string();      
                     intrip = true;
                 } else if event_type == "TRIP" {
                     intrip = true;
                 }
 
-                // Create and populate the struct correctly
+                // Create and populate the struct correctly.
                 let ev_data = ScrapedData {
                     date_time: format!("{} {}", date, time),
                     on_trip: intrip,
-                    trip_num: trip_id.to_string(),
+                    // Apply trip number to all events.
+                    trip_num: trip_num_id.clone(),
                     event_type: event_type.to_string(),
                     ev_detail: ev_key_vals,
                     gps_locn: gps_locn,
@@ -342,6 +350,9 @@ impl Scraper {
                 // This makes TRIP still part of the trip.
                 if event_type == "TRIP" {
                    intrip = false;
+                   // Clear the saved trip number as
+                   // following events are out of trip.
+                   trip_num_id = "".to_string();
                 }
             }
         }

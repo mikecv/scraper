@@ -7,6 +7,14 @@ pub struct Settings {
     // For now, keeping it empty but with proper serde derives.
 }
 
+impl Default for Settings {
+    fn default() -> Self {
+        Settings {
+            // Add defaults for settings above.
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 // Program settings, not settable by user.
 pub struct Details {
