@@ -156,12 +156,12 @@ impl App for MyApp {
 }
 
 impl MyApp {
-    // Draw border around the main window
+    // Draw border around the main window.
     fn draw_main_window_border(&self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let screen_rect = ctx.screen_rect();
         let border_width = 3.0;
         
-        // Get border color based on theme - using egui's built-in colours for consistency.
+        // Get border colour based on theme - using egui's built-in colours for consistency.
         let border_color = if self.dark_mode {
             ctx.style().visuals.widgets.noninteractive.bg_stroke.color
         } else {

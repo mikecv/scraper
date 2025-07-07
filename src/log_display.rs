@@ -1,4 +1,4 @@
-// Log display on UI.use log::info;
+// Log display on UI.
 
 use log::info;
 

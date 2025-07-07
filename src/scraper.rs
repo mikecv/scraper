@@ -143,10 +143,11 @@ impl Scraper {
     // This is required as there is no close file menu option.
     pub fn reinitialize_data(&mut self) {
         info!("Reinitializing scraper data for new file.");
-        // self.selected_file = None;
+
         self.processing_status = "Loading new file...".to_string();
         self.controller_id = "".to_string();
         self.controller_fw = "".to_string();
+
         // Clear any ongoing file dialog state.
         self.file_dialog_open = false;
         self.file_receiver = None;

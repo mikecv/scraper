@@ -36,7 +36,7 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
             // Plot menu.
             ui.menu_button("Plot", |ui| {
                 if ui.button("GPS Data").clicked() {
-                    info!("Plot GPS Data button clicked.");
+                    info!("GPS Data button clicked.");
                     app.show_gps_plot = true;
                     ui.close_menu();
                 }
@@ -305,6 +305,7 @@ pub fn draw_help_panel(app: &mut MyApp, ctx: &egui::Context) {
 // New function to draw the GPS plot window as a separate viewport.
 pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
     if app.show_gps_plot {
+
         // Lock the global DETAILS to obtain access settings.
         let details = DETAILS.lock().unwrap().clone();
 
@@ -324,7 +325,7 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
                     ctx.set_visuals(egui::Visuals::light());
                 }
 
-                // Crucial: Check if the viewport's native close button was clicked.
+                // Check if the viewport's native close button was clicked.
                 if ctx.input(|i| i.viewport().close_requested()) {
                     // Set app state to false when window is closed.
                     app.show_gps_plot = false;

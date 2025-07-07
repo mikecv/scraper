@@ -1,8 +1,6 @@
 // Functions to provide custom colours
 // for light and dark themes.
 
-// use log::info;
-
 use eframe::egui::Color32;
 
 // Colours for event labels in scraped logs.

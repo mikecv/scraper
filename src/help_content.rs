@@ -22,6 +22,7 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
     if let Some(texture) = &app.help_image_1 {
         ui.add_space(10.0);
         ui.add(egui::Image::new(texture).max_width(400.0));
+        // If needed to constain width and height specify max size like:
         // ui.add(egui::Image::new(texture).max_size(egui::Vec2::new(400.0, 300.0)));
         ui.add_space(10.0);
     }
@@ -44,7 +45,6 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
     if let Some(texture) = &app.help_image_2 {
         ui.add_space(10.0);
         ui.add(egui::Image::new(texture).max_width(400.0));
-        // ui.add(egui::Image::new(texture).max_size(egui::Vec2::new(400.0, 300.0)));
         ui.add_space(10.0);
     }
 }

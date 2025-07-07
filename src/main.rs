@@ -1,8 +1,8 @@
 // Application to perform custom scraping of log files,
 // and present results in tabular and graphical format.
 
-use log::info;
 use log4rs;
+use log::info;
 
 use eframe::{egui};
 use lazy_static::lazy_static;
@@ -42,12 +42,12 @@ static ref SETTINGS: Mutex<Settings> = {
                             Err(_) => Settings::default(),
                         }
                     }
-                    // Can't read from file.
-                    Err(_) => Settings::default(), // Can't read file, use defaults
+                    // Can't read from file, so use defaults.
+                    Err(_) => Settings::default(),
                 }
             }
-            // File doesn't exist.
-            Err(_) => Settings::default(), // File doesn't exist, use defaults
+            // File doesn't exist, so use defaults.
+            Err(_) => Settings::default(),
         };
         Mutex::new(settings)
     };
@@ -115,8 +115,8 @@ async fn main() -> Result<(), eframe::Error> {
     )
 }
 
-// Function to set up defaulr logging if log settings file
-// not available.
+// Function to set up default logging if log settings file
+// is not available or invalid.
 fn set_up_logging() {
     // Attempt to open logging file.
     match log4rs::init_file("log4rs.yml", Default::default()) {

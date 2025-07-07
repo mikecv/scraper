@@ -1,6 +1,9 @@
 // plots.rs
+
 use log::info;
+
 use chrono::{DateTime, NaiveDateTime, Utc, ParseError};
+
 use crate::scraper::{Scraper, ScrapedData};
 
 // Move PlotPoint here and make it public
@@ -56,4 +59,3 @@ pub fn plot_gps_data(scraper: &Scraper, selected_id: &Option<String>) {
         info!("Number of plot points in trip: {:}", plot_points.len());
     }
 }
-
