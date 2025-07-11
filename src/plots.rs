@@ -9,23 +9,23 @@ use crate::scraper::{Scraper, ScrapedData};
 // Move PlotPoint here and make it public
 #[derive(Debug, Clone)]
 pub struct PlotPoint {
-    pub timestamp: DateTime<Utc>,
-    pub trip_num: String,
-    pub lat: f64,
-    pub lon: f64,
-    pub speed: u32,
-    pub rssi: u32,
+    pub _timestamp: DateTime<Utc>,
+    pub _trip_num: String,
+    pub _lat: f64,
+    pub _lon: f64,
+    pub _speed: u32,
+    pub _rssi: u32,
 }
 
 impl From<&ScrapedData> for PlotPoint {
     fn from(data: &ScrapedData) -> Self {
         Self {
-            timestamp: parse_datetime(&data.date_time).unwrap(),
-            trip_num : data.trip_num.clone(),
-            lat: data.gps_locn.lat,
-            lon: data.gps_locn.long,
-            speed: data.gps_speed,
-            rssi: data.gps_rssi,
+            _timestamp: parse_datetime(&data.date_time).unwrap(),
+            _trip_num : data.trip_num.clone(),
+            _lat: data.gps_locn.lat,
+            _lon: data.gps_locn.long,
+            _speed: data.gps_speed,
+            _rssi: data.gps_rssi,
         }
     }
 }
