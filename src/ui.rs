@@ -303,6 +303,8 @@ pub fn draw_help_panel(app: &mut MyApp, ctx: &egui::Context) {
 }
 
 // New function to draw the GPS plot window as a separate viewport.
+// Replace the draw_gps_plot_window function in ui.rs with this:
+
 pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
     if app.show_gps_plot {
 
@@ -348,16 +350,19 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
                         .fill(background_color)
                     )
                     .show(ctx, |ui| {
-                        ui.vertical_centered(|ui| {
-                            ui.heading("GPS Plotting Window");
+                        ui.vertical(|ui| {
+                            // Header section
+                            ui.horizontal(|ui| {
+                                ui.heading("GPS Data Plot");
+                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                    if ui.button("Close").clicked() {
+                                        app.show_gps_plot = false;
+                                    }
+                                });
+                            });
                             ui.separator();
 
-                            // Call the plot_gps_data function.
-                            plots::plot_gps_data(&app.scraper, &app.selected_id);
-                            
-                            // <TODO> replace this message once data plotted.
-                            ui.label("GPS data processing complete. Plot will appear here.");
-
+                            // Trip selection status
                             if let Some(selected_id) = &app.selected_id {
                                 if selected_id.is_empty() {
                                     ui.colored_label(egui::Color32::YELLOW, "Please select a trip to plot GPS data.");
@@ -369,9 +374,16 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
                             }
 
                             ui.separator();
-                            if ui.button("Close Plot").clicked() {
-                                app.show_gps_plot = false;
-                            }
+
+                            // Main plotting area
+                            ui.allocate_ui_with_layout(
+                                egui::Vec2::new(ui.available_width(), ui.available_height() - 100.0),
+                                egui::Layout::top_down(egui::Align::Min),
+                                |ui| {
+                                    // Call the enhanced plot function
+                                    plots::plot_gps_data(ui, &app.scraper, &app.selected_id);
+                                }
+                            );
                         });
                     });
             },

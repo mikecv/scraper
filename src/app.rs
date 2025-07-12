@@ -148,7 +148,7 @@ impl App for MyApp {
         ui::draw_about_dialog(self, ctx);
         ui::draw_help_panel(self, ctx);
 
-        // Check if we need to plot gos data.
+        // Check if we need to plot gps data.
         if self.show_gps_plot {
             ui::draw_gps_plot_window(self, ctx);
         }
