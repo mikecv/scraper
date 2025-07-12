@@ -3,6 +3,7 @@
 use log::info;
 
 use eframe::{egui};
+use egui::epaint::{CornerRadius};
 
 use crate::plots;
 use crate::colours;
@@ -25,6 +26,7 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
                     ui.close_menu();
                 }
             });
+
             // Show menu.
             ui.menu_button("Show", |ui| {
                 ui.checkbox(&mut app.show_oot_events, "Out of trip events");
@@ -33,6 +35,7 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
                 ui.separator();                
                 ui.checkbox(&mut app.show_debug_events, "Debug events");
             });
+
             // Plot menu.
             ui.menu_button("Plot", |ui| {
                 if ui.button("GPS Data").clicked() {
@@ -40,7 +43,13 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
                     app.show_gps_plot = true;
                     ui.close_menu();
                 }
+                ui.separator();
+                let checkbox_response = ui.checkbox(&mut app.use_osm_tiles, "Use OSM tiles");
+                if checkbox_response.hovered() {
+                    checkbox_response.on_hover_text("Toggle between OSM tiles and simple plot view");
+                }
             });
+
             // View menu.
             // For toggling dark and light mode.
             ui.menu_button("View", |ui| {
@@ -55,6 +64,7 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
                     ui.close_menu();
                 }
             });
+
             // Help menu.
             ui.menu_button("Help", |ui| {
                 if ui.button("Help").clicked() {
@@ -68,6 +78,7 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
                     ui.close_menu();
                 }
             });
+
             // Quit menu.
             ui.menu_button("Quit", |ui| {
                 if ui.button("Quit").clicked() {
@@ -235,6 +246,7 @@ pub fn draw_about_dialog(app: &mut MyApp, ctx: &egui::Context) {
     }
 }
 
+// Function to draw the help panel.
 pub fn draw_help_panel(app: &mut MyApp, ctx: &egui::Context) {
 
     // Lock the global DETAILS to obtain access to the Details object.
@@ -280,7 +292,7 @@ pub fn draw_help_panel(app: &mut MyApp, ctx: &egui::Context) {
                 egui::CentralPanel::default()
                     .frame(egui::Frame::default()
                         .stroke(egui::Stroke::new(2.0, colours::border_colour(app.dark_mode)))
-                        .inner_margin(egui::Margin::same(8.0))
+                        .inner_margin(egui::Margin::same(8))
                         .fill(background_color)
                     )
                     .show(ctx, |ui| {
@@ -303,8 +315,6 @@ pub fn draw_help_panel(app: &mut MyApp, ctx: &egui::Context) {
 }
 
 // New function to draw the GPS plot window as a separate viewport.
-// Replace the draw_gps_plot_window function in ui.rs with this:
-
 pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
     if app.show_gps_plot {
 
@@ -346,12 +356,12 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
                 egui::CentralPanel::default()
                     .frame(egui::Frame::default()
                         .stroke(egui::Stroke::new(2.0, colours::border_colour(app.dark_mode)))
-                        .inner_margin(egui::Margin::same(8.0))
+                        .inner_margin(egui::Margin::same(8))
                         .fill(background_color)
                     )
                     .show(ctx, |ui| {
                         ui.vertical(|ui| {
-                            // Header section
+                            // Header section.
                             ui.horizontal(|ui| {
                                 ui.heading("GPS Data Plot");
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -375,13 +385,17 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
 
                             ui.separator();
 
-                            // Main plotting area
+                            // Main plotting area.
                             ui.allocate_ui_with_layout(
                                 egui::Vec2::new(ui.available_width(), ui.available_height() - 100.0),
                                 egui::Layout::top_down(egui::Align::Min),
                                 |ui| {
-                                    // Call the enhanced plot function
-                                    plots::plot_gps_data(ui, &app.scraper, &app.selected_id);
+                                    // Call the appropriate plot function based on OSM tiles setting.
+                                    if app.use_osm_tiles {
+                                        plots::plot_gps_data_with_osm(ui, &app.scraper, &app.selected_id, &mut app.map_memory);
+                                    } else {
+                                        plots::plot_gps_data(ui, &app.scraper, &app.selected_id);
+                                    }
                                 }
                             );
                         });
@@ -399,10 +413,11 @@ fn draw_viewport_border(ctx: &egui::Context, dark_mode: bool) {
 
     // Draw the border using rect_stroke for a cleaner look.
     let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground, egui::Id::new("viewport_border")));
-    
+
     painter.rect_stroke(
         screen_rect.shrink(border_width / 2.0),
-        0.0,
+        CornerRadius::same(0),
         egui::Stroke::new(border_width, border_color),
+        egui::epaint::StrokeKind::Inside,
     );
 }

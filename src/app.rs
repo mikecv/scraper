@@ -3,6 +3,8 @@
 use log::info;
 
 use eframe::{egui, App};
+use walkers::MapMemory;
+use egui::epaint::{CornerRadius};
 
 use crate::scraper::Scraper;
 use crate::ui;
@@ -22,6 +24,9 @@ pub struct MyApp {
     pub selected_id: Option<String>,
     pub dark_mode: bool,
     pub show_gps_plot: bool,
+    pub use_osm_tiles: bool,
+    pub map_memory: MapMemory,
+    _runtime: tokio::runtime::Runtime,
     
     // Help images.
     pub help_image_1: Option<egui::TextureHandle>,
@@ -31,6 +36,8 @@ pub struct MyApp {
 impl Default for MyApp {
     fn default() -> Self {
         info!("Creating new instance of MyApp.");
+
+        let runtime = tokio::runtime::Runtime::new().unwrap();
 
         Self {
             scraper: Scraper::default(),
@@ -45,6 +52,9 @@ impl Default for MyApp {
             selected_id: Some("".to_string()),
             dark_mode: true,
             show_gps_plot: false,
+            use_osm_tiles: true,
+            map_memory: MapMemory::default(),
+            _runtime: runtime,
 
             // Help images.
             help_image_1: None,
@@ -174,8 +184,9 @@ impl MyApp {
         // Draw border as a frame (hollow rectangle).
         painter.rect_stroke(
             screen_rect.shrink(border_width / 2.0),
-            0.0,
+            CornerRadius::same(0),
             egui::Stroke::new(border_width, border_color),
+            egui::epaint::StrokeKind::Inside,
         );
     }
 }
