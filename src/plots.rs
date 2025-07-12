@@ -7,7 +7,7 @@ use egui::epaint;
 use geo_types::Point;
 use chrono::{DateTime, NaiveDateTime, Utc, ParseError};
 use walkers::{Map, MapMemory, HttpTiles, sources::OpenStreetMap};
-// use std::sync::Arc; // Removed unused import
+// Removed unused import: use std::sync::Arc;
 
 use crate::scraper::{Scraper, ScrapedData};
 
@@ -247,7 +247,7 @@ pub fn plot_gps_data_with_osm(
     selected_id: &Option<String>, 
     map_memory: &mut MapMemory,
     tiles: &mut HttpTiles, // Keep this one
-) { // Removed the duplicate &mut HttpTiles parameter
+) {
     info!("Initiating GPS plotting with OSM tiles.");
 
     // Check to see if there is a current trip selected.
@@ -291,15 +291,10 @@ pub fn plot_gps_data_with_osm(
     let centre_position = walkers::Position::from(Point::new(centre_lon, centre_lat));
 
     // Update map_memory with the new centre (but only once, not every frame)
-    // Removed map_memory.center() as it doesn't exist.
-    // Instead, you'd typically set the center via map_memory.center_at()
-    // or let Map's initial state handle it, often just setting it once.
-    // For this example, let's always set it to the center of the plot points
-    // if the map is not already centered.
-    // A more robust solution might involve checking if the current center
-    // is "close enough" or if it has been explicitly set by user interaction.
-    // For now, let's ensure it's centered on the GPS data.
     map_memory.center_at(centre_position);
+
+
+
 
 
     // Create the map widget with proper size
@@ -311,52 +306,25 @@ pub fn plot_gps_data_with_osm(
 
     // Custom drawing overlay for GPS points and tracks
     let painter = ui.painter_at(map_response.rect);
-    
-    // Convert GPS coordinates to screen coordinates
-    let bounds = map_response.rect;
-    
-    // Calculate bounds for coordinate transformation
-    let min_lat = plot_points.iter().map(|p| p.lat).fold(f64::INFINITY, f64::min);
-    let max_lat = plot_points.iter().map(|p| p.lat).fold(f64::NEG_INFINITY, f64::max);
-    let min_lon = plot_points.iter().map(|p| p.lon).fold(f64::INFINITY, f64::min);
-    let max_lon = plot_points.iter().map(|p| p.lon).fold(f64::NEG_INFINITY, f64::max);
-    
-    // Add padding to bounds
-    let lat_range = max_lat - min_lat;
-    let lon_range = max_lon - min_lon;
-    let padding = 0.05; // Smaller padding for tighter fit
-    
-    let padded_min_lat = min_lat - lat_range * padding;
-    let padded_max_lat = max_lat + lat_range * padding;
-    let padded_min_lon = min_lon - lon_range * padding;
-    let padded_max_lon = max_lon + lon_range * padding;
-    
-    // Function to convert GPS to screen coordinates
-    // This conversion needs to be aware of the map's current zoom and pan.
-    // Instead of a simple linear transformation, you need to use the map_memory
-    // to transform geographical coordinates to screen coordinates.
-    // The Map widget itself provides `screen_position` methods or you can
-    // calculate it based on the `MapMemory`'s internal state.
-    // For a quick fix to make it compile, we'll use a placeholder `screen_position`
-    // that assumes a fixed mapping for now, but this will need real integration
-    // with `walkers`'s coordinate system.
-    let gps_to_screen = |lat: f64, lon: f64| -> egui::Pos2 {
-        // This is a simplified transformation for demonstration purposes.
-        // In a real application with `walkers`, you would use something like:
-        // map_memory.project_position_to_screen(walkers::Position::from(Point::new(lon, lat)), bounds)
-        // or a method provided by the Map widget's response.
 
-        // Placeholder: map points relative to the bounds.
-        // This won't accurately reflect zoom/pan of the Map widget.
-        let norm_x = (lon - padded_min_lon) / (padded_max_lon - padded_min_lon);
-        let norm_y = (padded_max_lat - lat) / (padded_max_lat - padded_min_lat); // Flip Y
+    // IMPORTANT CHANGE HERE:
+    // Create an explicit immutable reference to map_memory *before* defining the closure.
+    // This ensures the closure captures an &MapMemory, not &mut MapMemory,
+    // which might be causing the compiler confusion regarding method availability.
+    let map_memory_ref: &MapMemory = map_memory; 
+
+    // Function to convert GPS to screen coordinates using map_memory_ref.
+    let gps_to_screen = |lat: f64, lon: f64| -> egui::Pos2 {
+        let geo_point = Point::new(lon, lat); // geo_types::Point expects (longitude, latitude)
+        let walkers_position = walkers::Position::from(geo_point);
         
-        egui::Pos2::new(
-            bounds.left() + norm_x as f32 * bounds.width(),
-            bounds.top() + norm_y as f32 * bounds.height(),
-        )
+        // Use the explicitly created immutable reference.
+        map_memory_ref.project_position_to_screen(walkers_position, map_response.rect)
     };
+
     
+
+
     // Draw connecting lines between GPS points
     for window in plot_points.windows(2) {
         let prev_point = &window[0];
@@ -365,30 +333,37 @@ pub fn plot_gps_data_with_osm(
         let prev_screen = gps_to_screen(prev_point.lat, prev_point.lon);
         let curr_screen = gps_to_screen(curr_point.lat, curr_point.lon);
         
-        painter.line_segment(
-            [prev_screen, curr_screen],
-            egui::Stroke::new(3.0, egui::Color32::from_rgba_unmultiplied(0, 120, 255, 200))
-        );
+        // Filter out points that are outside the visible map area
+        // to avoid drawing long lines across the screen when panning.
+        if map_response.rect.contains(prev_screen) && map_response.rect.contains(curr_screen) {
+            painter.line_segment(
+                [prev_screen, curr_screen],
+                egui::Stroke::new(3.0, egui::Color32::from_rgba_unmultiplied(0, 120, 255, 200))
+            );
+        }
     }
     
     // Draw GPS points
     for point in &plot_points {
         let screen_pos = gps_to_screen(point.lat, point.lon);
         
-        // Color based on speed
-        let color = if point.speed > 100 {
-            egui::Color32::RED
-        } else if point.speed > 80 {
-            egui::Color32::from_rgb(255, 165, 0) // Orange
-        } else if point.speed > 60 {
-            egui::Color32::BLUE
-        } else {
-            egui::Color32::GREEN
-        };
-        
-        // Draw the point with outline
-        painter.circle_filled(screen_pos, 5.0, color);
-        painter.circle_stroke(screen_pos, 5.0, egui::Stroke::new(2.0, egui::Color32::WHITE));
+        // Filter out points outside the visible map area to prevent drawing off-screen.
+        if map_response.rect.contains(screen_pos) {
+            // Color based on speed
+            let color = if point.speed > 100 {
+                egui::Color32::RED
+            } else if point.speed > 80 {
+                egui::Color32::from_rgb(255, 165, 0) // Orange
+            } else if point.speed > 60 {
+                egui::Color32::BLUE
+            } else {
+                egui::Color32::GREEN
+            };
+            
+            // Draw the point with outline
+            painter.circle_filled(screen_pos, 5.0, color);
+            painter.circle_stroke(screen_pos, 5.0, egui::Stroke::new(2.0, egui::Color32::WHITE));
+        }
     }
     
     // Handle map interactions
@@ -411,7 +386,7 @@ pub fn plot_gps_data_with_osm(
     ui.label(format!("Total GPS points: {}", plot_points.len()));
     
     if let (Some(first), Some(last)) = (plot_points.first(), plot_points.last()) {
-        ui.label(format!("Trip duration: {} to {}",
+        ui.label(format!("Trip duration: {} to {}", 
             first._timestamp.format("%H:%M:%S"),
             last._timestamp.format("%H:%M:%S")));
     }
