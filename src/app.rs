@@ -3,7 +3,7 @@
 use log::info;
 
 use eframe::{egui, App};
-use walkers::MapMemory;
+use walkers::{MapMemory, sources::OpenStreetMap}; // Removed HttpTiles as it's not directly used here
 use egui::epaint::{CornerRadius};
 
 use crate::scraper::Scraper;
@@ -26,6 +26,7 @@ pub struct MyApp {
     pub show_gps_plot: bool,
     pub use_osm_tiles: bool,
     pub map_memory: MapMemory,
+    pub map_tiles: Option<walkers::HttpTiles>, // Changed type to walkers::HttpTiles
     _runtime: tokio::runtime::Runtime,
     
     // Help images.
@@ -54,6 +55,7 @@ impl Default for MyApp {
             show_gps_plot: false,
             use_osm_tiles: true,
             map_memory: MapMemory::default(),
+            map_tiles: None,
             _runtime: runtime,
 
             // Help images.
@@ -64,6 +66,15 @@ impl Default for MyApp {
 }
 
 impl MyApp {
+    // Initialize map tiles when needed
+    pub fn ensure_map_tiles(&mut self, _ctx: &egui::Context) { // Changed ctx to _ctx to suppress unused warning
+        if self.map_tiles.is_none() {
+            info!("Initializing OSM tiles");
+            // HttpTiles needs a context to create itself, so pass it here.
+            self.map_tiles = Some(walkers::HttpTiles::new(OpenStreetMap, _ctx.clone())); // Pass cloned ctx
+        }
+    }
+
     // Load the about icon (call this once when needed);
     pub fn load_about_icon(&mut self, ctx: &egui::Context) {
         if self.about_icon.is_none() {

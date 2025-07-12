@@ -321,6 +321,11 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
         // Lock the global DETAILS to obtain access settings.
         let details = DETAILS.lock().unwrap().clone();
 
+        // Ensure map tiles are initialized if OSM is selected
+        if app.use_osm_tiles {
+            app.ensure_map_tiles(ctx);
+        }
+
         ctx.show_viewport_immediate(
             egui::ViewportId::from_hash_of("gps_plot_window"),
             egui::ViewportBuilder::default()
@@ -392,7 +397,14 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
                                 |ui| {
                                     // Call the appropriate plot function based on OSM tiles setting.
                                     if app.use_osm_tiles {
-                                        plots::plot_gps_data_with_osm(ui, &app.scraper, &app.selected_id, &mut app.map_memory);
+                                        // Pass the Option<HttpTiles> directly, and unwrap it safely within the function.
+                                        // You need to ensure app.map_tiles is Some(HttpTiles) when this path is taken.
+                                        // The ensure_map_tiles call earlier handles this.
+                                        if let Some(map_tiles) = &mut app.map_tiles {
+                                            plots::plot_gps_data_with_osm(ui, &app.scraper, &app.selected_id, &mut app.map_memory, map_tiles);
+                                        } else {
+                                            ui.label("Error: OSM tiles not initialized.");
+                                        }
                                     } else {
                                         plots::plot_gps_data(ui, &app.scraper, &app.selected_id);
                                     }
