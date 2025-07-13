@@ -3,7 +3,7 @@
 use log::info;
 
 use eframe::{egui, App};
-use walkers::{MapMemory, sources::OpenStreetMap}; // Removed HttpTiles as it's not directly used here
+use walkers::{MapMemory, sources::OpenStreetMap};
 use egui::epaint::{CornerRadius};
 
 use crate::scraper::Scraper;
@@ -26,7 +26,7 @@ pub struct MyApp {
     pub show_gps_plot: bool,
     pub use_osm_tiles: bool,
     pub map_memory: MapMemory,
-    pub map_tiles: Option<walkers::HttpTiles>, // Changed type to walkers::HttpTiles
+    pub map_tiles: Option<walkers::HttpTiles>,
     _runtime: tokio::runtime::Runtime,
     
     // Help images.
