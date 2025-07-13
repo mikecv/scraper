@@ -401,7 +401,7 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
                                         // You need to ensure app.map_tiles is Some(HttpTiles) when this path is taken.
                                         // The ensure_map_tiles call earlier handles this.
                                         if let Some(map_tiles) = &mut app.map_tiles {
-                                            plots::plot_gps_data_with_osm(ui, &app.scraper, &app.selected_id, &mut app.map_memory, map_tiles);
+                                            plots::plot_gps_data_with_osm(ui, &app.scraper, &app.selected_id, &mut app.map_memory, map_tiles, &mut app.last_trip_id);
                                         } else {
                                             ui.label("Error: OSM tiles not initialized.");
                                         }

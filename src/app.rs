@@ -26,6 +26,7 @@ pub struct MyApp {
     pub show_gps_plot: bool,
     pub use_osm_tiles: bool,
     pub map_memory: MapMemory,
+    pub last_trip_id: Option<String>,
     pub map_tiles: Option<walkers::HttpTiles>,
     _runtime: tokio::runtime::Runtime,
     
@@ -55,6 +56,7 @@ impl Default for MyApp {
             show_gps_plot: false,
             use_osm_tiles: true,
             map_memory: MapMemory::default(),
+            last_trip_id: None,
             map_tiles: None,
             _runtime: runtime,
 

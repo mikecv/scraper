@@ -7,8 +7,7 @@ use egui::epaint;
 use geo_types::Point;
 use chrono::{DateTime, NaiveDateTime, Utc, ParseError};
 use walkers::{Map, MapMemory, HttpTiles};
-// use walkers::{Map, MapMemory, HttpTiles, sources::OpenStreetMap};
-// Removed unused import: use std::sync::Arc;
+use walkers::Plugin;
 
 use crate::scraper::{Scraper, ScrapedData};
 
@@ -37,24 +36,83 @@ impl From<&ScrapedData> for PlotPoint {
     }
 }
 
+// Create a plugin for GPS plotting.
+pub struct GpsPlotPlugin {
+    pub plot_points: Vec<PlotPoint>,
+}
+
+// Instantiate plugin for walkers API.
+impl Plugin for GpsPlotPlugin {
+    fn run(
+        self: Box<Self>,
+        ui: &mut egui::Ui,
+        response: &egui::Response,
+        projector: &walkers::Projector,
+        _map_memory: &MapMemory,
+    ) {
+        // Get the painter from the UI
+        let painter = ui.painter();
+        
+        // Draw connecting lines between GPS points.
+        for window in self.plot_points.windows(2) {
+            let prev_point = &window[0];
+            let curr_point = &window[1];
+            
+            // Use walkers' projector to convert GPS to screen coordinates.
+            let prev_pos = walkers::Position::from(Point::new(prev_point.lon, prev_point.lat));
+            let curr_pos = walkers::Position::from(Point::new(curr_point.lon, curr_point.lat));
+            
+            // Project to screen coordinates using walkers' projector
+            let prev_screen = projector.project(prev_pos);
+            let curr_screen = projector.project(curr_pos);
+            
+            // Convert Vec2 to Pos2 for proper positioning.
+            let prev_screen_pos = egui::Pos2::new(prev_screen.x, prev_screen.y);
+            let curr_screen_pos = egui::Pos2::new(curr_screen.x, curr_screen.y);
+            
+            // Only draw if both points are within the visible area.
+            if response.rect.contains(prev_screen_pos) && response.rect.contains(curr_screen_pos) {
+                painter.line_segment(
+                    [prev_screen_pos, curr_screen_pos],
+                    egui::Stroke::new(3.0, egui::Color32::from_rgba_unmultiplied(0, 120, 255, 200))
+                );
+            }
+        }
+        
+        // Draw GPS points.
+        for point in &self.plot_points {
+            let position = walkers::Position::from(Point::new(point.lon, point.lat));
+            let screen_vec = projector.project(position);
+            
+            // Convert Vec2 to Pos2.
+            let screen_pos = egui::Pos2::new(screen_vec.x, screen_vec.y);
+            
+            // Only draw if the point is within the visible area.
+            if response.rect.contains(screen_pos) {
+                // Color based on speed
+                let color = if point.speed > 100 {
+                    egui::Color32::RED
+                } else if point.speed > 80 {
+                    egui::Color32::from_rgb(255, 165, 0)
+                } else if point.speed > 60 {
+                    egui::Color32::BLUE
+                } else {
+                    egui::Color32::GREEN
+                };
+                
+                // Draw the point with outline.
+                painter.circle_filled(screen_pos, 5.0, color);
+                painter.circle_stroke(screen_pos, 5.0, egui::Stroke::new(2.0, egui::Color32::WHITE));
+            }
+        }
+    }
+}
+
 // Helper function for getting dates.
 pub fn parse_datetime(date_str: &str) -> Result<DateTime<Utc>, ParseError> {
     let naive = NaiveDateTime::parse_from_str(date_str, "%d/%m/%Y %H:%M:%S")?;
     Ok(naive.and_utc())
 }
-
-// // Struct to hold tiles instance persistently
-// pub struct MapTiles {
-//     pub tiles: HttpTiles,
-// }
-
-// impl MapTiles {
-//     pub fn new(ctx: egui::Context) -> Self {
-//         Self {
-//             tiles: HttpTiles::new(OpenStreetMap, ctx),
-//         }
-//     }
-// }
 
 // Function to plot GPS data using custom drawing.
 pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<String>) {
@@ -109,7 +167,7 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
         ui.visuals().extreme_bg_color,
     );
 
-    // Draw border - Fixed: Use StrokeKind::Inside
+    // Draw border - Fixed: Use StrokeKind::Inside.
     ui.painter().rect_stroke(
         rect,
         epaint::CornerRadius::same(5),
@@ -241,33 +299,24 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
     ui.label(format!("Longitude range: {:.4} to {:.4}", min_lon + lon_range * padding, max_lon - lon_range * padding));
 }
 
-
-
-
-
-
-
-
-
-// Replace the plot_gps_data_with_osm function with this corrected version
-// Alternative: Much simpler approach that should work reliably
-// Replace the problematic section with this simpler coordinate transformation
-
+// Plot gps points with OSM tiles.
 pub fn plot_gps_data_with_osm(
     ui: &mut egui::Ui, 
     scraper: &Scraper, 
     selected_id: &Option<String>, 
     map_memory: &mut MapMemory,
-    tiles: &mut HttpTiles, 
+    tiles: &mut HttpTiles,
+    last_trip_id: &mut Option<String>,
 ) {
-    info!("Initiating GPS plotting with OSM tiles (simple approach).");
+    info!("Initiating GPS plotting with OSM tiles (using plugin system).");
 
-    // [Keep the same validation logic as before]
+    // Check to see if there is a current trip selected.
     if selected_id.as_deref() == Some("") {
         ui.label("No trip selected.");
         return;
     }
 
+    // Get id of selected trip, or return if no trip selected.
     let selected_trip = match selected_id.as_ref() {
         Some(id) => id,
         None => {
@@ -276,6 +325,7 @@ pub fn plot_gps_data_with_osm(
         }
     };
 
+    // Get all the plotting points.
     let plot_points: Vec<PlotPoint> = scraper.scrapings.iter()
         .filter(|scraped| scraped.trip_num == *selected_trip)
         .filter(|scraped| scraped.gps_locn.lat != 0.0 && scraped.gps_locn.long != 0.0)
@@ -287,79 +337,40 @@ pub fn plot_gps_data_with_osm(
         return;
     }
 
-    // Calculate bounds for normalization
-    let min_lat = plot_points.iter().map(|p| p.lat).fold(f64::INFINITY, f64::min);
-    let max_lat = plot_points.iter().map(|p| p.lat).fold(f64::NEG_INFINITY, f64::max);
-    let min_lon = plot_points.iter().map(|p| p.lon).fold(f64::INFINITY, f64::min);
-    let max_lon = plot_points.iter().map(|p| p.lon).fold(f64::NEG_INFINITY, f64::max);
+    // Calculate the centre point for the map.
+    let centre_lat = plot_points.iter().map(|p| p.lat).sum::<f64>() / plot_points.len() as f64;
+    let centre_lon = plot_points.iter().map(|p| p.lon).sum::<f64>() / plot_points.len() as f64;
 
-    // Calculate center for map
-    let centre_lat = (min_lat + max_lat) / 2.0;
-    let centre_lon = (min_lon + max_lon) / 2.0;
+    // Construct geo_types::Point then walkers::Position.
     let centre_position = walkers::Position::from(Point::new(centre_lon, centre_lat));
 
-    // Center the map
-    map_memory.center_at(centre_position);
+    // Only centre the map if the trip has changed.
+    // This allows user panning and zooming to work properly.
+    let trip_changed = last_trip_id.as_ref() != Some(selected_trip);
+    if trip_changed {
+        map_memory.center_at(centre_position);
+        *last_trip_id = Some(selected_trip.clone());
+    }
 
-    // Create the map widget
-    let map_size = egui::Vec2::new(ui.available_width().min(800.0), 400.0);
-    let map_response = ui.add_sized(map_size, Map::new(Some(tiles), map_memory, centre_position));
-
-    // Simple coordinate transformation - normalize GPS coordinates to screen space
-    let map_rect = map_response.rect.shrink(20.0); // Leave some margin
-    
-    let lat_range = max_lat - min_lat;
-    let lon_range = max_lon - min_lon;
-    
-    // Add padding to avoid edge clipping
-    let padding = 0.1;
-    let padded_lat_range = lat_range * (1.0 + padding);
-    let padded_lon_range = lon_range * (1.0 + padding);
-    
-    let gps_to_screen = |lat: f64, lon: f64| -> egui::Pos2 {
-        // Normalize coordinates to 0-1 range
-        let norm_x = (lon - centre_lon + padded_lon_range / 2.0) / padded_lon_range;
-        let norm_y = (lat - centre_lat + padded_lat_range / 2.0) / padded_lat_range;
-        
-        // Convert to screen coordinates
-        let screen_x = map_rect.left() + norm_x as f32 * map_rect.width();
-        let screen_y = map_rect.bottom() - norm_y as f32 * map_rect.height(); // Flip Y axis
-        
-        egui::Pos2::new(screen_x, screen_y)
+    // Create the GPS plotting plugin.
+    let gps_plugin = GpsPlotPlugin { 
+        plot_points: plot_points.clone() 
     };
 
-    let painter = ui.painter_at(map_response.rect);
-
-    // Draw connecting lines
-    for window in plot_points.windows(2) {
-        let prev_screen = gps_to_screen(window[0].lat, window[0].lon);
-        let curr_screen = gps_to_screen(window[1].lat, window[1].lon);
-        
-        painter.line_segment(
-            [prev_screen, curr_screen],
-            egui::Stroke::new(3.0, egui::Color32::from_rgba_unmultiplied(0, 120, 255, 200))
-        );
+    // Create the map widget with the plugin.
+    let map_size = egui::Vec2::new(ui.available_width().min(800.0), 400.0);
+    let map_response = ui.add_sized(
+        map_size,
+        Map::new(Some(tiles), map_memory, centre_position)
+            .with_plugin(gps_plugin)
+    );
+    
+    // Handle map interactions.
+    if map_response.hovered() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::Grab);
     }
     
-    // Draw GPS points
-    for point in &plot_points {
-        let screen_pos = gps_to_screen(point.lat, point.lon);
-        
-        let color = if point.speed > 100 {
-            egui::Color32::RED
-        } else if point.speed > 80 {
-            egui::Color32::from_rgb(255, 165, 0)
-        } else if point.speed > 60 {
-            egui::Color32::BLUE
-        } else {
-            egui::Color32::GREEN
-        };
-        
-        painter.circle_filled(screen_pos, 5.0, color);
-        painter.circle_stroke(screen_pos, 5.0, egui::Stroke::new(2.0, egui::Color32::WHITE));
-    }
-    
-    // [Keep the same legend and statistics as before]
+    // Show legend.
     ui.separator();
     ui.horizontal(|ui| {
         ui.label("Speed legend:");
@@ -369,6 +380,7 @@ pub fn plot_gps_data_with_osm(
         ui.colored_label(egui::Color32::RED, "● >100 km/h");
     });
     
+    // Show some statistics.
     ui.separator();
     ui.label(format!("Total GPS points: {}", plot_points.len()));
     
@@ -378,6 +390,9 @@ pub fn plot_gps_data_with_osm(
             last._timestamp.format("%H:%M:%S")));
     }
     
+    // Show centre coordinates
     ui.label(format!("Map centre: {:.6}, {:.6}", centre_lat, centre_lon));
+    
+    // Force repaint to ensure tiles keep loading.
     ui.ctx().request_repaint();
 }
