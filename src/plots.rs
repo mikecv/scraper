@@ -41,6 +41,81 @@ pub struct GpsPlotPlugin {
     pub plot_points: Vec<PlotPoint>,
 }
 
+impl GpsPlotPlugin {
+    // Draw a start pin (green flag style).
+    fn draw_start_pin(&self, painter: &egui::Painter, pos: egui::Pos2) {
+        let pin_height = 20.0;
+        let _pin_width = 12.0;
+        let flag_height = 8.0;
+        let flag_width = 16.0;
+        
+        // Draw the pin pole (dark gray).
+        painter.line_segment(
+            [pos, pos + egui::Vec2::new(0.0, -pin_height)],
+            egui::Stroke::new(2.0, egui::Color32::DARK_GRAY)
+        );
+        
+        // Draw the flag (bright green).
+        let flag_points = [
+            pos + egui::Vec2::new(0.0, -pin_height),
+            pos + egui::Vec2::new(flag_width, -pin_height + flag_height/2.0),
+            pos + egui::Vec2::new(0.0, -pin_height + flag_height),
+        ];
+        
+        painter.add(egui::Shape::convex_polygon(
+            flag_points.to_vec(),
+            egui::Color32::from_rgb(0, 200, 0),
+            egui::Stroke::new(1.0, egui::Color32::DARK_GREEN)
+        ));
+        
+        // Draw a small circle at the base.
+        painter.circle_filled(pos, 4.0, egui::Color32::WHITE);
+        painter.circle_stroke(pos, 4.0, egui::Stroke::new(2.0, egui::Color32::DARK_GREEN));
+    }
+    
+    // Draw a finish pin (checkered flag style).
+    fn draw_finish_pin(&self, painter: &egui::Painter, pos: egui::Pos2) {
+        let pin_height = 20.0;
+        let flag_height = 12.0;
+        let flag_width = 16.0;
+        let checker_size = 3.0;
+        
+        // Draw the pin pole (dark gray).
+        painter.line_segment(
+            [pos, pos + egui::Vec2::new(0.0, -pin_height)],
+            egui::Stroke::new(2.0, egui::Color32::DARK_GRAY)
+        );
+        
+        // Draw the flag background (white).
+        let flag_rect = egui::Rect::from_min_size(
+            pos + egui::Vec2::new(0.0, -pin_height),
+            egui::Vec2::new(flag_width, flag_height)
+        );
+        painter.rect_filled(flag_rect, egui::CornerRadius::ZERO, egui::Color32::WHITE);
+        painter.rect_stroke(flag_rect, egui::CornerRadius::ZERO, egui::Stroke::new(1.0, egui::Color32::BLACK), egui::epaint::StrokeKind::Inside);
+        
+        // Draw checkered pattern.
+        let checkers_x = (flag_width / checker_size) as i32;
+        let checkers_y = (flag_height / checker_size) as i32;
+        
+        for x in 0..checkers_x {
+            for y in 0..checkers_y {
+                if (x + y) % 2 == 1 {
+                    let checker_rect = egui::Rect::from_min_size(
+                        pos + egui::Vec2::new(x as f32 * checker_size, -pin_height + y as f32 * checker_size),
+                        egui::Vec2::new(checker_size, checker_size)
+                    );
+                    painter.rect_filled(checker_rect, egui::CornerRadius::ZERO, egui::Color32::BLACK);
+                }
+            }
+        }
+        
+        // Draw a small circle at the base.
+        painter.circle_filled(pos, 4.0, egui::Color32::WHITE);
+        painter.circle_stroke(pos, 4.0, egui::Stroke::new(2.0, egui::Color32::BLACK));
+    }
+}
+
 // Instantiate plugin for walkers API.
 impl Plugin for GpsPlotPlugin {
     fn run(
@@ -50,7 +125,7 @@ impl Plugin for GpsPlotPlugin {
         projector: &walkers::Projector,
         _map_memory: &MapMemory,
     ) {
-        // Get the painter from the UI
+        // Get the painter from the UI.
         let painter = ui.painter();
         
         // Draw connecting lines between GPS points.
@@ -62,7 +137,7 @@ impl Plugin for GpsPlotPlugin {
             let prev_pos = walkers::Position::from(Point::new(prev_point.lon, prev_point.lat));
             let curr_pos = walkers::Position::from(Point::new(curr_point.lon, curr_point.lat));
             
-            // Project to screen coordinates using walkers' projector
+            // Project to screen coordinates using walkers' projector.
             let prev_screen = projector.project(prev_pos);
             let curr_screen = projector.project(curr_pos);
             
@@ -80,7 +155,7 @@ impl Plugin for GpsPlotPlugin {
         }
         
         // Draw GPS points.
-        for point in &self.plot_points {
+        for (i, point) in self.plot_points.iter().enumerate() {
             let position = walkers::Position::from(Point::new(point.lon, point.lat));
             let screen_vec = projector.project(position);
             
@@ -89,20 +164,32 @@ impl Plugin for GpsPlotPlugin {
             
             // Only draw if the point is within the visible area.
             if response.rect.contains(screen_pos) {
-                // Color based on speed
-                let color = if point.speed > 100 {
-                    egui::Color32::RED
-                } else if point.speed > 80 {
-                    egui::Color32::from_rgb(255, 165, 0)
-                } else if point.speed > 60 {
-                    egui::Color32::BLUE
-                } else {
-                    egui::Color32::GREEN
-                };
+                // Check if this is start or end point.
+                let is_start = i == 0;
+                let is_end = i == self.plot_points.len() - 1;
                 
-                // Draw the point with outline.
-                painter.circle_filled(screen_pos, 5.0, color);
-                painter.circle_stroke(screen_pos, 5.0, egui::Stroke::new(2.0, egui::Color32::WHITE));
+                if is_start {
+                    // Draw start pin (green flag-style)
+                    self.draw_start_pin(&painter, screen_pos);
+                } else if is_end {
+                    // Draw finish pin (checkered flag-style).
+                    self.draw_finish_pin(&painter, screen_pos);
+                } else {
+                    // Regular GPS point - colour based on speed.
+                    let color = if point.speed > 100 {
+                        egui::Color32::RED
+                    } else if point.speed > 80 {
+                        egui::Color32::from_rgb(255, 165, 0)
+                    } else if point.speed > 60 {
+                        egui::Color32::BLUE
+                    } else {
+                        egui::Color32::GREEN
+                    };
+                    
+                    // Draw the point with outline.
+                    painter.circle_filled(screen_pos, 5.0, color);
+                    painter.circle_stroke(screen_pos, 5.0, egui::Stroke::new(2.0, egui::Color32::WHITE));
+                }
             }
         }
     }
@@ -167,7 +254,7 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
         ui.visuals().extreme_bg_color,
     );
 
-    // Draw border - Fixed: Use StrokeKind::Inside.
+    // Draw border. Use StrokeKind::Inside
     ui.painter().rect_stroke(
         rect,
         epaint::CornerRadius::same(5),
@@ -289,7 +376,7 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
     ui.label(format!("Total GPS points: {}", plot_points.len()));
     
     if let (Some(first), Some(last)) = (plot_points.first(), plot_points.last()) {
-        ui.label(format!("Trip duration: {} to {}", 
+        ui.label(format!("Trip start / end: {} to {}", 
             first._timestamp.format("%H:%M:%S"),
             last._timestamp.format("%H:%M:%S")));
     }
@@ -306,6 +393,7 @@ pub fn plot_gps_data_with_osm(
     selected_id: &Option<String>, 
     map_memory: &mut MapMemory,
     tiles: &mut HttpTiles,
+    // Track the last trip to detect changes
     last_trip_id: &mut Option<String>,
 ) {
     info!("Initiating GPS plotting with OSM tiles (using plugin system).");
@@ -385,7 +473,7 @@ pub fn plot_gps_data_with_osm(
     ui.label(format!("Total GPS points: {}", plot_points.len()));
     
     if let (Some(first), Some(last)) = (plot_points.first(), plot_points.last()) {
-        ui.label(format!("Trip duration: {} to {}", 
+        ui.label(format!("Trip start / end: {} to {}", 
             first._timestamp.format("%H:%M:%S"),
             last._timestamp.format("%H:%M:%S")));
     }
@@ -393,6 +481,6 @@ pub fn plot_gps_data_with_osm(
     // Show centre coordinates
     ui.label(format!("Map centre: {:.6}, {:.6}", centre_lat, centre_lon));
     
-    // Force repaint to ensure tiles keep loading.
+    // Force repaint to ensure tiles keep loading
     ui.ctx().request_repaint();
 }
