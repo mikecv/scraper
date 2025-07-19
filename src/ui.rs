@@ -262,7 +262,7 @@ pub fn draw_help_panel(app: &mut MyApp, ctx: &egui::Context) {
             egui::ViewportBuilder::default()
                 .with_title("Scraper Help")
                 .with_inner_size([details.help_win_height, details.help_win_width])
-                .with_resizable(true),
+                .with_resizable(false),
             |ctx, class| {
                 assert!(class == egui::ViewportClass::Immediate);
 
@@ -331,7 +331,7 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
             egui::ViewportBuilder::default()
                 .with_title("GPS Data Plot")
                 .with_inner_size([details.gps_win_height, details.gps_win_width])
-                .with_resizable(true),
+                .with_resizable(false),
             |ctx, class| {
                 assert!(class == egui::ViewportClass::Immediate);
 
@@ -377,15 +377,13 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
                             });
                             ui.separator();
 
-                            // Trip selection status
+                            // Trip selection status.
                             if let Some(selected_id) = &app.selected_id {
                                 if selected_id.is_empty() {
-                                    ui.colored_label(egui::Color32::YELLOW, "Please select a trip to plot GPS data.");
+                                    ui.colored_label(colours::gps_nill_colour(app.dark_mode), "Please select a trip to plot GPS data.");
                                 } else {
                                     ui.label(format!("Plotting GPS data for Trip ID: {}", selected_id));
                                 }
-                            } else {
-                                ui.colored_label(egui::Color32::YELLOW, "No trip selected to plot GPS data.");
                             }
 
                             ui.separator();
@@ -421,7 +419,7 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
 fn draw_viewport_border(ctx: &egui::Context, dark_mode: bool) {
     let screen_rect = ctx.screen_rect();
     let border_width = 3.0;
-    let border_color = colours::border_colour(dark_mode);
+    let border_colour = colours::border_colour(dark_mode);
 
     // Draw the border using rect_stroke for a cleaner look.
     let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground, egui::Id::new("viewport_border")));
@@ -429,7 +427,7 @@ fn draw_viewport_border(ctx: &egui::Context, dark_mode: bool) {
     painter.rect_stroke(
         screen_rect.shrink(border_width / 2.0),
         CornerRadius::same(0),
-        egui::Stroke::new(border_width, border_color),
+        egui::Stroke::new(border_width, border_colour),
         egui::epaint::StrokeKind::Inside,
     );
 }

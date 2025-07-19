@@ -205,17 +205,10 @@ pub fn parse_datetime(date_str: &str) -> Result<DateTime<Utc>, ParseError> {
 pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<String>) {
     info!("Initiating GPS plotting.");
 
-    // Check to see if there is a current trip selected.
-    if selected_id.as_deref() == Some("") {
-        ui.label("No trip selected.");
-        return;
-    }
-
     // Get id of selected trip, or return if no trip selected.
     let selected_trip = match selected_id.as_ref() {
         Some(id) => id,
         None => {
-            ui.label("No trip selected.");
             return;
         }
     };
@@ -354,7 +347,7 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
     );
     
     ui.painter().text(
-        egui::Pos2::new(rect.left() + 5.0, rect.bottom() - 30.0),
+        egui::Pos2::new(rect.left() + 5.0, rect.bottom() - 20.0),
         egui::Align2::LEFT_BOTTOM,
         format!("Lat: {:.4}", min_lat),
         egui::FontId::default(),
@@ -393,22 +386,15 @@ pub fn plot_gps_data_with_osm(
     selected_id: &Option<String>, 
     map_memory: &mut MapMemory,
     tiles: &mut HttpTiles,
-    // Track the last trip to detect changes
+    // Track the last trip to detect changes.
     last_trip_id: &mut Option<String>,
 ) {
     info!("Initiating GPS plotting with OSM tiles (using plugin system).");
-
-    // Check to see if there is a current trip selected.
-    if selected_id.as_deref() == Some("") {
-        ui.label("No trip selected.");
-        return;
-    }
 
     // Get id of selected trip, or return if no trip selected.
     let selected_trip = match selected_id.as_ref() {
         Some(id) => id,
         None => {
-            ui.label("No trip selected.");
             return;
         }
     };
@@ -478,9 +464,9 @@ pub fn plot_gps_data_with_osm(
             last._timestamp.format("%H:%M:%S")));
     }
     
-    // Show centre coordinates
+    // Show centre coordinates.
     ui.label(format!("Map centre: {:.6}, {:.6}", centre_lat, centre_lon));
     
-    // Force repaint to ensure tiles keep loading
+    // Force repaint to ensure tiles keep loading.
     ui.ctx().request_repaint();
 }

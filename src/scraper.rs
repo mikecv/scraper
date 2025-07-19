@@ -386,6 +386,7 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
     let mut result = Vec::new();
 
     // Search for the event sub-data for the SIGNON event.
+    // CHECKED //
     match event_type.as_str() {
         "SIGNON" => {
             let sub_signon_pattern = Regex::new(r"([-\*\+0-9]+) ([0-9a-fA-F]+) (.+?) ([0-9]+) ([0-9]+) ([0-9]+) v:(.+?)$")
@@ -477,6 +478,11 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
             } else {
                 warn!("Failed to extract sub-data from CLFAIL");
             }
+        },
+
+        // Search for the event sub-data for the CONFIG event.
+        "CONFIG" => {
+                info!("CONFIG event found, no sub-data applicable.");
         },
 
         // Search for the event sub-data for the CRITICALOUTPUTSET event.
@@ -707,7 +713,47 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
             }
         },
 
-         // Search for the event sub-data for the OVERLOAD event.
+        // Search for the event sub-data for the OOS PM event.
+        "OOS PM" => {
+            let sub_oospm_pattern = Regex::new(r" v:(.+?)$")
+                .expect("Invalid OS PMOS regex pattern");
+
+            if let Some(captures) = sub_oospm_pattern.captures(sub_data) {
+                if let Some(battery) = captures.get(1) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
+            } else {
+                warn!("Failed to extract sub-data from OOS PMS");
+            }
+        },
+
+        // Search for the event sub-data for the OOS UPM event.
+        "OOS UPM" => {
+            let sub_oosupm_pattern = Regex::new(r"[0-9]+) ([0-9]+) v:(.+?)$")
+                .expect("Invalid OOS UPM regex pattern");
+
+            if let Some(captures) = sub_oosupm_pattern.captures(sub_data) {
+                if let Some(trip_id) = captures.get(1) {
+                    result.push(("Trip id".to_string(), trip_id.as_str().to_string()));
+                }
+                if let Some(reason) = captures.get(2) {
+                    result.push(("Reason".to_string(), reason.as_str().to_string()));
+                }
+                if let Some(battery) = captures.get(3) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
+            } else {
+                warn!("Failed to extract sub-data from OOS UPM");
+            }
+        },
+
+        // Search for the event sub-data for the OVERLOAD event.
         "OVERLOAD" => {
             let sub_overload_pattern = Regex::new(r"([0-9]+) ([0-9]+)(.*) v:(.+?)$")
                 .expect("Invalid OVERLOAD regex pattern");
@@ -753,7 +799,13 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
             }
         },
 
+        // Search for the event sub-data for the CONFIG event.
+        "POWERDOWN" => {
+                info!("POWERDOWN event found, no sub-data applicable.");
+        },
+
         // Search for the event sub-data for the REPORT event.
+        // CHECKED //
         "REPORT" => {
             let sub_report_pattern = Regex::new(r"(\*|[0-9]+) ([0-9]+) ([0-9]+) v:(.+?)$")
                 .expect("Invalid REPORT regex pattern");
@@ -776,6 +828,70 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
                 }
             } else {
                 warn!("Failed to extract sub-data from REPORT");
+            }
+        },
+ 
+        // Search for the event sub-data for the SERVICE event.
+        "SERVICE" => {
+            let sub_service_pattern = Regex::new(r" v:(.+?)$")
+                .expect("Invalid SERVICE regex pattern");
+
+            if let Some(captures) = sub_service_pattern.captures(sub_data) {
+                if let Some(battery) = captures.get(1) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
+            } else {
+                warn!("Failed to extract sub-data from SERVICE");
+            }
+        },
+
+
+        // Search for the event sub-data for the SWSTART event.
+        "SWSTART" => {
+            let sub_swstart_pattern = Regex::new(r"([.0-9]+ .*) v:(.+?)$")
+                .expect("Invalid SWSTART regex pattern");
+
+            if let Some(captures) = sub_swstart_pattern.captures(sub_data) {
+                if let Some(firmware) = captures.get(1) {
+                    result.push(("Firmware".to_string(), firmware.as_str().to_string()));
+                }
+                if let Some(battery) = captures.get(2) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
+            } else {
+                warn!("Failed to extract sub-data from SWSTART");
+            }
+        },
+
+        // Search for the event sub-data for the UNBUCKLED event.
+        "UNBUCKLED" => {
+            let sub_unbuckled_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([DP]) v:(.+?)$")
+                .expect("Invalid UNBUCKLED regex pattern");
+
+            if let Some(captures) = sub_unbuckled_pattern.captures(sub_data) {
+                if let Some(trip_id) = captures.get(1) {
+                    result.push(("Trip id".to_string(), trip_id.as_str().to_string()));
+                }
+                if let Some(duration) = captures.get(2) {
+                    result.push(("Duration".to_string(), duration.as_str().to_string()));
+                }
+                if let Some(seat_owner) = captures.get(3) {
+                    result.push(("Seat owner".to_string(), seat_owner.as_str().to_string()));
+                }
+                if let Some(battery) = captures.get(4) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
+            } else {
+                warn!("Failed to extract sub-data from UNBUCKLED");
             }
         },
 
@@ -833,6 +949,7 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
 
         // Search for the event sub-data for the ZONECHANGE event.
         "ZONECHANGE" => {
+        // CHECKED //
             let sub_zone_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+) v:(.+?)$")
                 .expect("Invalid ZONECHANGE regex pattern");
 
@@ -922,6 +1039,7 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
         },
 
         // Search for the event sub-data for the TRIP event.
+        // CHECKED //
         "TRIP" => {
             let sub_trip_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+)(.*) v:(.+?)$")
                 .expect("Invalid TRIP regex pattern");

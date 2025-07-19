@@ -97,8 +97,8 @@ async fn main() -> Result<(), eframe::Error> {
     info!("Configuring the options for the window.");
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_min_inner_size([details.win_width, details.win_height])
-            .with_inner_size([details.win_width, details.win_height]),
+            .with_inner_size([details.win_width, details.win_height])
+            .with_resizable(false),
         ..Default::default()
     };
 

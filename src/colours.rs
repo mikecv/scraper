@@ -74,3 +74,12 @@ pub fn border_colour(dark_mode: bool) -> Color32 {
         Color32::from_rgb(128, 128, 128)
     }
 }
+
+// Colours for no trip seleceted yet.
+pub fn gps_nill_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgb(245, 242, 13)
+    } else {
+        Color32::from_rgb(231, 17, 39)
+    }
+}

@@ -69,11 +69,11 @@ impl Default for MyApp {
 
 impl MyApp {
     // Initialize map tiles when needed
-    pub fn ensure_map_tiles(&mut self, _ctx: &egui::Context) { // Changed ctx to _ctx to suppress unused warning
+    pub fn ensure_map_tiles(&mut self, _ctx: &egui::Context) {
         if self.map_tiles.is_none() {
             info!("Initializing OSM tiles");
             // HttpTiles needs a context to create itself, so pass it here.
-            self.map_tiles = Some(walkers::HttpTiles::new(OpenStreetMap, _ctx.clone())); // Pass cloned ctx
+            self.map_tiles = Some(walkers::HttpTiles::new(OpenStreetMap, _ctx.clone()));
         }
     }
 
@@ -182,24 +182,17 @@ impl MyApp {
     // Draw border around the main window.
     fn draw_main_window_border(&self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let screen_rect = ctx.screen_rect();
-        let border_width = 3.0;
-        
-        // Get border colour based on theme - using egui's built-in colours for consistency.
-        let border_color = if self.dark_mode {
-            ctx.style().visuals.widgets.noninteractive.bg_stroke.color
-        } else {
-            ctx.style().visuals.widgets.noninteractive.bg_stroke.color
-        };
+        let border_width = 8.0;
+        let border_colour = crate::colours::border_colour(self.dark_mode);
 
-        // Draw the border using the painter at a higher layer.
+        // Use the exact same approach as other window borders.
         let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground, egui::Id::new("main_border")));
-        
-        // Draw border as a frame (hollow rectangle).
+
         painter.rect_stroke(
             screen_rect.shrink(border_width / 2.0),
             CornerRadius::same(0),
-            egui::Stroke::new(border_width, border_color),
-            egui::epaint::StrokeKind::Inside,
+            egui::Stroke::new(border_width, border_colour),
+            egui::epaint::StrokeKind::Outside,
         );
     }
 }
