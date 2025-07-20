@@ -33,6 +33,7 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
                 ui.checkbox(&mut app.show_input_events, "Input events");
                 ui.checkbox(&mut app.show_report_events, "Report events");
                 ui.separator();                
+                ui.checkbox(&mut app.show_gps_events, "GPS events");
                 ui.checkbox(&mut app.show_debug_events, "Debug events");
             });
 
@@ -190,6 +191,7 @@ pub fn draw_central_panel(app: &mut MyApp, ctx: &egui::Context) {
             app.show_input_events,
             app.show_report_events,
             app.show_debug_events,
+            app.show_gps_events,
             &mut app.selected_id,
             app.dark_mode,
         );
