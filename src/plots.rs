@@ -169,7 +169,7 @@ impl Plugin for GpsPlotPlugin {
                 let is_end = i == self.plot_points.len() - 1;
                 
                 if is_start {
-                    // Draw start pin (green flag-style)
+                    // Draw start pin (green flag-style).
                     self.draw_start_pin(&painter, screen_pos);
                 } else if is_end {
                     // Draw finish pin (checkered flag-style).
@@ -232,7 +232,8 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
     }
 
     // Create a custom plot area.
-    let plot_height = 400.0;
+    // let plot_height = 400.0;
+    let plot_height = ui.available_height() - 95.0;
     let plot_width = ui.available_width();
     
     let (rect, _response) = ui.allocate_exact_size(
@@ -269,6 +270,10 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
         max_lon = max_lon.max(point.lon);
     }
 
+    // Calculate the centre point of plot.
+    let lat_centre = min_lat + (max_lat - min_lat);
+    let lon_centre = min_lon + (max_lon - min_lon);
+
     // Add some padding.
     let lat_range = max_lat - min_lat;
     let lon_range = max_lon - min_lon;
@@ -285,7 +290,7 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
     
     // Iterate and plot points.
     for (i, point) in plot_points.iter().enumerate() {
-        // Convert GPS coordinates to screen coordinates
+        // Convert GPS coordinates to screen coordinates.
         let x = plot_rect.left() as f64 + ((point.lon - min_lon) / (max_lon - min_lon)) * plot_rect.width() as f64;
         let y = plot_rect.bottom() as f64 - ((point.lat - min_lat) / (max_lat - min_lat)) * plot_rect.height() as f64;
         
@@ -321,62 +326,35 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
         }
     }
 
-    // Add axis labels.
-    ui.painter().text(
-        egui::Pos2::new(rect.left() + 5.0, rect.bottom() - 10.0),
-        egui::Align2::LEFT_BOTTOM,
-        format!("Lon: {:.4}", min_lon),
-        egui::FontId::default(),
-        ui.visuals().text_color(),
-    );
-    
-    ui.painter().text(
-        egui::Pos2::new(rect.right() - 5.0, rect.bottom() - 10.0),
-        egui::Align2::RIGHT_BOTTOM,
-        format!("Lon: {:.4}", max_lon),
-        egui::FontId::default(),
-        ui.visuals().text_color(),
-    );
-    
-    ui.painter().text(
-        egui::Pos2::new(rect.left() + 5.0, rect.top() + 10.0),
-        egui::Align2::LEFT_TOP,
-        format!("Lat: {:.4}", max_lat),
-        egui::FontId::default(),
-        ui.visuals().text_color(),
-    );
-    
-    ui.painter().text(
-        egui::Pos2::new(rect.left() + 5.0, rect.bottom() - 20.0),
-        egui::Align2::LEFT_BOTTOM,
-        format!("Lat: {:.4}", min_lat),
-        egui::FontId::default(),
-        ui.visuals().text_color(),
-    );
-
     // Show legend.
     ui.separator();
     ui.horizontal(|ui| {
         ui.label("Speed legend:");
-        ui.colored_label(egui::Color32::GREEN, "● 60 km/h");
+        ui.colored_label(egui::Color32::GREEN, "● ≤60 km/h");
         ui.colored_label(egui::Color32::ORANGE, "● 60-80 km/h");
         ui.colored_label(egui::Color32::BLUE, "● 80-100 km/h");
-        ui.colored_label(egui::Color32::RED, "● 100 km/h");
+        ui.colored_label(egui::Color32::RED, "● >100 km/h");
     });
 
     // Show some statistics.
     ui.separator();
-    ui.label(format!("Total GPS points: {}", plot_points.len()));
+    ui.horizontal(|ui| {
+        ui.label("GPS points:");
+        ui.strong(format!("{}", plot_points.len()));
+    });
     
     if let (Some(first), Some(last)) = (plot_points.first(), plot_points.last()) {
-        ui.label(format!("Trip start / end: {} to {}", 
-            first._timestamp.format("%H:%M:%S"),
-            last._timestamp.format("%H:%M:%S")));
+        ui.horizontal(|ui| {
+            ui.label("Trip time:");
+            ui.strong(format!("{} to {}", first._timestamp.format("%H:%M:%S"), last._timestamp.format("%H:%M:%S")));
+        });
     }
 
-    // Show coordinate range.
-    ui.label(format!("Latitude range: {:.4} to {:.4}", min_lat + lat_range * padding, max_lat - lat_range * padding));
-    ui.label(format!("Longitude range: {:.4} to {:.4}", min_lon + lon_range * padding, max_lon - lon_range * padding));
+    // Show crntrepoint of plot.
+    ui.horizontal(|ui| {
+        ui.label("Map centre:");
+        ui.strong(format!("{:.6}, {:.6}", lat_centre, lon_centre));
+    });
 }
 
 // Plot gps points with OSM tiles.
@@ -386,7 +364,6 @@ pub fn plot_gps_data_with_osm(
     selected_id: &Option<String>, 
     map_memory: &mut MapMemory,
     tiles: &mut HttpTiles,
-    // Track the last trip to detect changes.
     last_trip_id: &mut Option<String>,
 ) {
     info!("Initiating GPS plotting with OSM tiles (using plugin system).");
@@ -432,7 +409,7 @@ pub fn plot_gps_data_with_osm(
     };
 
     // Create the map widget with the plugin.
-    let map_size = egui::Vec2::new(ui.available_width().min(800.0), 400.0);
+    let map_size = egui::Vec2::new(ui.available_width().min(800.0), ui.available_height() - 95.0);
     let map_response = ui.add_sized(
         map_size,
         Map::new(Some(tiles), map_memory, centre_position)
@@ -450,22 +427,29 @@ pub fn plot_gps_data_with_osm(
         ui.label("Speed legend:");
         ui.colored_label(egui::Color32::GREEN, "● ≤60 km/h");
         ui.colored_label(egui::Color32::BLUE, "● 60-80 km/h");
-        ui.colored_label(egui::Color32::from_rgb(255, 165, 0), "● 80-100 km/h");
+        ui.colored_label(egui::Color32::ORANGE, "● 80-100 km/h");
         ui.colored_label(egui::Color32::RED, "● >100 km/h");
     });
     
     // Show some statistics.
     ui.separator();
-    ui.label(format!("Total GPS points: {}", plot_points.len()));
+    ui.horizontal(|ui| {
+        ui.label("GPS points:");
+        ui.strong(format!("{}", plot_points.len()));
+    });
     
     if let (Some(first), Some(last)) = (plot_points.first(), plot_points.last()) {
-        ui.label(format!("Trip start / end: {} to {}", 
-            first._timestamp.format("%H:%M:%S"),
-            last._timestamp.format("%H:%M:%S")));
+        ui.horizontal(|ui| {
+            ui.label("Trip time:");
+            ui.strong(format!("{} to {}", first._timestamp.format("%H:%M:%S"), last._timestamp.format("%H:%M:%S")));
+        });
     }
     
     // Show centre coordinates.
-    ui.label(format!("Map centre: {:.6}, {:.6}", centre_lat, centre_lon));
+    ui.horizontal(|ui| {
+        ui.label("Map centre:");
+        ui.strong(format!("{:.6}, {:.6}", centre_lat, centre_lon));
+    });
     
     // Force repaint to ensure tiles keep loading.
     ui.ctx().request_repaint();

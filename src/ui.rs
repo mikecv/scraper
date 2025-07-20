@@ -368,7 +368,6 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
                         ui.vertical(|ui| {
                             // Header section.
                             ui.horizontal(|ui| {
-                                ui.heading("GPS Data Plot");
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                     if ui.button("Close").clicked() {
                                         app.show_gps_plot = false;
@@ -390,7 +389,7 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
 
                             // Main plotting area.
                             ui.allocate_ui_with_layout(
-                                egui::Vec2::new(ui.available_width(), ui.available_height() - 100.0),
+                                egui::Vec2::new(ui.available_width(), ui.available_height()),
                                 egui::Layout::top_down(egui::Align::Min),
                                 |ui| {
                                     // Call the appropriate plot function based on OSM tiles setting.

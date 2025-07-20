@@ -68,7 +68,7 @@ impl Default for MyApp {
 }
 
 impl MyApp {
-    // Initialize map tiles when needed
+    // Initialize map tiles when needed.
     pub fn ensure_map_tiles(&mut self, _ctx: &egui::Context) {
         if self.map_tiles.is_none() {
             info!("Initializing OSM tiles");
