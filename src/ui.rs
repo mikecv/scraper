@@ -376,16 +376,6 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
                                     }
                                 });
                             });
-                            ui.separator();
-
-                            // Trip selection status.
-                            if let Some(selected_id) = &app.selected_id {
-                                if selected_id.is_empty() {
-                                    ui.colored_label(colours::gps_nill_colour(app.dark_mode), "Please select a trip to plot GPS data.");
-                                } else {
-                                    ui.label(format!("Plotting GPS data for Trip ID: {}", selected_id));
-                                }
-                            }
 
                             ui.separator();
 

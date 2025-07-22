@@ -93,8 +93,8 @@ impl Scraper {
         }
 
         // Before we start we can delete any previously selected trip.
-        // Reset selected_id before loading new file
-        *selected_id = Some("".to_string());
+        // Reset selected_id before loading new file.
+        *selected_id = None;
  
         self.file_dialog_open = true;
 

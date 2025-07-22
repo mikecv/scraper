@@ -203,12 +203,15 @@ pub fn parse_datetime(date_str: &str) -> Result<DateTime<Utc>, ParseError> {
 
 // Function to plot GPS data using custom drawing.
 pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<String>) {
-    info!("Initiating GPS plotting.");
 
-    // Get id of selected trip, or return if no trip selected.
+    // Get id of selected trip, or show prompt if no trip selected.
     let selected_trip = match selected_id.as_ref() {
-        Some(id) => id,
-        None => {
+        Some(id) if !id.is_empty() => id,
+        _ => {
+            ui.vertical_centered(|ui| {
+                ui.add_space(50.0);
+                ui.label("Please select a trip to plot GPS points.");
+            });
             return;
         }
     };
@@ -350,7 +353,7 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
         });
     }
 
-    // Show crntrepoint of plot.
+    // Show centrepoint of plot.
     ui.horizontal(|ui| {
         ui.label("Map centre:");
         ui.strong(format!("{:.6}, {:.6}", lat_centre, lon_centre));
@@ -366,12 +369,15 @@ pub fn plot_gps_data_with_osm(
     tiles: &mut HttpTiles,
     last_trip_id: &mut Option<String>,
 ) {
-    info!("Initiating GPS plotting with OSM tiles (using plugin system).");
 
-    // Get id of selected trip, or return if no trip selected.
+    // Get id of selected trip, or show prompt if no trip selected.
     let selected_trip = match selected_id.as_ref() {
-        Some(id) => id,
-        None => {
+        Some(id) if !id.is_empty() => id,
+        _ => {
+            ui.vertical_centered(|ui| {
+                ui.add_space(50.0);
+                ui.label("Please select a trip to plot GPS points.");
+            });
             return;
         }
     };
@@ -388,20 +394,68 @@ pub fn plot_gps_data_with_osm(
         return;
     }
 
-    // Calculate the centre point for the map.
-    let centre_lat = plot_points.iter().map(|p| p.lat).sum::<f64>() / plot_points.len() as f64;
-    let centre_lon = plot_points.iter().map(|p| p.lon).sum::<f64>() / plot_points.len() as f64;
-
-    // Construct geo_types::Point then walkers::Position.
-    let centre_position = walkers::Position::from(Point::new(centre_lon, centre_lat));
-
     // Only centre the map if the trip has changed.
     // This allows user panning and zooming to work properly.
     let trip_changed = last_trip_id.as_ref() != Some(selected_trip);
     if trip_changed {
+
+        // Calculate bounds of all GPS points.
+        let mut min_lat = f64::MAX;
+        let mut max_lat = f64::MIN;
+        let mut min_lon = f64::MAX;
+        let mut max_lon = f64::MIN;
+
+        for point in &plot_points {
+            min_lat = min_lat.min(point.lat);
+            max_lat = max_lat.max(point.lat);
+            min_lon = min_lon.min(point.lon);
+            max_lon = max_lon.max(point.lon);
+        }
+
+        // Add some padding (10% on each side).
+        let lat_range = max_lat - min_lat;
+        let lon_range = max_lon - min_lon;
+        let padding = 0.1;
+        
+        min_lat -= lat_range * padding;
+        max_lat += lat_range * padding;
+        min_lon -= lon_range * padding;
+        max_lon += lon_range * padding;
+
+        // Calculate centre.
+        let centre_lat = (min_lat + max_lat) / 2.0;
+        let centre_lon = (min_lon + max_lon) / 2.0;
+        let centre_position = walkers::Position::from(Point::new(centre_lon, centre_lat));
+
+        // Calculate appropriate zoom level to fit all points.
+        // This is a rough approximation - adjust the multiplier to suit
+        let lat_span = max_lat - min_lat;
+        let lon_span = max_lon - min_lon;
+        let max_span = lat_span.max(lon_span);
+        
+        // Approximate zoom level calculation (fine-tune this).        
+        let zoom = if max_span > 0.1 {
+            10.0
+        } else if max_span > 0.01 {
+            12.0
+        } else if max_span > 0.001 {
+            14.0
+        } else {
+            16.0
+        };
+
+        info!("Max span: {:?}, Zoom level: {:?}", max_span, zoom);
+
+        // Set the centre and zoom for the plot.
         map_memory.center_at(centre_position);
+        let _ = map_memory.set_zoom(zoom);
         *last_trip_id = Some(selected_trip.clone());
     }
+
+    // Calculate the centre for display purposes.
+    let centre_lat = plot_points.iter().map(|p| p.lat).sum::<f64>() / plot_points.len() as f64;
+    let centre_lon = plot_points.iter().map(|p| p.lon).sum::<f64>() / plot_points.len() as f64;
+    let centre_position = walkers::Position::from(Point::new(centre_lon, centre_lat));
 
     // Create the GPS plotting plugin.
     let gps_plugin = GpsPlotPlugin { 
