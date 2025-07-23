@@ -21,6 +21,7 @@ pub struct MyApp {
     pub show_about: bool,
     pub show_help: bool,
     pub about_icon: Option<egui::TextureHandle>,
+    pub show_changelog: bool,
     pub ui_state: UiState,
     pub selected_id: Option<String>,
     pub dark_mode: bool,
@@ -52,6 +53,7 @@ impl Default for MyApp {
             show_about: false,
             show_help: false,
             about_icon: None,
+            show_changelog: false,
             ui_state: UiState::default(),
             selected_id: Some("".to_string()),
             dark_mode: true,
@@ -172,6 +174,7 @@ impl App for MyApp {
         // Handle modal dialogs.
         ui::draw_about_dialog(self, ctx);
         ui::draw_help_panel(self, ctx);
+        ui::draw_changelog(self, ctx);
 
         // Check if we need to plot gps data.
         if self.show_gps_plot {

@@ -9,6 +9,7 @@ use crate::plots;
 use crate::colours;
 use crate::app::MyApp;
 use crate::help_content;
+use crate::changelog_content;
 use crate::DETAILS;
 
 // use crate::settings::Settings;
@@ -76,6 +77,12 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
                 if ui.button("About").clicked() {
                     info!("About button clicked.");
                     app.show_about = true;
+                    ui.close_menu();
+                }
+                ui.separator();                
+                if ui.button("Changelog").clicked() {
+                    info!("Changelog button clicked.");
+                    app.show_changelog = true;
                     ui.close_menu();
                 }
             });
@@ -353,7 +360,7 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
                 // Draw border around the gps plot window.
                 draw_viewport_border(ctx, app.dark_mode);
 
-                // Determine the background color based on dark_mode.
+                // Determine the background colour based on dark_mode.
                 let background_color = if app.dark_mode {
                     ctx.style().visuals.widgets.noninteractive.bg_fill
                 } else {
@@ -399,6 +406,71 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
                                     }
                                 }
                             );
+                        });
+                    });
+            },
+        );
+    }
+}
+
+// Function to draw tchangelog.
+pub fn draw_changelog(app: &mut MyApp, ctx: &egui::Context) {
+
+    // Lock the global DETAILS to obtain access to the Details object.
+    let details = DETAILS.lock().unwrap().clone();
+
+    if app.show_changelog {
+        // Create a detached window in its own viewport.
+        ctx.show_viewport_immediate(
+            egui::ViewportId::from_hash_of("changlog_window"),
+            egui::ViewportBuilder::default()
+                .with_title("Changelog")
+                .with_inner_size([details.changelog_win_height, details.changelog_win_width])
+                .with_resizable(false),
+            |ctx, class| {
+                assert!(class == egui::ViewportClass::Immediate);
+
+                // Apply theme according to menu selection. This should be inside
+                // the closure to ensure it's re-evaluated every frame.
+                if app.dark_mode {
+                    ctx.set_visuals(egui::Visuals::dark());
+                } else {
+                    ctx.set_visuals(egui::Visuals::light());
+                }
+                
+                // Check if close was requested via the window's X button.
+                if ctx.input(|i| i.viewport().close_requested()) {
+                    app.show_changelog = false;
+                }
+                
+                // Draw border around the changelog window.
+                draw_viewport_border(ctx, app.dark_mode);
+                
+                // Determine the background colour based on dark_mode.
+                let background_color = if app.dark_mode {
+                    ctx.style().visuals.widgets.noninteractive.bg_fill
+                } else {
+                    ctx.style().visuals.widgets.noninteractive.bg_fill
+                };
+
+                egui::CentralPanel::default()
+                    .frame(egui::Frame::default()
+                        .stroke(egui::Stroke::new(2.0, colours::border_colour(app.dark_mode)))
+                        .inner_margin(egui::Margin::same(8))
+                        .fill(background_color)
+                    )
+                    .show(ctx, |ui| {
+                        ui.horizontal(|ui| {
+                            // Close changelog menu.
+                            ui.separator();
+                            if ui.button("Close").clicked() {
+                                app.show_changelog = false;
+                            }
+                        });
+                        ui.separator();
+                        
+                        egui::ScrollArea::vertical().show(ui, |ui| {
+                            changelog_content::draw_changelog_content(ui, app);
                         });
                     });
             },
