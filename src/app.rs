@@ -103,8 +103,9 @@ impl MyApp {
     }
 
     // Load all help images here.
+    // Images get loader early, so that they load quickly when needed.
     pub fn load_help_images(&mut self, ctx: &egui::Context) {
-        // Help image 1 - loaded log file.
+        // Help image 1 - loading log file.
         if self.help_image_1.is_none() {
             let icon_bytes = include_bytes!("../assets/help-1.png");
             match image::load_from_memory(icon_bytes) {

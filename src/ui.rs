@@ -126,6 +126,11 @@ pub fn draw_bottom_panel(app: &mut MyApp, ctx: &egui::Context) {
                             ui.label("Controller ID:");
                             ui.strong(format!("{:0>6}", app.scraper.controller_id));
                         }
+                        else {
+                            ui.separator();
+                            ui.label("Controller ID:");
+                            ui.strong("Not defined.");
+                        }
 
                         // Add controller firmware version if available.
                         if !app.scraper.controller_fw.is_empty() {
@@ -330,7 +335,7 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
         // Lock the global DETAILS to obtain access settings.
         let details = DETAILS.lock().unwrap().clone();
 
-        // Ensure map tiles are initialized if OSM is selected
+        // Ensure map tiles are initialized if OSM is selected.
         if app.use_osm_tiles {
             app.ensure_map_tiles(ctx);
         }
@@ -413,7 +418,7 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
     }
 }
 
-// Function to draw tchangelog.
+// Function to draw changelog.
 pub fn draw_changelog(app: &mut MyApp, ctx: &egui::Context) {
 
     // Lock the global DETAILS to obtain access to the Details object.

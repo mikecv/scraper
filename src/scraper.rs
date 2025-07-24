@@ -14,7 +14,7 @@ use crate::egui;
 
 // Use conditional includes for linux and Windows,
 // as tinyfiledialogs doesn't readily compile and
-// build for windows.
+// build for Windows.
 
 #[cfg(target_os = "windows")]
 use rfd::FileDialog;
@@ -29,11 +29,11 @@ pub enum FileDialogMessage {
     DialogClosed,
 }
 
-// GPS location (lat, long)
+// GPS location (lat, lon)
 #[derive(Debug)]
 pub struct GpsLocation {
     pub lat: f64,
-    pub long: f64,
+    pub lon: f64,
 }
 
 // Data that is scraped.
@@ -108,7 +108,8 @@ impl Scraper {
             {
                 // For windows use FileDialog.
                 FileDialog::new()
-                    .add_filter("text", &["txt"])
+                    // .add_filter("text", &["txt"])
+                    .add_filter("Log files", &["log", "bak", "csv", "txt"])
                     .pick_file()
                     .map(|path| path.to_string_lossy().to_string())
             }
@@ -118,7 +119,7 @@ impl Scraper {
                 open_file_dialog(
                     "Select log file",
                     "",
-                    Some((&["*.log", "*.bak", "*.csv"], "Log files (log, bak, csv)")),
+                    Some((&["*.log", "*.bak", "*.csv", "*.txt"], "Log files (log, bak, csv, txt)")),
                 )
             }
         };
@@ -220,11 +221,9 @@ impl Scraper {
                 self.controller_id = sn_str.to_string();
                 info!("Found controller s/n: {:0>6}", sn_str); 
             }
-            if found_sn == true {
-                break
-            }
         }
         if found_sn == false {
+            self.controller_id = "Not defined.".to_string();
             info!("Failed to find controller serial number."); 
         }
 
@@ -238,7 +237,6 @@ impl Scraper {
         let fw_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}) EVENT ([0-9]+) ([0-9]+) (.+)/(.+)/(.+)/([-0-9]+)/([0-9]+) SWSTART (.+) ([.0-9]+.+) v(.+)$")?;
         let mut found_fw = false;
 
-
         // Process file line by line,
         for line_result in reader.lines() {
             let line = line_result?;
@@ -251,11 +249,9 @@ impl Scraper {
                 self.controller_fw = fw_str.to_string();
                 info!("Found controller firmware: {:?}", fw_str); 
             }
-            if found_fw == true {
-                break
-            }
         }
         if found_fw == false {
+            self.controller_fw = "Not defined.".to_string();
             info!("Failed to find controller firmware version."); 
         }
 
@@ -304,7 +300,7 @@ impl Scraper {
                     .expect("Failed to parse longitude as f64");
                 let gps_locn = GpsLocation {
                     lat: gps_latitude / 10_000_000.0,
-                    long: gps_longitude / 10_000_000.0,
+                    lon: gps_longitude / 10_000_000.0,
                 };
 
                 // Get the gps RSSI from the event data.

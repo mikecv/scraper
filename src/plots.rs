@@ -1,4 +1,4 @@
-// plots.rs
+// Draw the gps data plots to a separate UI.
 
 use log::info;
 
@@ -29,7 +29,7 @@ impl From<&ScrapedData> for PlotPoint {
             _timestamp: parse_datetime(&data.date_time).unwrap(),
             _trip_num : data.trip_num.clone(),
             lat: data.gps_locn.lat,
-            lon: data.gps_locn.long,
+            lon: data.gps_locn.lon,
             speed: data.gps_speed,
             _rssi: data.gps_rssi,
         }
@@ -97,7 +97,8 @@ impl GpsPlotPlugin {
         // Draw checkered pattern.
         let checkers_x = (flag_width / checker_size) as i32;
         let checkers_y = (flag_height / checker_size) as i32;
-        
+
+        // Draw the checks on the flag.
         for x in 0..checkers_x {
             for y in 0..checkers_y {
                 if (x + y) % 2 == 1 {
@@ -219,11 +220,10 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
     info!("Selected trip number: {}", selected_trip);
 
     // Get all the plotting points.
-    // Filter out bad gps points, i.e lat and long = 0;
-    // Lat / Lon equal to 0,0 legitimate but ignored as out in the ocean.
+    // Filter out bad gps points, i.e lat and lon = 0;
     let plot_points: Vec<PlotPoint> = scraper.scrapings.iter()
         .filter(|scraped| scraped.trip_num == *selected_trip)
-        .filter(|scraped| scraped.gps_locn.lat != 0.0 && scraped.gps_locn.long != 0.0)
+        .filter(|scraped| scraped.gps_locn.lat != 0.0 && scraped.gps_locn.lon != 0.0)
         .map(PlotPoint::from)
         .collect();
 
@@ -235,7 +235,6 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
     }
 
     // Create a custom plot area.
-    // let plot_height = 400.0;
     let plot_height = ui.available_height() - 95.0;
     let plot_width = ui.available_width();
     
@@ -385,7 +384,7 @@ pub fn plot_gps_data_with_osm(
     // Get all the plotting points.
     let plot_points: Vec<PlotPoint> = scraper.scrapings.iter()
         .filter(|scraped| scraped.trip_num == *selected_trip)
-        .filter(|scraped| scraped.gps_locn.lat != 0.0 && scraped.gps_locn.long != 0.0)
+        .filter(|scraped| scraped.gps_locn.lat != 0.0 && scraped.gps_locn.lon != 0.0)
         .map(PlotPoint::from)
         .collect();
 
@@ -428,7 +427,7 @@ pub fn plot_gps_data_with_osm(
         let centre_position = walkers::Position::from(Point::new(centre_lon, centre_lat));
 
         // Calculate appropriate zoom level to fit all points.
-        // This is a rough approximation - adjust the multiplier to suit
+        // This is a rough approximation - adjust the multiplier if necessary.
         let lat_span = max_lat - min_lat;
         let lon_span = max_lon - min_lon;
         let max_span = lat_span.max(lon_span);

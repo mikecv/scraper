@@ -1,5 +1,5 @@
 // Functions to provide custom colours
-// for light and dark themes.
+// for dark and light themes.
 
 use eframe::egui::Color32;
 
