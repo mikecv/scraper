@@ -12,8 +12,6 @@ use crate::help_content;
 use crate::changelog_content;
 use crate::DETAILS;
 
-// use crate::settings::Settings;
-
 // Function to draw the menu bar.
 pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
     egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -276,7 +274,9 @@ pub fn draw_help_panel(app: &mut MyApp, ctx: &egui::Context) {
             egui::ViewportBuilder::default()
                 .with_title("Scraper Help")
                 .with_inner_size([details.help_win_height, details.help_win_width])
-                .with_resizable(false),
+                .with_resizable(false)
+                .with_min_inner_size([details.help_win_width, details.min_help_win_height])
+                .with_max_inner_size([details.help_win_width, details.max_help_win_height]),
             |ctx, class| {
                 assert!(class == egui::ViewportClass::Immediate);
 

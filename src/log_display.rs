@@ -10,6 +10,8 @@ use crate::egui::{ScrollArea, Ui};
 use crate::colours;
 use crate::scraper::ScrapedData;
 use crate::DETAILS;
+use crate::SETTINGS;
+use crate::settings::Settings;
 
 // Simple UI state to hold processed display data.
 #[derive(Debug, Clone)]
@@ -172,6 +174,9 @@ fn render_trip_section(
     dark_mode: bool,
     show_gps_events: bool)
 {
+    // Get application settings in scope.
+    let settings: Settings = SETTINGS.lock().unwrap().clone();
+
     // Generate a unique trip ID.
     let trip_id = format!("{}", trip_data.trip_num);
     let _is_trip_selected = selected_id.as_ref() == Some(&trip_id);
@@ -181,7 +186,7 @@ fn render_trip_section(
             RichText::new(format!("TRIP {:} - {}", trip_data.trip_num, &trip_data.date_time))
                 .color(colours::trip_colour(dark_mode))
                 .family(egui::FontFamily::Monospace)
-                .text_style(egui::TextStyle::Small),
+                .size(settings.trip_font_size),
             |ui| {
                 // Display all events for this trip.
                 for (index, item) in trip_events {
@@ -193,7 +198,7 @@ fn render_trip_section(
                             RichText::new(format!("{:20} {}",&item.event_type, &item.date_time))
                                 .color(colours::event_colour(dark_mode))
                                 .family(egui::FontFamily::Monospace)
-                                .text_style(egui::TextStyle::Small),
+                                .size(settings.event_font_size),
                             |ui| {
                                 // Do the event detail key-value pairs
                                 for (key, value) in &item.ev_detail {
@@ -201,12 +206,12 @@ fn render_trip_section(
                                         ui.label(RichText::new(format!("{:20}", key))
                                             .color(colours::key_colour(dark_mode))
                                             .family(egui::FontFamily::Monospace)
-                                            .text_style(egui::TextStyle::Small)
+                                            .size(settings.event_font_size)
                                             .italics());
                                         ui.label(RichText::new(format!("{}", value))
                                             .color(colours::value_colour(dark_mode))
                                             .family(egui::FontFamily::Monospace)
-                                            .text_style(egui::TextStyle::Small)
+                                            .size(settings.event_font_size)
                                             .italics());
                                     });
                                 }
@@ -217,24 +222,24 @@ fn render_trip_section(
                                         ui.label(RichText::new(format!("{:20}", "GPS Latitude"))
                                             .color(colours::gps_key_colour(dark_mode))
                                             .family(egui::FontFamily::Monospace)
-                                            .text_style(egui::TextStyle::Small)
+                                            .size(settings.event_font_size)
                                             .italics());
                                         ui.label(RichText::new(format!("{}", &item.gps_locn.lat))
                                             .color(colours::gps_value_colour(dark_mode))
                                             .family(egui::FontFamily::Monospace)
-                                            .text_style(egui::TextStyle::Small)
+                                            .size(settings.event_font_size)
                                             .italics());
                                     });
                                     ui.horizontal(|ui| {
                                         ui.label(RichText::new(format!("{:20}", "GPS Longitude"))
                                             .color(colours::gps_key_colour(dark_mode))
                                             .family(egui::FontFamily::Monospace)
-                                            .text_style(egui::TextStyle::Small)
+                                            .size(settings.event_font_size)
                                             .italics());
                                         ui.label(RichText::new(format!("{}", &item.gps_locn.lon))
                                             .color(colours::gps_value_colour(dark_mode))
                                             .family(egui::FontFamily::Monospace)
-                                            .text_style(egui::TextStyle::Small)
+                                            .size(settings.event_font_size)
                                             .italics());
                                     });
                                     // Add the speed from GPS to key value data for the event.
@@ -242,12 +247,12 @@ fn render_trip_section(
                                         ui.label(RichText::new(format!("{:20}", "GPS Speed"))
                                             .color(colours::gps_key_colour(dark_mode))
                                             .family(egui::FontFamily::Monospace)
-                                            .text_style(egui::TextStyle::Small)
+                                            .size(settings.event_font_size)
                                             .italics());
                                         ui.label(RichText::new(format!("{}", &item.gps_speed))
                                             .color(colours::gps_value_colour(dark_mode))
                                             .family(egui::FontFamily::Monospace)
-                                            .text_style(egui::TextStyle::Small)
+                                            .size(settings.event_font_size)
                                             .italics());
                                     });
                                     // Add the gps RSSI value from GPS to key value data for the event.
@@ -255,12 +260,12 @@ fn render_trip_section(
                                         ui.label(RichText::new(format!("{:20}", "GPS RSSI"))
                                             .color(colours::gps_key_colour(dark_mode))
                                             .family(egui::FontFamily::Monospace)
-                                            .text_style(egui::TextStyle::Small)
+                                            .size(settings.event_font_size)
                                             .italics());
                                         ui.label(RichText::new(format!("{}", &item.gps_rssi))
                                             .color(colours::gps_value_colour(dark_mode))
                                             .family(egui::FontFamily::Monospace)
-                                            .text_style(egui::TextStyle::Small)
+                                            .size(settings.event_font_size)
                                             .italics());
                                     });
                                 }
@@ -294,6 +299,9 @@ fn render_top_level_event(
     item: &ScrapedData,
     dark_mode: bool)
 {
+    // Get application settings in scope.
+    let settings: Settings = SETTINGS.lock().unwrap().clone();
+
     let event_id = format!("{}_{}", index, &item.event_type);
     ui.push_id(&event_id, |ui| {
         ui.collapsing(
@@ -301,7 +309,7 @@ fn render_top_level_event(
             RichText::new(format!("{:} {}",&item.event_type, &item.date_time))
                 .color(colours::subtle_colour(dark_mode))
                 .family(egui::FontFamily::Monospace)
-                .text_style(egui::TextStyle::Small),
+                .size(settings.event_font_size),
             |ui| {
                 
                 // Do the event data key value pairs.
@@ -310,12 +318,12 @@ fn render_top_level_event(
                         ui.label(RichText::new(format!("{:20}", key))
                             .color(colours::subtle_colour(dark_mode))
                             .family(egui::FontFamily::Monospace)
-                            .text_style(egui::TextStyle::Small)
+                            .size(settings.event_font_size)
                             .italics());
                         ui.label(RichText::new(format!("{}", value))
                             .color(colours::subtle_colour(dark_mode))
                             .family(egui::FontFamily::Monospace)
-                            .text_style(egui::TextStyle::Small)
+                            .size(settings.event_font_size)
                             .italics());
                     });
                 }
@@ -324,24 +332,24 @@ fn render_top_level_event(
                     ui.label(RichText::new(format!("{:20}", "GPS Latitude"))
                         .color(colours::subtle_colour(dark_mode))
                         .family(egui::FontFamily::Monospace)
-                        .text_style(egui::TextStyle::Small)
+                        .size(settings.event_font_size)
                         .italics());
                     ui.label(RichText::new(format!("{}", &item.gps_locn.lat))
                         .color(colours::subtle_colour(dark_mode))
                         .family(egui::FontFamily::Monospace)
-                        .text_style(egui::TextStyle::Small)
+                        .size(settings.event_font_size)
                         .italics());
                 });
                 ui.horizontal(|ui| {
                     ui.label(RichText::new(format!("{:20}", "GPS Longitude"))
                         .color(colours::subtle_colour(dark_mode))
                         .family(egui::FontFamily::Monospace)
-                        .text_style(egui::TextStyle::Small)
+                        .size(settings.event_font_size)
                         .italics());
                     ui.label(RichText::new(format!("{}", &item.gps_locn.lon))
                         .color(colours::subtle_colour(dark_mode))
                         .family(egui::FontFamily::Monospace)
-                        .text_style(egui::TextStyle::Small)
+                        .size(settings.event_font_size)
                         .italics());
                 });
                 // Add the speed value from GPS to key value data for the event.
@@ -349,12 +357,12 @@ fn render_top_level_event(
                     ui.label(RichText::new(format!("{:20}", "GPS Speed"))
                         .color(colours::subtle_colour(dark_mode))
                         .family(egui::FontFamily::Monospace)
-                        .text_style(egui::TextStyle::Small)
+                        .size(settings.event_font_size)
                         .italics());
                     ui.label(RichText::new(format!("{}", &item.gps_speed))
                         .color(colours::subtle_colour(dark_mode))
                         .family(egui::FontFamily::Monospace)
-                        .text_style(egui::TextStyle::Small)
+                        .size(settings.event_font_size)
                         .italics());
                 });
                 // Add the gps RSSI value from GPS to key value data for the event.
@@ -362,12 +370,12 @@ fn render_top_level_event(
                     ui.label(RichText::new(format!("{:20}", "GPS RSSI"))
                         .color(colours::subtle_colour(dark_mode))
                         .family(egui::FontFamily::Monospace)
-                        .text_style(egui::TextStyle::Small)
+                        .size(settings.event_font_size)
                         .italics());
                     ui.label(RichText::new(format!("{}", &item.gps_rssi))
                         .color(colours::subtle_colour(dark_mode))
                         .family(egui::FontFamily::Monospace)
-                        .text_style(egui::TextStyle::Small)
+                        .size(settings.event_font_size)
                         .italics());
                 });
             }

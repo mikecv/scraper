@@ -28,26 +28,26 @@ mod plots;
 // Create a global variable for application settings.
 // This will be available in other files.
 lazy_static! {
-static ref SETTINGS: Mutex<Settings> = {
-        // Try to read YAML settings file.
+    static ref SETTINGS: Mutex<Settings> = {
         let settings = match File::open("settings.yml") {
             Ok(mut file) => {
-                // Logging settings found and read.
                 let mut contents = String::new();
                 match file.read_to_string(&mut contents) {
                     Ok(_) => {
-                        // Try to parse YAML, use defaults if parsing fails.
-                        match serde_yaml::from_str(&contents) {
-                            Ok(settings) => settings,
-                            // Setting yaml file invalid.
+                        match serde_yaml::from_str::<Settings>(&contents) {
+                            Ok(mut settings) => {
+                                settings.validate();
+                                settings
+                            }
+                            // Settings invalid values.
                             Err(_) => Settings::default(),
                         }
                     }
-                    // Can't read from file, so use defaults.
+                    // Failed to read from settings file.
                     Err(_) => Settings::default(),
                 }
             }
-            // File doesn't exist, so use defaults.
+            // Settings file not found.
             Err(_) => Settings::default(),
         };
         Mutex::new(settings)
@@ -65,10 +65,16 @@ lazy_static! {
             program_date:           "2025".to_string(),
             program_devs:           vec!["mdc".to_string()],
             program_web:            "galacticwingcommander".to_string(),
+            min_win_width:          300.0,
             win_width:              400.0,
+            max_win_width:          600.0,
+            min_win_height:         500.0,
             win_height:             600.0,
+            max_win_height:         1000.0,
             help_win_width:         600.0,
-            help_win_height:        600.0,
+            min_help_win_height:    500.0,
+            help_win_height:        700.0,
+            max_help_win_height:    1000.0,
             gps_win_width:          600.0,
             gps_win_height:         600.0,
             changelog_win_width:    300.0,
@@ -101,8 +107,10 @@ async fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([details.win_width, details.win_height])
-            .with_resizable(false),
-        ..Default::default()
+            .with_resizable(true)
+            .with_min_inner_size([details.min_win_width, details.min_win_height])
+            .with_max_inner_size([details.max_win_width, details.max_win_height]),
+            ..Default::default()
     };
 
     // Run the application.
