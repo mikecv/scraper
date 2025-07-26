@@ -1,6 +1,7 @@
 // Draw the gps data plots to a separate UI.
 
-use log::info;
+// use log::info;
+use log::debug;
 
 use eframe::egui;
 use egui::epaint;
@@ -217,7 +218,7 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
         }
     };
 
-    info!("Selected trip number: {}", selected_trip);
+    debug!("Selected trip number: {}", selected_trip);
 
     // Get all the plotting points.
     // Filter out bad gps points, i.e lat and lon = 0;
@@ -227,7 +228,7 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
         .map(PlotPoint::from)
         .collect();
 
-    info!("Number of plot points in trip: {}", plot_points.len());
+    debug!("Number of plot points in trip: {}", plot_points.len());
 
     if plot_points.is_empty() {
         ui.label("No valid GPS points found for this trip.");
@@ -443,7 +444,7 @@ pub fn plot_gps_data_with_osm(
             16.0
         };
 
-        info!("Max span: {:?}, Zoom level: {:?}", max_span, zoom);
+        debug!("Max span: {:?}, Zoom level: {:?}", max_span, zoom);
 
         // Set the centre and zoom for the plot.
         map_memory.center_at(centre_position);

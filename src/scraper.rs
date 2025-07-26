@@ -221,6 +221,11 @@ impl Scraper {
                 self.controller_id = sn_str.to_string();
                 info!("Found controller s/n: {:0>6}", sn_str); 
             }
+            if found_sn {
+                // Have found one instance of controller number.
+                // Don't need to look any further.
+                break;
+            }
         }
         if found_sn == false {
             self.controller_id = "Not defined.".to_string();
@@ -248,6 +253,11 @@ impl Scraper {
                 let fw_str = captures.get(11).unwrap().as_str();
                 self.controller_fw = fw_str.to_string();
                 info!("Found controller firmware: {:?}", fw_str); 
+            }
+            if found_fw {
+                // Have found one instance of firmware version.
+                // Don'n nee to look any further.
+                break;
             }
         }
         if found_fw == false {
