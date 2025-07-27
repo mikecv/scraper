@@ -28,12 +28,13 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
 
             // Show menu.
             ui.menu_button("Show", |ui| {
-                ui.checkbox(&mut app.show_oot_events, "Out of trip events");
                 ui.checkbox(&mut app.show_input_events, "Input events");
                 ui.checkbox(&mut app.show_report_events, "Report events");
-                ui.separator();                
-                ui.checkbox(&mut app.show_gps_events, "GPS events");
                 ui.checkbox(&mut app.show_debug_events, "Debug events");
+                ui.separator();                
+                ui.checkbox(&mut app.show_gps_events, "GPS event data");
+                ui.separator();                
+                ui.checkbox(&mut app.show_oot_events, "Out of trip events");
             });
 
             // Plot menu.

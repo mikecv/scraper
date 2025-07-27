@@ -35,6 +35,19 @@ pub struct MyApp {
     // Help images.
     pub help_image_1: Option<egui::TextureHandle>,
     pub help_image_2: Option<egui::TextureHandle>,
+    pub help_image_3: Option<egui::TextureHandle>,
+    pub help_image_4: Option<egui::TextureHandle>,
+    pub help_image_5: Option<egui::TextureHandle>,
+    pub help_image_6: Option<egui::TextureHandle>,
+    pub help_image_7: Option<egui::TextureHandle>,
+    pub help_image_8: Option<egui::TextureHandle>,
+    pub help_image_9: Option<egui::TextureHandle>,
+    pub help_image_10: Option<egui::TextureHandle>,
+    pub help_image_11: Option<egui::TextureHandle>,
+    pub help_image_12: Option<egui::TextureHandle>,
+    pub help_image_13: Option<egui::TextureHandle>,
+    pub help_image_14: Option<egui::TextureHandle>,
+    pub help_image_15: Option<egui::TextureHandle>,
 }
 
 impl Default for MyApp {
@@ -67,6 +80,19 @@ impl Default for MyApp {
             // Help images.
             help_image_1: None,
             help_image_2: None,
+            help_image_3: None,
+            help_image_4: None,
+            help_image_5: None,
+            help_image_6: None,
+            help_image_7: None,
+            help_image_8: None,
+            help_image_9: None,
+            help_image_10: None,
+            help_image_11: None,
+            help_image_12: None,
+            help_image_13: None,
+            help_image_14: None,
+            help_image_15: None,
         }
     }
 }
@@ -133,6 +159,187 @@ impl MyApp {
             }
         }
 
+        // Help image 3 - events in trip.
+        if self.help_image_3.is_none() {
+            let icon_bytes = include_bytes!("../assets/help-3.png");
+            match image::load_from_memory(icon_bytes) {
+                Ok(img) => {
+                    let rgba = img.to_rgba8();
+                    let size = [img.width() as usize, img.height() as usize];
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    self.help_image_3 = Some(ctx.load_texture("help_image_3", color_image, Default::default()));
+                }
+                Err(e) => info!("Failed to load help image 3: {}", e),
+            }
+        }
+
+        // Help image 4 - event details.
+        if self.help_image_4.is_none() {
+            let icon_bytes = include_bytes!("../assets/help-4.png");
+            match image::load_from_memory(icon_bytes) {
+                Ok(img) => {
+                    let rgba = img.to_rgba8();
+                    let size = [img.width() as usize, img.height() as usize];
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    self.help_image_4 = Some(ctx.load_texture("help_image_4", color_image, Default::default()));
+                }
+                Err(e) => info!("Failed to load help image 4: {}", e),
+            }
+        }
+
+        // Help image 5 - show event options menu.
+        if self.help_image_5.is_none() {
+            let icon_bytes = include_bytes!("../assets/help-5.png");
+            match image::load_from_memory(icon_bytes) {
+                Ok(img) => {
+                    let rgba = img.to_rgba8();
+                    let size = [img.width() as usize, img.height() as usize];
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    self.help_image_5 = Some(ctx.load_texture("help_image_5", color_image, Default::default()));
+                }
+                Err(e) => info!("Failed to load help image 5: {}", e),
+            }
+        }
+
+        // Help image 6 - optional trip events.
+        if self.help_image_6.is_none() {
+            let icon_bytes = include_bytes!("../assets/help-6.png");
+            match image::load_from_memory(icon_bytes) {
+                Ok(img) => {
+                    let rgba = img.to_rgba8();
+                    let size = [img.width() as usize, img.height() as usize];
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    self.help_image_6 = Some(ctx.load_texture("help_image_6", color_image, Default::default()));
+                }
+                Err(e) => info!("Failed to load help image 6: {}", e),
+            }
+        }
+
+        // Help image 7 - event gps details.
+        if self.help_image_7.is_none() {
+            let icon_bytes = include_bytes!("../assets/help-7.png");
+            match image::load_from_memory(icon_bytes) {
+                Ok(img) => {
+                    let rgba = img.to_rgba8();
+                    let size = [img.width() as usize, img.height() as usize];
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    self.help_image_7 = Some(ctx.load_texture("help_image_7", color_image, Default::default()));
+                }
+                Err(e) => info!("Failed to load help image 7: {}", e),
+            }
+        }
+
+        // Help image 8 - out of trip event.
+        if self.help_image_8.is_none() {
+            let icon_bytes = include_bytes!("../assets/help-8.png");
+            match image::load_from_memory(icon_bytes) {
+                Ok(img) => {
+                    let rgba = img.to_rgba8();
+                    let size = [img.width() as usize, img.height() as usize];
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    self.help_image_8 = Some(ctx.load_texture("help_image_8", color_image, Default::default()));
+                }
+                Err(e) => info!("Failed to load help image 8: {}", e),
+            }
+        }
+
+        // Help image 9 - out of trip event details.
+        if self.help_image_9.is_none() {
+            let icon_bytes = include_bytes!("../assets/help-9.png");
+            match image::load_from_memory(icon_bytes) {
+                Ok(img) => {
+                    let rgba = img.to_rgba8();
+                    let size = [img.width() as usize, img.height() as usize];
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    self.help_image_9 = Some(ctx.load_texture("help_image_9", color_image, Default::default()));
+                }
+                Err(e) => info!("Failed to load help image 9: {}", e),
+            }
+        }
+
+        // Help image 10 - plot menu.
+        if self.help_image_10.is_none() {
+            let icon_bytes = include_bytes!("../assets/help-10.png");
+            match image::load_from_memory(icon_bytes) {
+                Ok(img) => {
+                    let rgba = img.to_rgba8();
+                    let size = [img.width() as usize, img.height() as usize];
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    self.help_image_10 = Some(ctx.load_texture("help_image_10", color_image, Default::default()));
+                }
+                Err(e) => info!("Failed to load help image 10: {}", e),
+            }
+        }
+
+        // Help image 11 - naked gps plot.
+        if self.help_image_11.is_none() {
+            let icon_bytes = include_bytes!("../assets/help-11.png");
+            match image::load_from_memory(icon_bytes) {
+                Ok(img) => {
+                    let rgba = img.to_rgba8();
+                    let size = [img.width() as usize, img.height() as usize];
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    self.help_image_11 = Some(ctx.load_texture("help_image_11", color_image, Default::default()));
+                }
+                Err(e) => info!("Failed to load help image 11: {}", e),
+            }
+        }
+
+        // Help image 12 - gps plot with OSM tile background.
+        if self.help_image_12.is_none() {
+            let icon_bytes = include_bytes!("../assets/help-12.png");
+            match image::load_from_memory(icon_bytes) {
+                Ok(img) => {
+                    let rgba = img.to_rgba8();
+                    let size = [img.width() as usize, img.height() as usize];
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    self.help_image_12 = Some(ctx.load_texture("help_image_12", color_image, Default::default()));
+                }
+                Err(e) => info!("Failed to load help image 12: {}", e),
+            }
+        }
+
+        // Help image 13 - OSM gps plot pan and zoom.
+        if self.help_image_13.is_none() {
+            let icon_bytes = include_bytes!("../assets/help-13.png");
+            match image::load_from_memory(icon_bytes) {
+                Ok(img) => {
+                    let rgba = img.to_rgba8();
+                    let size = [img.width() as usize, img.height() as usize];
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    self.help_image_13 = Some(ctx.load_texture("help_image_13", color_image, Default::default()));
+                }
+                Err(e) => info!("Failed to load help image 13: {}", e),
+            }
+        }
+
+        // Help image 14 - light and dark mode menu.
+        if self.help_image_14.is_none() {
+            let icon_bytes = include_bytes!("../assets/help-14.png");
+            match image::load_from_memory(icon_bytes) {
+                Ok(img) => {
+                    let rgba = img.to_rgba8();
+                    let size = [img.width() as usize, img.height() as usize];
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    self.help_image_14 = Some(ctx.load_texture("help_image_14", color_image, Default::default()));
+                }
+                Err(e) => info!("Failed to load help image 14: {}", e),
+            }
+        }
+
+        // Help image 15 - trip and event font sizes.
+        if self.help_image_15.is_none() {
+            let icon_bytes = include_bytes!("../assets/help-15.png");
+            match image::load_from_memory(icon_bytes) {
+                Ok(img) => {
+                    let rgba = img.to_rgba8();
+                    let size = [img.width() as usize, img.height() as usize];
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    self.help_image_15 = Some(ctx.load_texture("help_image_15", color_image, Default::default()));
+                }
+                Err(e) => info!("Failed to load help image 15: {}", e),
+            }
+        }
     }
 }
 
