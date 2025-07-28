@@ -1,9 +1,4 @@
 appenders:
-  default:
-    kind: console
-    encoder:
-      kind: pattern
-      pattern: "{h({d(%H:%M:%S)})} - {m}{n}"
   log_file:
     kind: rolling_file
     append: true
@@ -24,5 +19,4 @@ appenders:
 root:
   level: debug
   appenders:
-    - default
     - log_file
