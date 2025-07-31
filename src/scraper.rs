@@ -110,6 +110,7 @@ impl Scraper {
                 FileDialog::new()
                     // .add_filter("text", &["txt"])
                     .add_filter("Log files", &["log", "bak", "csv", "txt"])
+                    .add_filter("All files", &["*"])
                     .pick_file()
                     .map(|path| path.to_string_lossy().to_string())
             }
