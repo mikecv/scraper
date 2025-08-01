@@ -158,27 +158,27 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
     }
 
     ui.collapsing("3.2 Open Street Maps (SM) GPS plot", |ui| {
-        ui.label("The gps plot with OSM menu item is selected the current or future gps plots will use an OSM background as illustrated below.");
-        ui.label("Note that if a map is already displayed in plain mode when the OSM menu item is checked, the gps plot will automatically be updated to use the GPS background.");
+        ui.label("The gps plot with street view menu item is selected the current or future gps plots will use a street view background as illustrated below.");
+        ui.label("Note that if a map is already displayed in plain mode when the street view menu item is checked, the gps plot will automatically be updated to use the GPS background.");
         ui.label("Note that the gps breadcrumbs are colour coded to indicate the gps speed of the vehicle at the time - refer to the legend below the plot.");
 });
 
-    // OSM GPS plot.
+    // Street view GPS plot.
     if let Some(texture) = &app.help_image_12 {
         ui.add_space(10.0);
         ui.add(egui::Image::new(texture).max_width(400.0));
         ui.add_space(10.0);
     }
 
-    ui.collapsing("3.3 OSM GPS gps plot options", |ui| {
-        ui.label("Built into the gps with OSM plots is the abilty to pan and zoom using the familiar mouse, or Ctrl mouse opens.");
+    ui.collapsing("3.3 Street view GPS gps plot options", |ui| {
+        ui.label("Built into the gps with street view plots is the abilty to pan and zoom using the familiar mouse, or Ctrl mouse opens.");
         ui.label("Ilustrated in the following figure is the previous map that has been panned and zoomed as a demonstration.");
-        ui.label("Note that an internet connection is required to plot with OSM backgrounds.");
+        ui.label("Note that an internet connection is required to plot with street view backgrounds.");
         ui.label("Note that partial links between consecutive gps points is  only shown if both points are visible.");
         ui.label("Note that the gps breadcrumbs are colour coded to indicate the gps speed of the vehicle at the time - refer to the legend below the plot.");
     });
 
-    // OSM GPS plot (pan and zoom).
+    // Street view GPS plot (pan and zoom).
     if let Some(texture) = &app.help_image_13 {
         ui.add_space(10.0);
         ui.add(egui::Image::new(texture).max_width(400.0));

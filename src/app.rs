@@ -26,7 +26,7 @@ pub struct MyApp {
     pub selected_id: Option<String>,
     pub dark_mode: bool,
     pub show_gps_plot: bool,
-    pub use_osm_tiles: bool,
+    pub use_street_tiles: bool,
     pub map_memory: MapMemory,
     pub last_trip_id: Option<String>,
     pub map_tiles: Option<walkers::HttpTiles>,
@@ -71,7 +71,7 @@ impl Default for MyApp {
             selected_id: Some("".to_string()),
             dark_mode: true,
             show_gps_plot: false,
-            use_osm_tiles: true,
+            use_street_tiles: true,
             map_memory: MapMemory::default(),
             last_trip_id: None,
             map_tiles: None,
@@ -101,7 +101,7 @@ impl MyApp {
     // Initialize map tiles when needed.
     pub fn ensure_map_tiles(&mut self, _ctx: &egui::Context) {
         if self.map_tiles.is_none() {
-            info!("Initializing OSM tiles");
+            info!("Initializing street view tiles");
             // HttpTiles needs a context to create itself, so pass it here.
             self.map_tiles = Some(walkers::HttpTiles::new(OpenStreetMap, _ctx.clone()));
         }
@@ -285,7 +285,7 @@ impl MyApp {
             }
         }
 
-        // Help image 12 - gps plot with OSM tile background.
+        // Help image 12 - gps plot with street view tile background.
         if self.help_image_12.is_none() {
             let icon_bytes = include_bytes!("../assets/help-12.png");
             match image::load_from_memory(icon_bytes) {
@@ -299,7 +299,7 @@ impl MyApp {
             }
         }
 
-        // Help image 13 - OSM gps plot pan and zoom.
+        // Help image 13 - street view gps plot pan and zoom.
         if self.help_image_13.is_none() {
             let icon_bytes = include_bytes!("../assets/help-13.png");
             match image::load_from_memory(icon_bytes) {

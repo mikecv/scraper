@@ -360,8 +360,8 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
     });
 }
 
-// Plot gps points with OSM tiles.
-pub fn plot_gps_data_with_osm(
+// Plot gps points with tiles.
+pub fn plot_gps_data_with_tiles(
     ui: &mut egui::Ui, 
     scraper: &Scraper, 
     selected_id: &Option<String>, 

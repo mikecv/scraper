@@ -45,9 +45,9 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
                     ui.close_menu();
                 }
                 ui.separator();
-                let checkbox_response = ui.checkbox(&mut app.use_osm_tiles, "Use OSM tiles");
+                let checkbox_response = ui.checkbox(&mut app.use_street_tiles, "Use street view tiles");
                 if checkbox_response.hovered() {
-                    checkbox_response.on_hover_text("Toggle between OSM tiles and simple plot view");
+                    checkbox_response.on_hover_text("Toggle between steet view tiles and simple plot view");
                 }
             });
 
@@ -336,8 +336,8 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
         // Lock the global DETAILS to obtain access settings.
         let details = DETAILS.lock().unwrap().clone();
 
-        // Ensure map tiles are initialized if OSM is selected.
-        if app.use_osm_tiles {
+        // Ensure map tiles are initialized if street view tiles is selected.
+        if app.use_street_tiles {
             app.ensure_map_tiles(ctx);
         }
 
@@ -397,15 +397,15 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
                                 egui::Vec2::new(ui.available_width(), ui.available_height()),
                                 egui::Layout::top_down(egui::Align::Min),
                                 |ui| {
-                                    // Call the appropriate plot function based on OSM tiles setting.
-                                    if app.use_osm_tiles {
+                                    // Call the appropriate plot function based on tiles setting.
+                                    if app.use_street_tiles {
                                         // Pass the Option<HttpTiles> directly, and unwrap it safely within the function.
-                                        // You need to ensure app.map_tiles is Some(HttpTiles) when this path is taken.
+                                        // Ensure app.map_tiles is Some(HttpTiles) when this path is taken.
                                         // The ensure_map_tiles call earlier handles this.
                                         if let Some(map_tiles) = &mut app.map_tiles {
-                                            plots::plot_gps_data_with_osm(ui, &app.scraper, &app.selected_id, &mut app.map_memory, map_tiles, &mut app.last_trip_id);
+                                            plots::plot_gps_data_with_tiles(ui, &app.scraper, &app.selected_id, &mut app.map_memory, map_tiles, &mut app.last_trip_id);
                                         } else {
-                                            ui.label("Error: OSM tiles not initialized.");
+                                            ui.label("Error: Street tiles not initialized.");
                                         }
                                     } else {
                                         plots::plot_gps_data(ui, &app.scraper, &app.selected_id);
