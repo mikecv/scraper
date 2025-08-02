@@ -435,13 +435,13 @@ pub fn plot_gps_data_with_tiles(
         
         // Approximate zoom level calculation (fine-tune this).        
         let zoom = if max_span > 0.1 {
-            10.0
+            11.0
         } else if max_span > 0.01 {
-            12.0
+            13.0
         } else if max_span > 0.001 {
-            14.0
+            15.0
         } else {
-            16.0
+            17.0
         };
 
         debug!("Max span: {:?}, Zoom level: {:?}", max_span, zoom);

@@ -45,10 +45,21 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
                     ui.close_menu();
                 }
                 ui.separator();
-                let checkbox_response = ui.checkbox(&mut app.use_street_tiles, "Use street view tiles");
-                if checkbox_response.hovered() {
-                    checkbox_response.on_hover_text("Toggle between steet view tiles and simple plot view");
-                }
+                if ui.radio_value(&mut app.use_simple_plot, true, "Simple View").clicked() {
+                    info!("Switched to simple plot, no tiles.");
+                    app.use_street_tiles = false;
+                    app.use_satellite_tiles = false;
+                };
+                if ui.radio_value(&mut app.use_street_tiles, true, "Street View").clicked() {
+                    info!("Switched to street view tiles.");
+                    app.use_simple_plot = false;
+                    app.use_satellite_tiles = false;
+                };
+                if ui.radio_value(&mut app.use_satellite_tiles, true, "Satellite View").clicked() {
+                    info!("Switched to satellite view tiles.");
+                    app.use_street_tiles = false;
+                    app.use_simple_plot = false;
+                };
             });
 
             // View menu.
@@ -336,9 +347,15 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
         // Lock the global DETAILS to obtain access settings.
         let details = DETAILS.lock().unwrap().clone();
 
-        // Ensure map tiles are initialized if street view tiles is selected.
+        // Ensure the appropriate (street or satellite) map tiles are initialized.
         if app.use_street_tiles {
-            app.ensure_map_tiles(ctx);
+            // Street view tiles map.
+            app.ensure_street_tiles(ctx);
+        } else if app.use_satellite_tiles {
+            // (REPLACE THIS WITH SATELLITE TILES)
+            // Satellite view tiles map.
+            // app.ensure_satelitte_tiles(ctx);
+            app.ensure_street_tiles(ctx);
         }
 
         ctx.show_viewport_immediate(
@@ -401,13 +418,23 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
                                     if app.use_street_tiles {
                                         // Pass the Option<HttpTiles> directly, and unwrap it safely within the function.
                                         // Ensure app.map_tiles is Some(HttpTiles) when this path is taken.
-                                        // The ensure_map_tiles call earlier handles this.
                                         if let Some(map_tiles) = &mut app.map_tiles {
                                             plots::plot_gps_data_with_tiles(ui, &app.scraper, &app.selected_id, &mut app.map_memory, map_tiles, &mut app.last_trip_id);
                                         } else {
                                             ui.label("Error: Street tiles not initialized.");
                                         }
-                                    } else {
+                                    }
+                                    else if app.use_satellite_tiles {
+                                        // if let Some(map_tiles) = &mut app._satellite_tiles {
+                                        // REPLACE WITH SATELLITE TILES WHEN AVAILABLE.
+                                        if let Some(map_tiles) = &mut app.map_tiles {
+                                            plots::plot_gps_data_with_tiles(ui, &app.scraper, &app.selected_id, &mut app.map_memory, map_tiles, &mut app.last_trip_id);
+                                        } else {
+                                            ui.label("Error: Satellite tiles not initialized.");
+                                        }
+                                    }
+                                    else {
+                                        // Simple plot with no background.
                                         plots::plot_gps_data(ui, &app.scraper, &app.selected_id);
                                     }
                                 }

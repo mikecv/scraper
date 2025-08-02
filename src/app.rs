@@ -26,10 +26,13 @@ pub struct MyApp {
     pub selected_id: Option<String>,
     pub dark_mode: bool,
     pub show_gps_plot: bool,
+    pub use_simple_plot: bool,
     pub use_street_tiles: bool,
+    pub use_satellite_tiles: bool,
     pub map_memory: MapMemory,
     pub last_trip_id: Option<String>,
     pub map_tiles: Option<walkers::HttpTiles>,
+    pub _satellite_tiles: Option<walkers::HttpTiles>,
     _runtime: tokio::runtime::Runtime,
     
     // Help images.
@@ -71,10 +74,13 @@ impl Default for MyApp {
             selected_id: Some("".to_string()),
             dark_mode: true,
             show_gps_plot: false,
-            use_street_tiles: true,
+            use_simple_plot: true,
+            use_street_tiles: false,
+            use_satellite_tiles: false,
             map_memory: MapMemory::default(),
             last_trip_id: None,
             map_tiles: None,
+            _satellite_tiles: None,
             _runtime: runtime,
 
             // Help images.
@@ -98,12 +104,21 @@ impl Default for MyApp {
 }
 
 impl MyApp {
-    // Initialize map tiles when needed.
-    pub fn ensure_map_tiles(&mut self, _ctx: &egui::Context) {
+    // Initialize street view tiles when needed.
+    pub fn ensure_street_tiles(&mut self, _ctx: &egui::Context) {
         if self.map_tiles.is_none() {
             info!("Initializing street view tiles");
             // HttpTiles needs a context to create itself, so pass it here.
             self.map_tiles = Some(walkers::HttpTiles::new(OpenStreetMap, _ctx.clone()));
+        }
+    }
+
+    pub fn _ensure_satellite_tiles(&mut self, _ctx: &egui::Context) {
+        if self.map_tiles.is_none() {
+            info!("Initializing satellite view tiles");
+            // HttpTiles needs a context to create itself, so pass it here.
+            // (SET TO SATELLITE TILES)
+            self._satellite_tiles = Some(walkers::HttpTiles::new(OpenStreetMap, _ctx.clone()));
         }
     }
 
