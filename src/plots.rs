@@ -1,6 +1,5 @@
 // Draw the gps data plots to a separate UI.
 
-// use log::info;
 use log::debug;
 
 use eframe::egui;
@@ -9,6 +8,7 @@ use geo_types::Point;
 use chrono::{DateTime, NaiveDateTime, Utc, ParseError};
 use walkers::{Map, MapMemory, HttpTiles};
 use walkers::Plugin;
+use walkers::sources::{TileSource, Attribution};
 
 use crate::scraper::{Scraper, ScrapedData};
 
@@ -33,6 +33,29 @@ impl From<&ScrapedData> for PlotPoint {
             lon: data.gps_locn.lon,
             speed: data.gps_speed,
             _rssi: data.gps_rssi,
+        }
+    }
+}
+
+// Custom satellite tile source.
+#[derive(Clone, Debug)]
+pub struct SatelliteTiles;
+
+impl TileSource for SatelliteTiles {
+    fn tile_url(&self, tile_id: walkers::TileId) -> String {
+        // Using ESRI World Imagery (free satellite tiles)
+        format!(
+            "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{}/{}/{}",
+            tile_id.zoom, tile_id.y, tile_id.x
+        )
+    }
+
+    fn attribution(&self) -> Attribution {
+        Attribution {
+            text: "Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community".into(),
+            url: "https://www.esri.com/".into(),
+            logo_dark: None,
+            logo_light: None,
         }
     }
 }

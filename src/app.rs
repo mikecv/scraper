@@ -32,7 +32,7 @@ pub struct MyApp {
     pub map_memory: MapMemory,
     pub last_trip_id: Option<String>,
     pub map_tiles: Option<walkers::HttpTiles>,
-    pub _satellite_tiles: Option<walkers::HttpTiles>,
+    pub satellite_tiles: Option<walkers::HttpTiles>,
     _runtime: tokio::runtime::Runtime,
     
     // Help images.
@@ -51,6 +51,7 @@ pub struct MyApp {
     pub help_image_13: Option<egui::TextureHandle>,
     pub help_image_14: Option<egui::TextureHandle>,
     pub help_image_15: Option<egui::TextureHandle>,
+    pub help_image_16: Option<egui::TextureHandle>,
 }
 
 impl Default for MyApp {
@@ -80,7 +81,7 @@ impl Default for MyApp {
             map_memory: MapMemory::default(),
             last_trip_id: None,
             map_tiles: None,
-            _satellite_tiles: None,
+            satellite_tiles: None,
             _runtime: runtime,
 
             // Help images.
@@ -99,6 +100,7 @@ impl Default for MyApp {
             help_image_13: None,
             help_image_14: None,
             help_image_15: None,
+            help_image_16: None,
         }
     }
 }
@@ -113,12 +115,12 @@ impl MyApp {
         }
     }
 
-    pub fn _ensure_satellite_tiles(&mut self, _ctx: &egui::Context) {
-        if self.map_tiles.is_none() {
+    // Initialize satelitte view tiles when needed.
+    pub fn ensure_satellite_tiles(&mut self, _ctx: &egui::Context) {
+        if self.satellite_tiles.is_none() {
             info!("Initializing satellite view tiles");
-            // HttpTiles needs a context to create itself, so pass it here.
-            // (SET TO SATELLITE TILES)
-            self._satellite_tiles = Some(walkers::HttpTiles::new(OpenStreetMap, _ctx.clone()));
+            // Use our custom satellite tile source
+            self.satellite_tiles = Some(walkers::HttpTiles::new(crate::plots::SatelliteTiles, _ctx.clone()));
         }
     }
 
@@ -313,8 +315,7 @@ impl MyApp {
                 Err(e) => info!("Failed to load help image 12: {}", e),
             }
         }
-
-        // Help image 13 - street view gps plot pan and zoom.
+        // Help image 13 - gps plot with satelitte view tile background.
         if self.help_image_13.is_none() {
             let icon_bytes = include_bytes!("../assets/help-13.png");
             match image::load_from_memory(icon_bytes) {
@@ -328,8 +329,8 @@ impl MyApp {
             }
         }
 
-        // Help image 14 - light and dark mode menu.
-        if self.help_image_14.is_none() {
+        // Help image 14 - street view gps plot pan and zoom.
+        if self.help_image_13.is_none() {
             let icon_bytes = include_bytes!("../assets/help-14.png");
             match image::load_from_memory(icon_bytes) {
                 Ok(img) => {
@@ -342,8 +343,8 @@ impl MyApp {
             }
         }
 
-        // Help image 15 - trip and event font sizes.
-        if self.help_image_15.is_none() {
+        // Help image 15 - light and dark mode menu.
+        if self.help_image_14.is_none() {
             let icon_bytes = include_bytes!("../assets/help-15.png");
             match image::load_from_memory(icon_bytes) {
                 Ok(img) => {
@@ -353,6 +354,20 @@ impl MyApp {
                     self.help_image_15 = Some(ctx.load_texture("help_image_15", color_image, Default::default()));
                 }
                 Err(e) => info!("Failed to load help image 15: {}", e),
+            }
+        }
+
+        // Help image 16 - trip and event font sizes.
+        if self.help_image_16.is_none() {
+            let icon_bytes = include_bytes!("../assets/help-16.png");
+            match image::load_from_memory(icon_bytes) {
+                Ok(img) => {
+                    let rgba = img.to_rgba8();
+                    let size = [img.width() as usize, img.height() as usize];
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    self.help_image_16 = Some(ctx.load_texture("help_image_16", color_image, Default::default()));
+                }
+                Err(e) => info!("Failed to load help image 16: {}", e),
             }
         }
     }

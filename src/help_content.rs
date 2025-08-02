@@ -73,8 +73,7 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
     }
 
     ui.collapsing("2.5 Optional Trip Data", |ui| {
-        ui.label("Some less common events can be shown in the trip events list by selecting options from the main menu.");
-        ui.label("From the main menu check from the optional event types as illustrated below.");
+        ui.label("Some less common events can be shown in the trip events list by selecting options from the 'Show' menu item as illustrated below.");
     });
 
     // Optional events display.
@@ -85,7 +84,7 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
     }
 
     ui.collapsing("2.6 Trip events showing optional REPORT events", |ui| {
-        ui.label("The following figure shows REPORT events included in the previous trip events list with showing report events enabled.");
+        ui.label("The following figure shows that REPORT events can be included with the other trip events list by selecting 'Report events' from the 'Show' menu.");
     });
 
     // Optional report events displayed.
@@ -97,7 +96,7 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
 
     ui.collapsing("2.7 Trip events showing GPS data", |ui| {
         ui.label("Most trip events include some GPS data in the event string.");
-        ui.label("By checking the Show GPS data menu option GPS data is apended to the event data for each event as illustrated in below.");
+        ui.label("By checking the 'GPS event data' from the 'Show' menu option, GPS data is apended to the event data for each event as illustrated in below.");
         ui.label("Note that GPS data relies on a gps fix for data to be accurate or useful.");
     });
 
@@ -109,7 +108,7 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
     }
 
     ui.collapsing("2.8 Out of trip events", |ui| {
-        ui.label("By checking the Show Out of Trip Event menu option the trip events list will include any (supported) events that occured out of trip, where out of trip means after an end of trip and before a start of trip.");
+        ui.label("By checking the Show Out of trip events' from the 'Show' menu the trip events list will include any (supported) events that occured out of trip, where out of trip means after an end of trip and before a start of trip.");
     });
 
     // Optional out of trip events.
@@ -134,7 +133,7 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
         ui.label("As described in early sections event data has collected gps data associated with it.");
         ui.label("As events are recorded in sequence, when plotted, the gps data is a breadcrumn trail of the machine in question.");
         ui.label("From the Plot menu the user can select to show the gps plot for the currently selected trip (if there is one selected).");
-        ui.label("The Plot men allows the user to select a naked plot, or one with an Open Street Map (OSM) tile background as illustrated belwo.");
+        ui.label("The Plot menu allows the user to select a simple plot (no background), or one with an Open street (OSM), or ESRI satelitte view tile background as illustrated belwo.");
     });
 
     // GPS plot menu.
@@ -144,10 +143,10 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
         ui.add_space(10.0);
     }
 
-    ui.collapsing("3.1 Plain GPS plot", |ui| {
+    ui.collapsing("3.1 Simple GPS plot", |ui| {
         ui.label("The standard option is no backgound to the plot as illustrated below.");
         ui.label("Note that the plain background will match the current light/dark application background setting.");
-        ui.label("Note that plot displayed is for the currently selected machine if one is selected.");
+        ui.label("Note that the plot displayed is for the currently selected trip, if one is selected.");
     });
 
     // Plain GPS plot.
@@ -157,11 +156,11 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
         ui.add_space(10.0);
     }
 
-    ui.collapsing("3.2 Open Street Maps (SM) GPS plot", |ui| {
-        ui.label("The gps plot with street view menu item is selected the current or future gps plots will use a street view background as illustrated below.");
-        ui.label("Note that if a map is already displayed in plain mode when the street view menu item is checked, the gps plot will automatically be updated to use the GPS background.");
+    ui.collapsing("3.2 Open Street Maps (OSM) GPS plot", |ui| {
+        ui.label("If the 'Street View' option is selected from the 'Plot' menu the current and future gps plots will use a street view background as illustrated below.");
+        ui.label("Note that if a map is already displayed in plain mode when the street view menu item is checked, the gps plot will automatically be updated to use the OSM street view background.");
         ui.label("Note that the gps breadcrumbs are colour coded to indicate the gps speed of the vehicle at the time - refer to the legend below the plot.");
-});
+    });
 
     // Street view GPS plot.
     if let Some(texture) = &app.help_image_12 {
@@ -170,16 +169,21 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
         ui.add_space(10.0);
     }
 
-    ui.collapsing("3.3 Street view GPS gps plot options", |ui| {
-        ui.label("Built into the gps with street view plots is the abilty to pan and zoom using the familiar mouse, or Ctrl mouse opens.");
-        ui.label("Ilustrated in the following figure is the previous map that has been panned and zoomed as a demonstration.");
-        ui.label("Note that an internet connection is required to plot with street view backgrounds.");
-        ui.label("Note that partial links between consecutive gps points is  only shown if both points are visible.");
+    ui.collapsing("3.3 Satelite Maps GPS plot", |ui| {
+        ui.label("If the 'Satellite View' option is selected from the 'Plot' menu the current and future gps plots will use a satellite view background as illustrated below.");
+        ui.label("Note that if a map is already displayed in plain mode when the satellite view menu item is checked, the gps plot will automatically be updated to use the ESRI satellite view background.");
         ui.label("Note that the gps breadcrumbs are colour coded to indicate the gps speed of the vehicle at the time - refer to the legend below the plot.");
     });
 
-    // Street view GPS plot (pan and zoom).
+    // Satellite view GPS plot.
     if let Some(texture) = &app.help_image_13 {
+        ui.add_space(10.0);
+        ui.add(egui::Image::new(texture).max_width(400.0));
+        ui.add_space(10.0);
+    }
+
+    // Sat view GPS plot (pan and zoom).
+    if let Some(texture) = &app.help_image_14 {
         ui.add_space(10.0);
         ui.add(egui::Image::new(texture).max_width(400.0));
         ui.add_space(10.0);
@@ -187,18 +191,18 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
 
     ui.collapsing("4.0 User settings", |ui| {
         ui.label("There are some program related settings that the user can select or use independent of the log scraping functionality.");
-        ui.label("These include the dark/light program setting, and the font size of trip and event data information on the main display.");
+        ui.label("These include the dark/light program setting, and the font size of trip and event data information, on the main display.");
         ui.label("These settings will be described in the following sections.");
     });
 
     ui.collapsing("4.1 Background settings", |ui| {
-        ui.label("From the View menu, the user can select between light and dark mode as illustrated below.");
+        ui.label("From the 'View' menu, the user can select between light and dark mode as illustrated below.");
         ui.label("Note that menu selection is effectively a toggle button.");
         ui.label("Note also that this will change the background to all the application windows.");
     });
 
     // Light and dark mode setting.
-    if let Some(texture) = &app.help_image_14 {
+    if let Some(texture) = &app.help_image_15 {
         ui.add_space(10.0);
         ui.add(egui::Image::new(texture).max_width(400.0));
         ui.add_space(10.0);
@@ -206,11 +210,11 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
 
     ui.collapsing("4.2 Trip and event list font size", |ui| {
         ui.label("There is an option to change the font size used for Trip and Event data.");
-        ui.label("This is achieved via the 'settings.yml' file, an example of which is shown in the following example (actually the default values).");
+        ui.label("This is achieved via the 'settings.yml' file, an example of which is shown in the following example (these are also the default values).");
     });
 
     // Trip and Event font size setting.
-    if let Some(texture) = &app.help_image_15 {
+    if let Some(texture) = &app.help_image_16 {
         ui.add_space(10.0);
         ui.add(egui::Image::new(texture).max_width(400.0));
         ui.add_space(10.0);
@@ -221,6 +225,6 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
         ui.label("Font sizes are limited to the range 12.0 to 20.0.");
         ui.add_space(10.0);
         ui.label("If the range limits above are exceeded the default values shown above will be used.");
-        ui.label("Note that the width of the main screen can be varied within limits, but using too large a font may result in longer strings from being clipped.");
+        ui.label("Note that the width of the main screen can be varied within limits, but using too large a font may result in longer strings being clipped.");
     });
 }

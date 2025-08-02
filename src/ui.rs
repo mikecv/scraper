@@ -352,10 +352,8 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
             // Street view tiles map.
             app.ensure_street_tiles(ctx);
         } else if app.use_satellite_tiles {
-            // (REPLACE THIS WITH SATELLITE TILES)
             // Satellite view tiles map.
-            // app.ensure_satelitte_tiles(ctx);
-            app.ensure_street_tiles(ctx);
+            app.ensure_satellite_tiles(ctx);
         }
 
         ctx.show_viewport_immediate(
@@ -425,9 +423,7 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
                                         }
                                     }
                                     else if app.use_satellite_tiles {
-                                        // if let Some(map_tiles) = &mut app._satellite_tiles {
-                                        // REPLACE WITH SATELLITE TILES WHEN AVAILABLE.
-                                        if let Some(map_tiles) = &mut app.map_tiles {
+                                        if let Some(map_tiles) = &mut app.satellite_tiles {
                                             plots::plot_gps_data_with_tiles(ui, &app.scraper, &app.selected_id, &mut app.map_memory, map_tiles, &mut app.last_trip_id);
                                         } else {
                                             ui.label("Error: Satellite tiles not initialized.");
