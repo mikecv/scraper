@@ -23,7 +23,7 @@ pub struct PlotPoint {
     pub _rssi: u32,
 }
 
-// Plotpoint struct instantiated from scraped data.
+// PlotPoint struct instantiated from scraped data.
 impl From<&ScrapedData> for PlotPoint {
     fn from(data: &ScrapedData) -> Self {
         Self {

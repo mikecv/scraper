@@ -18,6 +18,7 @@ pub struct MyApp {
     pub show_report_events: bool,
     pub show_debug_events: bool,
     pub show_gps_events: bool,
+    pub show_time_series: bool,
     pub show_about: bool,
     pub show_help: bool,
     pub about_icon: Option<egui::TextureHandle>,
@@ -67,6 +68,7 @@ impl Default for MyApp {
             show_report_events: false,
             show_debug_events: false,
             show_gps_events: false,
+            show_time_series: false,
             show_about: false,
             show_help: false,
             about_icon: None,
@@ -119,8 +121,8 @@ impl MyApp {
     pub fn ensure_satellite_tiles(&mut self, _ctx: &egui::Context) {
         if self.satellite_tiles.is_none() {
             info!("Initializing satellite view tiles");
-            // Use our custom satellite tile source
-            self.satellite_tiles = Some(walkers::HttpTiles::new(crate::plots::SatelliteTiles, _ctx.clone()));
+            // Use custom satellite tile source.
+            self.satellite_tiles = Some(walkers::HttpTiles::new(crate::gps_plot::SatelliteTiles, _ctx.clone()));
         }
     }
 
@@ -417,6 +419,11 @@ impl App for MyApp {
         // Check if we need to plot gps data.
         if self.show_gps_plot {
             ui::draw_gps_plot_window(self, ctx);
+        }
+
+        // Check if we need to plot time series data.
+        if self.show_time_series {
+            ui::draw_time_series_window(self, ctx);
         }
     }
 }

@@ -23,7 +23,8 @@ mod help_content;
 mod changelog_content;
 mod log_display;
 mod colours;
-mod plots;
+mod gps_plot;
+mod time_series_plot;
 
 // Create a global variable for application settings.
 // This will be available in other files.
@@ -61,7 +62,7 @@ lazy_static! {
     static ref DETAILS: Mutex<Details> = {
         let details = Details {
             program_name:           "Scraper".to_string(),
-            program_ver:            "0.1.0".to_string(),
+            program_ver:            "0.2.0".to_string(),
             program_date:           "2025".to_string(),
             program_devs:           vec!["mdc".to_string()],
             program_web:            "galacticwingcommander".to_string(),
@@ -77,8 +78,10 @@ lazy_static! {
             max_help_win_height:    1000.0,
             gps_win_width:          600.0,
             gps_win_height:         600.0,
-            changelog_win_width:    300.0,
-            changelog_win_height:   500.0,
+            time_series_win_width:  400.0,
+            time_series_win_height: 600.0,
+            changelog_win_width:    400.0,
+            changelog_win_height:   600.0,
         };
         Mutex::new(details)
     };

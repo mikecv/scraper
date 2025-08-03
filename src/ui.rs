@@ -5,7 +5,8 @@ use log::info;
 use eframe::{egui};
 use egui::epaint::{CornerRadius};
 
-use crate::plots;
+use crate::gps_plot;
+use crate::time_series_plot;
 use crate::colours;
 use crate::app::MyApp;
 use crate::help_content;
@@ -60,6 +61,12 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
                     app.use_street_tiles = false;
                     app.use_simple_plot = false;
                 };
+                ui.separator();
+                if ui.button("Time Series Data").clicked() {
+                    info!("Time Series Data button clicked.");
+                    app.show_time_series = true;
+                    ui.close_menu();
+                }
             });
 
             // View menu.
@@ -285,7 +292,7 @@ pub fn draw_help_panel(app: &mut MyApp, ctx: &egui::Context) {
             egui::ViewportId::from_hash_of("help_window"),
             egui::ViewportBuilder::default()
                 .with_title("Scraper Help")
-                .with_inner_size([details.help_win_height, details.help_win_width])
+                .with_inner_size([details.help_win_width, details.help_win_height])
                 .with_resizable(false)
                 .with_min_inner_size([details.help_win_width, details.min_help_win_height])
                 .with_max_inner_size([details.help_win_width, details.max_help_win_height]),
@@ -340,7 +347,7 @@ pub fn draw_help_panel(app: &mut MyApp, ctx: &egui::Context) {
     }
 }
 
-// New function to draw the GPS plot window as a separate viewport.
+// Function to draw the GPS plot window as a separate viewport.
 pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
     if app.show_gps_plot {
 
@@ -360,7 +367,7 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
             egui::ViewportId::from_hash_of("gps_plot_window"),
             egui::ViewportBuilder::default()
                 .with_title("GPS Data Plot")
-                .with_inner_size([details.gps_win_height, details.gps_win_width])
+                .with_inner_size([details.gps_win_width, details.gps_win_height])
                 .with_resizable(false),
             |ctx, class| {
                 assert!(class == egui::ViewportClass::Immediate);
@@ -417,21 +424,21 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
                                         // Pass the Option<HttpTiles> directly, and unwrap it safely within the function.
                                         // Ensure app.map_tiles is Some(HttpTiles) when this path is taken.
                                         if let Some(map_tiles) = &mut app.map_tiles {
-                                            plots::plot_gps_data_with_tiles(ui, &app.scraper, &app.selected_id, &mut app.map_memory, map_tiles, &mut app.last_trip_id);
+                                            gps_plot::plot_gps_data_with_tiles(ui, &app.scraper, &app.selected_id, &mut app.map_memory, map_tiles, &mut app.last_trip_id);
                                         } else {
                                             ui.label("Error: Street tiles not initialized.");
                                         }
                                     }
                                     else if app.use_satellite_tiles {
                                         if let Some(map_tiles) = &mut app.satellite_tiles {
-                                            plots::plot_gps_data_with_tiles(ui, &app.scraper, &app.selected_id, &mut app.map_memory, map_tiles, &mut app.last_trip_id);
+                                            gps_plot::plot_gps_data_with_tiles(ui, &app.scraper, &app.selected_id, &mut app.map_memory, map_tiles, &mut app.last_trip_id);
                                         } else {
                                             ui.label("Error: Satellite tiles not initialized.");
                                         }
                                     }
                                     else {
                                         // Simple plot with no background.
-                                        plots::plot_gps_data(ui, &app.scraper, &app.selected_id);
+                                        gps_plot::plot_gps_data(ui, &app.scraper, &app.selected_id);
                                     }
                                 }
                             );
@@ -441,6 +448,81 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
         );
     }
 }
+
+// Function to draw the time series plot window as a separate viewport.
+pub fn draw_time_series_window(app: &mut MyApp, ctx: &egui::Context) {
+    if app.show_time_series {
+
+        // Lock the global DETAILS to obtain access settings.
+        let details = DETAILS.lock().unwrap().clone();
+
+        ctx.show_viewport_immediate(
+            egui::ViewportId::from_hash_of("time_series_data_window"),
+            egui::ViewportBuilder::default()
+                .with_title("Time Series Data Plot")
+                .with_inner_size([details.time_series_win_width, details.time_series_win_height])
+                .with_resizable(false),
+            |ctx, class| {
+                assert!(class == egui::ViewportClass::Immediate);
+
+                // Apply theme based on main app setting.
+                if app.dark_mode {
+                    ctx.set_visuals(egui::Visuals::dark());
+                } else {
+                    ctx.set_visuals(egui::Visuals::light());
+                }
+
+                // Check if the viewport's native close button was clicked.
+                if ctx.input(|i| i.viewport().close_requested()) {
+                    // Set app state to false when window is closed.
+                    app.show_time_series = false;
+                }
+
+                // Draw border around the time series plot window.
+                draw_viewport_border(ctx, app.dark_mode);
+
+                // Determine the background colour based on dark_mode.
+                let background_color = if app.dark_mode {
+                    ctx.style().visuals.widgets.noninteractive.bg_fill
+                } else {
+                    ctx.style().visuals.widgets.noninteractive.bg_fill
+                };
+
+                egui::CentralPanel::default()
+                    .frame(egui::Frame::default()
+                        .stroke(egui::Stroke::new(2.0, colours::border_colour(app.dark_mode)))
+                        .inner_margin(egui::Margin::same(8))
+                        .fill(background_color)
+                    )
+                    .show(ctx, |ui| {
+                        ui.vertical(|ui| {
+                            // Header section.
+                            ui.horizontal(|ui| {
+                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                    if ui.button("Close").clicked() {
+                                        app.show_time_series = false;
+                                    }
+                                });
+                            });
+
+                            ui.separator();
+
+                            // Main plotting area.
+                            ui.allocate_ui_with_layout(
+                                egui::Vec2::new(ui.available_width(), ui.available_height()),
+                                egui::Layout::top_down(egui::Align::Min),
+                                |ui| {
+                                    // Call the time series plot function.
+                                    time_series_plot::plot_time_series_data(ui, &app.scraper, &app.selected_id);
+                                }
+                            );
+                        });
+                    });
+            },
+        );
+    }
+}
+
 
 // Function to draw changelog.
 pub fn draw_changelog(app: &mut MyApp, ctx: &egui::Context) {
@@ -454,7 +536,7 @@ pub fn draw_changelog(app: &mut MyApp, ctx: &egui::Context) {
             egui::ViewportId::from_hash_of("changlog_window"),
             egui::ViewportBuilder::default()
                 .with_title("Changelog")
-                .with_inner_size([details.changelog_win_height, details.changelog_win_width])
+                .with_inner_size([details.changelog_win_width, details.changelog_win_height])
                 .with_resizable(false),
             |ctx, class| {
                 assert!(class == egui::ViewportClass::Immediate);

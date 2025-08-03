@@ -49,6 +49,8 @@ pub struct Details {
     pub max_help_win_height:    f32,
     pub gps_win_width:          f32,
     pub gps_win_height:         f32,
+    pub time_series_win_width:  f32,
+    pub time_series_win_height: f32,
     pub changelog_win_width:    f32,
     pub changelog_win_height:   f32,
 }

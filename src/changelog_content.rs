@@ -9,7 +9,12 @@ use crate::app::MyApp;
 pub fn draw_changelog_content(ui: &mut egui::Ui, _app: &mut MyApp) {
     ui.heading("Scraper Changelog");
     ui.separator();
-    
+
+    ui.collapsing("0.2.0 - update release", |ui| {
+        ui.label("Bug fixes to window sizing.");
+        ui.label("Added time series data plotting.");
+   });
+
     ui.collapsing("0.1.0 - Initial release", |ui| {
         ui.label("Log parsing for trips and most events.");
         ui.label("Includes all event sub-data, as well as gps data.");
