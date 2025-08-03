@@ -241,8 +241,6 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
         }
     };
 
-    debug!("Selected trip number: {}", selected_trip);
-
     // Get all the plotting points.
     // Filter out bad gps points, i.e lat and lon = 0;
     let plot_points: Vec<PlotPoint> = scraper.scrapings.iter()
@@ -250,8 +248,6 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
         .filter(|scraped| scraped.gps_locn.lat != 0.0 && scraped.gps_locn.lon != 0.0)
         .map(PlotPoint::from)
         .collect();
-
-    debug!("Number of plot points in trip: {}", plot_points.len());
 
     if plot_points.is_empty() {
         ui.label("No valid GPS points found for this trip.");

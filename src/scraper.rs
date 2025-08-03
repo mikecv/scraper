@@ -40,6 +40,7 @@ pub struct GpsLocation {
 #[derive(Debug)]
 pub struct ScrapedData {
     pub date_time: String,
+    pub unix_time: u64,
     pub on_trip: bool,
     pub trip_num: String,
     pub event_type: String,
@@ -277,7 +278,7 @@ impl Scraper {
         // Track if we are in or out of trip.
         let mut intrip = false;
 
-        // Trip number for signone event so that it can
+        // Trip number for SIGNON event so that it can
         // be copied to the other events in the trip.
         let mut trip_num_id = "".to_string();
 
@@ -291,6 +292,7 @@ impl Scraper {
                 // Extract key fields for logging.
                 let date = captures.get(1).unwrap().as_str();
                 let time = captures.get(2).unwrap().as_str();
+                let unix_time = captures.get(4).unwrap().as_str();
                 let event_type = captures.get(10).unwrap().as_str();
                 let event_detail = captures.get(11).unwrap().as_str();
                 let ev_key_vals = ungroup_event_data(event_type.to_string(), event_detail);
@@ -341,6 +343,7 @@ impl Scraper {
                 // Create and populate the struct correctly.
                 let ev_data = ScrapedData {
                     date_time: format!("{} {}", date, time),
+                    unix_time: unix_time.parse().expect("Invalid Unix time string"),
                     on_trip: intrip,
                     // Apply trip number to all events.
                     trip_num: trip_num_id.clone(),
@@ -573,7 +576,7 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
                 if let Some(duration) = captures.get(2) {
                     result.push(("Duration".to_string(), duration.as_str().to_string()));
                 }
-                if let Some(battery) = captures.get(3) {
+                if let Some(battery) = captures.get(4) {
                     if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
                         let voltage_volts = voltage_tens / 10.0;
                         result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
@@ -986,7 +989,7 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
 
         // Search for the event sub-data for the ZONEOVERSPEED event.
         "ZONEOVERSPEED" => {
-            let sub_zone_overspeed_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+)(.*)$")
+            let sub_zone_overspeed_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+) v:(.+?)$")
                 .expect("Invalid ZONEOVERSPEED regex pattern");
 
             if let Some(captures) = sub_zone_overspeed_pattern.captures(sub_data) {
