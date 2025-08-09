@@ -78,8 +78,8 @@ lazy_static! {
             max_help_win_height:    1000.0,
             gps_win_width:          600.0,
             gps_win_height:         600.0,
-            time_series_win_width:  400.0,
-            time_series_win_height: 600.0,
+            time_series_win_width:  500.0,
+            time_series_win_height: 700.0,
             changelog_win_width:    400.0,
             changelog_win_height:   600.0,
         };

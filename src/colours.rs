@@ -74,3 +74,57 @@ pub fn border_colour(dark_mode: bool) -> Color32 {
         Color32::from_rgb(128, 128, 128)
     }
 }
+
+// Colours for time series plot lines.
+pub fn ts_line_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgb(58, 235, 14)
+    } else {
+        Color32::from_rgb(0, 51, 204)
+    }
+}
+
+// Colours for time series plot backgroud.
+pub fn ts_back_gnd_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgb(10, 10, 10)
+    } else {
+        Color32::from_rgb(250, 250, 250)
+    }
+}
+
+// Colours for time series plot grid lines.
+pub fn ts_grid_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgb(250, 250, 250)
+    } else {
+        Color32::from_rgb(10, 10, 10)
+    }
+}
+
+// Colours for time series plot labels.
+pub fn ts_labels_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgb(204, 255, 204)
+    } else {
+        Color32::from_rgb(0, 0, 75)
+    }
+}
+
+// Colours for zoom box outline.
+pub fn ts_zoom_outline_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgb(204, 15, 0)
+    } else {
+        Color32::from_rgb(51, 0, 10)
+    }
+}
+
+// Colours for zoom box fill.
+pub fn ts_zoom_fill_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgba_unmultiplied(204, 15, 0, 30)
+    } else {
+        Color32::from_rgba_unmultiplied(204, 15, 0, 30)
+    }
+}

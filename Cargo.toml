@@ -29,6 +29,7 @@ chrono = "0.4.41"
 # UI related.
 eframe = "0.31.1"
 egui = "0.31.1"
+egui_plot = "0.31"
 walkers = "0.42.0"
 epaint = "0.31.1"
 geo-types = "0.7.16"

@@ -9,6 +9,7 @@ use egui::epaint::{CornerRadius};
 use crate::scraper::Scraper;
 use crate::ui;
 use crate::log_display::UiState;
+use crate::time_series_plot::PlotState;
 
 // Make the MyApp struct public.
 pub struct MyApp {
@@ -34,6 +35,7 @@ pub struct MyApp {
     pub last_trip_id: Option<String>,
     pub map_tiles: Option<walkers::HttpTiles>,
     pub satellite_tiles: Option<walkers::HttpTiles>,
+    pub plot_state: PlotState,
     _runtime: tokio::runtime::Runtime,
     
     // Help images.
@@ -84,6 +86,7 @@ impl Default for MyApp {
             last_trip_id: None,
             map_tiles: None,
             satellite_tiles: None,
+            plot_state: PlotState::default(),
             _runtime: runtime,
 
             // Help images.
@@ -317,6 +320,7 @@ impl MyApp {
                 Err(e) => info!("Failed to load help image 12: {}", e),
             }
         }
+
         // Help image 13 - gps plot with satelitte view tile background.
         if self.help_image_13.is_none() {
             let icon_bytes = include_bytes!("../assets/help-13.png");
