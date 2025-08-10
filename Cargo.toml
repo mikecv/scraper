@@ -24,7 +24,7 @@ serde_yaml = "0.9.34"
 serde_json = "1.0"
 futures = "0.3"
 futures-util = "0.3"
-chrono = "0.4.41"
+chrono = { version = "0.4", features = ["serde"] }
 
 # UI related.
 eframe = "0.31.1"
