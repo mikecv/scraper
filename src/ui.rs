@@ -507,15 +507,8 @@ pub fn draw_time_series_window(app: &mut MyApp, ctx: &egui::Context) {
 
                             ui.separator();
 
-                            // Main plotting area.
-                            ui.allocate_ui_with_layout(
-                                egui::Vec2::new(ui.available_width(), ui.available_height()),
-                                egui::Layout::top_down(egui::Align::Min),
-                                |ui| {
-                                    // Call the time series plot function.
-                                    time_series_plot::plot_time_series_data(ui, &app.scraper, &app.selected_id, &mut app.plot_state, &app.dark_mode);
-                                }
-                            );
+                            // Call the time series plot function.
+                            time_series_plot::plot_time_series_data(ui, &app.scraper, &app.selected_id, &mut app.plot_state, &app.dark_mode);
                         });
                     });
             },
