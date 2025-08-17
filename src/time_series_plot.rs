@@ -7,6 +7,7 @@ use log::info;
 
 use eframe::egui;
 
+use crate::colours;
 use crate::scraper::{Scraper, ScrapedData};
 
 // SinglePoint struct.
@@ -22,6 +23,7 @@ pub struct TimeSeriesData {
     pub series_name: String,
     pub data_type: String,
     pub units: String,
+    pub levels: Vec<String>,
     pub time_series_points: Vec<SinglePoint>,
 }
 
@@ -32,11 +34,6 @@ pub struct PlotState {
     pub auto_bounds: bool,
     pub zoom_factor: f32,
     pub pan_offset: f32,
-    pub is_dragging: bool,
-    pub drag_start: Option<egui::Pos2>,
-    pub is_selecting: bool,
-    pub selection_start: Option<egui::Pos2>,
-    pub selection_end: Option<egui::Pos2>,
 }
 
 impl Default for PlotState {
@@ -46,19 +43,20 @@ impl Default for PlotState {
             auto_bounds: true,
             zoom_factor: 1.0,
             pan_offset: 0.0,
-            is_dragging: false,
-            drag_start: None,
-            is_selecting: false,
-            selection_start: None,
-            selection_end: None,
         }
     }
 }
 
 // Constants for plot dimensions,
-// as well as spacing between plots.
-const PLOT_HEIGHT: f32 = 200.0;
+// as well as format and spacing between plots.
+const PLOT_HEIGHT: f32 = 140.0;
 const SPACE_BETWEEN_PLOTS: f32 = 5.0;
+const MARGIN_LEFT: f32 = 50.0;
+const MARGIN_RIGHT: f32 = 40.0;
+const MARGIN_TOP: f32 = 30.0;
+const MARGIN_BOTTOM: f32 = 40.0;
+const SHOW_MARKERS: bool = false;
+const LINE_THIVKNESS: f32 = 1.0;
 
 // Function to create the data sets to plot.
 fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<TimeSeriesData> {
@@ -109,6 +107,7 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
             data_type: "Analog".to_string(),
             series_name: "Battery".to_string(),
             units: "V".to_string(),
+            levels: Vec::new(),
             time_series_points: battery_points,
         });
     }
@@ -127,22 +126,25 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
             data_type: "Analog".to_string(),
             series_name: "Speed".to_string(),
             units: "kph".to_string(),
+            levels: Vec::new(),
             time_series_points: speed_points,
         });
     }
 
     // Process each unique event type once to create combined datasets.
     // That is a combined dataset for each type of event.
-    let unique_event_types: std::collections::HashSet<String> = trip_data.iter()
+    // let unique_event_types: std::collections::HashSet<String> = trip_data.iter()
+        let unique_event_types: std::collections::BTreeSet<String> = trip_data.iter()
         .map(|data| data.event_type.clone())
         .collect();
 
     for event_type in unique_event_types {
         match event_type.as_str() {
             "ENGINETEMP" => {
-                // Get all points for this event type in the selected trip
+                // Get all points for this event type in the selected trip.
                 let ev_points: Vec<SinglePoint> = trip_data.iter()
-                    .filter(|data| data.event_type == event_type) // Filter by event type
+                    // Filter by event type.
+                    .filter(|data| data.event_type == event_type)
                     .filter_map(|data| {
                         // Look for event duration in the ev_detail vector.
                         data.ev_detail.iter()
@@ -159,7 +161,7 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
                     .collect();
                 
                 if !ev_points.is_empty() {
-                    // Convert single points to pulse data
+                    // Convert single points to pulse data.
                     let pulse_points = convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time);
     
                     // Push the digital time series events to list of datasets.
@@ -167,14 +169,16 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
                         data_type: "Digital".to_string(),
                         series_name: event_type.clone(),
                         units: "Active".to_string(),
+                        levels: Vec::new(),
                         time_series_points: pulse_points,
                     });
                 }
             }
             "LOWCOOLANT" => {
-                // Get all points for this event type in the selected trip
+                // Get all points for this event type in the selected trip.
                 let ev_points: Vec<SinglePoint> = trip_data.iter()
-                    .filter(|data| data.event_type == event_type) // Filter by event type
+                    // Filter by event type.
+                    .filter(|data| data.event_type == event_type)
                     .filter_map(|data| {
                         // Look for event duration in the ev_detail vector.
                         data.ev_detail.iter()
@@ -191,7 +195,7 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
                     .collect();
                 
                 if !ev_points.is_empty() {
-                    // Convert single points to pulse data
+                    // Convert single points to pulse data.
                     let pulse_points = convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time);
     
                     // Push the digital time series events to list of datasets.
@@ -199,14 +203,16 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
                         data_type: "Digital".to_string(),
                         series_name: event_type.clone(),
                         units: "Active".to_string(),
+                        levels: Vec::new(),
                         time_series_points: pulse_points,
                     });
                 }
             }
             "OILPRESSURE" => {
-                // Get all points for this event type in the selected trip
+                // Get all points for this event type in the selected trip.
                 let ev_points: Vec<SinglePoint> = trip_data.iter()
-                    .filter(|data| data.event_type == event_type) // Filter by event type
+                    // Filter by event type.
+                    .filter(|data| data.event_type == event_type)
                     .filter_map(|data| {
                         // Look for event duration in the ev_detail vector.
                         data.ev_detail.iter()
@@ -223,7 +229,7 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
                     .collect();
                 
                 if !ev_points.is_empty() {
-                    // Convert single points to pulse data
+                    // Convert single points to pulse data.
                     let pulse_points = convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time);
     
                     // Push the digital time series events to list of datasets.
@@ -231,14 +237,16 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
                         data_type: "Digital".to_string(),
                         series_name: event_type.clone(),
                         units: "Active".to_string(),
+                        levels: Vec::new(),
                         time_series_points: pulse_points,
                     });
                 }
             }
             "OVERSPEED" => {
-                // Get all points for this event type in the selected trip
+                // Get all points for this event type in the selected trip.
                 let ev_points: Vec<SinglePoint> = trip_data.iter()
-                    .filter(|data| data.event_type == event_type) // Filter by event type
+                    // Filter by event type
+                    .filter(|data| data.event_type == event_type)
                     .filter_map(|data| {
                         // Look for event duration in the ev_detail vector.
                         data.ev_detail.iter()
@@ -255,7 +263,7 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
                     .collect();
                 
                 if !ev_points.is_empty() {
-                    // Convert single points to pulse data
+                    // Convert single points to pulse data.
                     let pulse_points = convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time);
     
                     // Push the digital time series events to list of datasets.
@@ -263,6 +271,42 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
                         data_type: "Digital".to_string(),
                         series_name: event_type.clone(),
                         units: "Active".to_string(),
+                        levels: Vec::new(),
+                        time_series_points: pulse_points,
+                    });
+                }
+            }
+            "IMPACT" => {
+                // Get all points for this event type in the selected trip.
+                let ev_points: Vec<SinglePoint> = trip_data.iter()
+                    // Filter by event type
+                    .filter(|data| data.event_type == event_type)
+                    .filter_map(|data| {
+                        // Look for event duration in the ev_detail vector.
+                        data.ev_detail.iter()
+                            .find(|(tag, _)| tag == "Severity")
+                            .and_then(|(_, value)| {
+                                // Parse the integer string value to f32.
+                                value.parse::<f32>().ok()
+                            })
+                            .map(|event_point| SinglePoint {
+                                unix_time: data.unix_time,
+                                point_value: event_point,
+                            })
+                    })
+                    .collect();
+                
+                if !ev_points.is_empty() {
+                    // Convert single points to impulse data.
+                    // Impulse data is at instance in time, but can have different values.
+                    let pulse_points = convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time);
+    
+                    // Push the impulse time series events to list of datasets.
+                    datasets.push(TimeSeriesData {
+                        data_type: "Impulse".to_string(),
+                        series_name: event_type.clone(),
+                        units: "Severity".to_string(),
+                        levels: vec!["Low".to_string(), "Warning".to_string(), "Critical".to_string()],
                         time_series_points: pulse_points,
                     });
                 }
@@ -279,7 +323,7 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
 fn convert_to_pulse_data(ev_points: &[SinglePoint], trip_start: u64, trip_end: u64) -> Vec<SinglePoint> {
     let mut pulse_points = Vec::new();
     
-    // Add starting point at trip start (signal not active)
+    // Add starting point at trip start (signal not active).
     pulse_points.push(SinglePoint {
         unix_time: trip_start,
         point_value: 0.0,
@@ -302,7 +346,8 @@ fn convert_to_pulse_data(ev_points: &[SinglePoint], trip_start: u64, trip_end: u
         // Add point just before signal goes active (still 0).
         if event_start_time > trip_start {
             pulse_points.push(SinglePoint {
-                unix_time: event_start_time.saturating_sub(1),
+                // unix_time: event_start_time.saturating_sub(1),
+                unix_time: event_start_time,
                 point_value: 0.0,
             });
         }
@@ -313,6 +358,12 @@ fn convert_to_pulse_data(ev_points: &[SinglePoint], trip_start: u64, trip_end: u
             point_value: 1.0,
         });
         
+        // Add point where signal is active (constant high).
+        pulse_points.push(SinglePoint {
+            unix_time: event_end_time,
+            point_value: 1.0,
+        });
+    
         // Add point where signal becomes inactive (falling edge).
         pulse_points.push(SinglePoint {
             unix_time: event_end_time,
@@ -324,18 +375,6 @@ fn convert_to_pulse_data(ev_points: &[SinglePoint], trip_start: u64, trip_end: u
     pulse_points.push(SinglePoint {
         unix_time: trip_end,
         point_value: 0.0,
-    });
-    
-    // Sort by time to ensure correct order.
-    pulse_points.sort_by_key(|p| p.unix_time);
-    
-    // Remove any duplicate time points (keep the last value for each time).
-    pulse_points.dedup_by(|a, b| {
-        if a.unix_time == b.unix_time {
-            true
-        } else {
-            false
-        }
     });
     
     pulse_points
@@ -352,45 +391,451 @@ pub fn plot_time_series_data(
 ) {
     // Create a fixed top panel for info.
     egui::TopBottomPanel::top("info_panel").show_inside(ui, |ui| {
-        ui.heading("Time Series Plots");
+        ui.horizontal(|ui| {
+            ui.heading("Time Series Plots");
+            
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui.button("Reset Pan/Zoom").clicked() {
+                    plot_state.x_range = None;
+                    plot_state.auto_bounds = true;
+                    plot_state.pan_offset = 0.0;
+                    plot_state.zoom_factor = 1.0;
+                }
+            });
+        });
+        
+        // Show trip selection status.
+        match selected_trip {
+            Some(trip_id) if !trip_id.is_empty() => {
+                ui.label(format!("Current trip ID: {}", trip_id));
+            }
+            _ => info!("No trip selected."),
+        }
     });
 
-    // Create a central, vertically scrollable area for the plots.
     egui::CentralPanel::default().show_inside(ui, |ui| {
-        egui::ScrollArea::vertical().show(ui, |ui| {
+        let mut scroll_area = egui::ScrollArea::vertical();
+        scroll_area = scroll_area.auto_shrink([false, false]);
+        scroll_area.show(ui, |ui| {
+            ui.set_max_width(ui.available_width() - 20.0);
 
-            // Iterate through datasets and plot each one in turn.
-            let datasets = create_time_series_datasets(scraper, selected_trip.as_ref().unwrap());
+            // Check if a trip is currently selected.
+            if let Some(trip_id) = selected_trip {
+                if !trip_id.is_empty() {
+                    // If trip selected, and not empty, get datasets to plot.
+                    let datasets = create_time_series_datasets(scraper, trip_id);
 
-            for dataset in datasets {
+                    // Calculate overall time range for all datasets.
+                    let (time_min, time_max) = calculate_time_range(&datasets);
 
-                // Here's the space allocation for a single plot.
-                let plot_size = egui::vec2(ui.available_width(), PLOT_HEIGHT);
-                let (plot_response, painter) = ui.allocate_painter(plot_size, egui::Sense::hover());
+                    for dataset in datasets {
+                        // Here's the space allocation for a single plot.
+                        let plot_size = egui::vec2(ui.available_width(), PLOT_HEIGHT);
+                        let (plot_response, painter) = ui.allocate_painter(plot_size, egui::Sense::click_and_drag());
 
-                // Now you would use the 'painter' to draw your plot.
-                // You can also use the 'plot_response' to handle user input like hover.
+                        // Handle panning.
+                        if plot_response.dragged() {
+                            let drag_delta = plot_response.drag_delta();
+                            plot_state.pan_offset += drag_delta.x;
+                            plot_state.auto_bounds = false;
+                        }
 
-                // Example of drawing a simple rectangle to represent a plot:
-                painter.rect_filled(plot_response.rect, 0.0, egui::Color32::from_rgb(50, 100, 150));
-                
-                // Add some vertical spacing between plots.
-                ui.add_space(SPACE_BETWEEN_PLOTS);
-            }
+                        // Handle limited zooming with mouse wheel.
+                        if plot_response.hovered() {
+                            let scroll_delta = ui.input(|i| i.raw_scroll_delta.y);
+                            if scroll_delta != 0.0 {
+                                let zoom_speed = 0.001;
+                                let zoom_change = 1.0 + (scroll_delta * zoom_speed);
+                                plot_state.zoom_factor *= zoom_change;
+                                plot_state.zoom_factor = plot_state.zoom_factor.clamp(0.1, 10.0);
+                                plot_state.auto_bounds = false;
+                            }
+                        }
 
-            // To demonstrate multiple plots, let's create a few placeholder plots.
-            for i in 0..5 {
-                 // The allocation must be done for each plot individually.
-                let plot_size = egui::vec2(ui.available_width(), PLOT_HEIGHT);
-                let (plot_response, painter) = ui.allocate_painter(plot_size, egui::Sense::hover());
-                
-                // Example of drawing a simple placeholder plot.
-                painter.rect_filled(plot_response.rect, 0.0, egui::Color32::from_rgb(50 + i * 20, 100, 150));
-                ui.label(format!("Placeholder Plot {}", i));
-                
-                // Add some vertical spacing between plots.
-                ui.add_space(SPACE_BETWEEN_PLOTS);
+                        // Draw the plot with axes.
+                        draw_plot_with_axes(
+                            &painter, 
+                            &plot_response.rect, 
+                            &dataset, 
+                            time_min, 
+                            time_max,
+                            plot_state,
+                            *dark_mode
+                        );
+                        
+                        // Add some vertical spacing between plots.
+                        ui.add_space(SPACE_BETWEEN_PLOTS);
+                    }
+                } else {
+                    // Show a centreed message when trip is empty.
+                    ui.vertical_centered(|ui| {
+                        ui.add_space(100.0);
+                        ui.label(egui::RichText::new("No time series plots to display.")
+                            .color(colours::ts_notices_colour(*dark_mode)));
+                    });
+                }
+            } else {
+                // Show a centreed message when no trip is selected.
+                ui.vertical_centered(|ui| {
+                    ui.add_space(100.0);
+                    ui.label(egui::RichText::new("Please select a trip from the trip list to view time series plots.")
+                        .color(colours::ts_notices_colour(*dark_mode)));
+                });
             }
         });
     });
+}
+
+// Helper function to calculate the overall time range across all datasets.
+fn calculate_time_range(datasets: &[TimeSeriesData]) -> (u64, u64) {
+    let mut time_min = u64::MAX;
+    let mut time_max = u64::MIN;
+    
+    for dataset in datasets {
+        for point in &dataset.time_series_points {
+            time_min = time_min.min(point.unix_time);
+            time_max = time_max.max(point.unix_time);
+        }
+    }
+    
+    // If no data points, return reasonable defaults.
+    if time_min == u64::MAX {
+        (0, 1)
+    } else {
+        (time_min, time_max)
+    }
+}
+
+// Helper function to draw a plot with axes.
+fn draw_plot_with_axes(
+    painter: &egui::Painter,
+    rect: &egui::Rect,
+    dataset: &TimeSeriesData,
+    time_min: u64,
+    time_max: u64,
+    plot_state: &PlotState,
+    dark_mode: bool,
+) {
+    // Calculate the actual plotting area.
+    let plot_rect = egui::Rect::from_min_size(
+        egui::pos2(rect.min.x + MARGIN_LEFT, rect.min.y + MARGIN_TOP),
+        egui::vec2(
+            rect.width() - MARGIN_LEFT - MARGIN_RIGHT,
+            rect.height() - MARGIN_TOP - MARGIN_BOTTOM,
+        ),
+    );
+
+    // Calculate panned and zoomed time range.
+    let time_range = time_max - time_min;
+    let zoomed_time_range = (time_range as f32 / plot_state.zoom_factor) as u64;
+    let pan_pixels_to_time = zoomed_time_range as f32 / plot_rect.width();
+    let pan_time_offset = (plot_state.pan_offset * pan_pixels_to_time) as i64;
+
+    let center_time = (time_min + time_max) / 2;
+    let half_zoomed_range = zoomed_time_range / 2;
+
+    let panned_time_min = ((center_time as i64) - (half_zoomed_range as i64) - pan_time_offset).max(0) as u64;
+    let panned_time_max = ((center_time as i64) + (half_zoomed_range as i64) - pan_time_offset).max(0) as u64;
+
+    // Choose colours based on dark mode.
+    let (bg_color, axis_color, text_color) = if dark_mode {
+        (egui::Color32::from_rgb(30, 30, 30), egui::Color32::LIGHT_GRAY, egui::Color32::WHITE)
+    } else {
+        (egui::Color32::WHITE, egui::Color32::DARK_GRAY, egui::Color32::BLACK)
+    };
+    
+    // Draw background.
+    painter.rect_filled(*rect, 4.0, bg_color);
+    
+    // Draw plot border/frame.
+    painter.rect_stroke(*rect, 4.0, egui::Stroke::new(1.0, axis_color), egui::epaint::StrokeKind::Inside);
+    
+    // Draw the main plot area background.
+    painter.rect_filled(plot_rect, 0.0, if dark_mode { 
+        egui::Color32::from_rgb(40, 40, 40) 
+    } else { 
+        egui::Color32::from_rgb(250, 250, 250) 
+    });
+    
+    // Draw axes.
+    // X-axis (bottom).
+    painter.line_segment(
+        [egui::pos2(plot_rect.min.x, plot_rect.max.y), 
+         egui::pos2(plot_rect.max.x, plot_rect.max.y)],
+        egui::Stroke::new(2.0, axis_color),
+    );
+    
+    // Y-axis (left).
+    painter.line_segment(
+        [egui::pos2(plot_rect.min.x, plot_rect.min.y), 
+         egui::pos2(plot_rect.min.x, plot_rect.max.y)],
+        egui::Stroke::new(2.0, axis_color),
+    );
+    
+    // Calculate Y-axis range for this dataset.
+    let (y_min, y_max) = calculate_y_range(dataset);
+    
+    // Add plot title.
+    let title_pos = egui::pos2(rect.center().x, rect.min.y + 15.0);
+    painter.text(
+        title_pos,
+        egui::Align2::CENTER_CENTER,
+        format!("{} ({})", dataset.series_name, dataset.units),
+        egui::FontId::proportional(14.0),
+        text_color,
+    );
+    
+    // Draw X-axis tick marks and time labels (4 marks total).
+    if panned_time_max > panned_time_min {
+        let time_positions = [
+            (panned_time_min, plot_rect.min.x),
+            (panned_time_min + (panned_time_max - panned_time_min) / 3, plot_rect.min.x + plot_rect.width() / 3.0),
+            (panned_time_min + 2 * (panned_time_max - panned_time_min) / 3, plot_rect.min.x + 2.0 * plot_rect.width() / 3.0),
+            (panned_time_max, plot_rect.max.x),
+        ];
+        
+        for (time_value, x_pos) in time_positions {
+            // Draw tick mark.
+            painter.line_segment(
+                [egui::pos2(x_pos, plot_rect.max.y), 
+                 egui::pos2(x_pos, plot_rect.max.y + 5.0)],
+                egui::Stroke::new(1.0, axis_color),
+            );
+            
+            // Draw time label (actual clock time).
+            painter.text(
+                egui::pos2(x_pos, plot_rect.max.y + 20.0),
+                egui::Align2::CENTER_CENTER,
+                unix_time_to_hms(time_value),
+                egui::FontId::proportional(10.0),
+                text_color,
+            );
+        }
+    }
+    
+    // Draw Y-axis tick marks and labels.
+    if dataset.data_type == "Digital" {
+        // For digital signals, only show 0 and 1.
+        let positions_and_values = [
+            (plot_rect.max.y, 0.0),
+            (plot_rect.min.y, 1.0),
+        ];
+        
+        for (pos_y, value) in positions_and_values {
+            // Draw tick marks.
+            painter.line_segment(
+                [egui::pos2(plot_rect.min.x - 5.0, pos_y), 
+                 egui::pos2(plot_rect.min.x, pos_y)],
+                egui::Stroke::new(1.0, axis_color),
+            );
+            
+            // Draw value label.
+            painter.text(
+                egui::pos2(plot_rect.min.x - 10.0, pos_y),
+                egui::Align2::RIGHT_CENTER,
+                format!("{:.0}", value),
+                egui::FontId::proportional(10.0),
+                text_color,
+            );
+        }
+    } else {
+        // For analog signals, show min, middle, and max.
+        let positions_and_values = [
+            (plot_rect.min.y, y_max),
+            (plot_rect.center().y, (y_max + y_min) / 2.0),
+            (plot_rect.max.y, y_min),
+        ];
+        
+        for (pos_y, value) in positions_and_values {
+            // Draw tick mark.
+            painter.line_segment(
+                [egui::pos2(plot_rect.min.x - 5.0, pos_y), 
+                 egui::pos2(plot_rect.min.x, pos_y)],
+                egui::Stroke::new(1.0, axis_color),
+            );
+            
+            // Draw value label.
+            painter.text(
+                egui::pos2(plot_rect.min.x - 10.0, pos_y),
+                egui::Align2::RIGHT_CENTER,
+                format!("{:.1}", value),
+                egui::FontId::proportional(10.0),
+                text_color,
+            );
+        }
+    }
+
+    // Draw grid lines
+    let grid_color = if dark_mode {
+        egui::Color32::from_rgba_unmultiplied(100, 100, 100, 100)
+    } else {
+        egui::Color32::from_rgba_unmultiplied(200, 200, 200, 150)
+    };
+    let grid_stroke = egui::Stroke::new(0.5, grid_color);
+
+    // Vertical grid lines (same X positions as time tick marks).
+    if panned_time_max > panned_time_min {
+        let time_positions = [
+            plot_rect.min.x,
+            plot_rect.min.x + plot_rect.width() / 3.0,
+            plot_rect.min.x + 2.0 * plot_rect.width() / 3.0,
+            plot_rect.max.x,
+        ];
+        
+        for x_pos in time_positions {
+            painter.line_segment(
+                [egui::pos2(x_pos, plot_rect.min.y), 
+                egui::pos2(x_pos, plot_rect.max.y)],
+                grid_stroke,
+            );
+        }
+    }
+
+    // Horizontal grid lines (same Y positions as value tick marks).
+    if dataset.data_type == "Digital" {
+        let y_positions = [plot_rect.max.y, plot_rect.min.y];
+        for y_pos in y_positions {
+            painter.line_segment(
+                [egui::pos2(plot_rect.min.x, y_pos), 
+                egui::pos2(plot_rect.max.x, y_pos)],
+                grid_stroke,
+            );
+        }
+    } else {
+        let y_positions = [plot_rect.min.y, plot_rect.center().y, plot_rect.max.y];
+        for y_pos in y_positions {
+            painter.line_segment(
+                [egui::pos2(plot_rect.min.x, y_pos), 
+                egui::pos2(plot_rect.max.x, y_pos)],
+                grid_stroke,
+            );
+        }
+    }
+    
+    // Plot the actual data.
+    plot_data_points(painter, &plot_rect, dataset, panned_time_min, panned_time_max, y_min, y_max, dark_mode);
+}
+
+// Helper function to plot the actual data points.
+fn plot_data_points(
+    painter: &egui::Painter,
+    plot_rect: &egui::Rect,
+    dataset: &TimeSeriesData,
+    time_min: u64,
+    time_max: u64,
+    y_min: f32,
+    y_max: f32,
+    dark_mode: bool,
+) {
+    // Check for empty dataset, or no real data.
+    if dataset.time_series_points.is_empty() || time_max == time_min || y_max == y_min {
+        return;
+    }
+    
+    // Choose line color based on data type and dark mode.
+    let line_color = if dataset.data_type == "Digital" {
+        if dark_mode { egui::Color32::from_rgb(100, 255, 100) } else { egui::Color32::from_rgb(0, 150, 0) }
+    } else {
+        if dark_mode { egui::Color32::from_rgb(100, 150, 255) } else { egui::Color32::from_rgb(50, 100, 200) }
+    };
+
+    let line_stroke = egui::Stroke::new(LINE_THIVKNESS, line_color);
+    
+    // Convert data points to screen coordinates.
+    let mut screen_points: Vec<egui::Pos2> = Vec::new();
+
+    for point in &dataset.time_series_points {
+        // Skip points outside the visible time range,
+        // i.e. points that move out due to zooming.
+        if point.unix_time < time_min || point.unix_time > time_max {
+            continue;
+        }
+        
+        // Convert time to X coordinate.
+        let x_ratio = (point.unix_time as f64 - time_min as f64) / (time_max as f64 - time_min as f64);
+        let x_pos = plot_rect.min.x + (x_ratio as f32 * plot_rect.width());
+        
+        // Convert value to Y coordinate (note: Y is inverted, so max value is at top).
+        let y_ratio = (point.point_value - y_min) / (y_max - y_min);
+        let y_pos = plot_rect.max.y - (y_ratio * plot_rect.height());
+        
+        screen_points.push(egui::pos2(x_pos, y_pos));
+    }
+    
+    // Add shading for digital signals (active pulses only).
+    if dataset.data_type == "Digital" {
+        let fill_color = if dark_mode { 
+            egui::Color32::from_rgba_unmultiplied(100, 255, 100, 50) 
+        } else { 
+            egui::Color32::from_rgba_unmultiplied(0, 150, 0, 50) 
+        };
+        
+        // Find the Y position for low (0) values.
+        let low_y_pos = plot_rect.max.y - (0.0 - y_min) / (y_max - y_min) * plot_rect.height();
+        
+        // Find pairs of rising/falling edges to shade.
+        for i in 0..screen_points.len() - 1 {
+            let current_y = screen_points[i].y;
+            
+            // If current point is high (active), shade to the next point.
+            if current_y < plot_rect.center().y {
+                let rect = egui::Rect::from_two_pos(
+                    egui::pos2(screen_points[i].x, current_y),
+                    egui::pos2(screen_points[i + 1].x, low_y_pos)
+                );
+                painter.rect_filled(rect, 0.0, fill_color);
+            }
+        }
+    }
+
+    // Draw lines connecting the points.
+    for i in 1..screen_points.len() {
+        painter.line_segment([screen_points[i-1], screen_points[i]], line_stroke);
+    }
+
+    // Optional.
+    // Draw small circles at data points.
+    // But not for digital plots as doesn't look as nice.
+    if SHOW_MARKERS {
+        if dataset.data_type != "Digital" {
+            for point in &screen_points {
+                painter.circle_filled(*point, 2.0, line_color);
+            }
+        }
+    }
+}
+
+// Helper function to convert Unix timestamp to hh:mm:ss format.
+fn unix_time_to_hms(unix_time: u64) -> String {
+    // Convert Unix timestamp to time of day (UTC).
+    let seconds_in_day = unix_time % 86400;
+    let hours = seconds_in_day / 3600;
+    let minutes = (seconds_in_day % 3600) / 60;
+    let seconds = seconds_in_day % 60;
+    
+    format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
+}
+
+// Helper function to calculate Y-axis range for a dataset.
+fn calculate_y_range(dataset: &TimeSeriesData) -> (f32, f32) {
+    if dataset.time_series_points.is_empty() {
+        return (0.0, 1.0);
+    }
+    
+    let mut y_min = f32::MAX;
+    let mut y_max = f32::MIN;
+    
+    for point in &dataset.time_series_points {
+        y_min = y_min.min(point.point_value);
+        y_max = y_max.max(point.point_value);
+    }
+    
+    // Add some padding for better visualization.
+    let padding = (y_max - y_min) * 0.1;
+    if padding == 0.0 {
+        // For flat lines (like digital signals), add fixed padding.
+        (y_min - 0.1, y_max + 0.1)
+    } else {
+        (y_min - padding, y_max + padding)
+    }
 }

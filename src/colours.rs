@@ -75,14 +75,14 @@ pub fn border_colour(dark_mode: bool) -> Color32 {
     }
 }
 
-// // Colours for time series plot lines.
-// pub fn ts_line_colour(dark_mode: bool) -> Color32 {
-//     if dark_mode {
-//         Color32::from_rgb(58, 235, 14)
-//     } else {
-//         Color32::from_rgb(0, 51, 204)
-//     }
-// }
+// // Colours for time series plot notices.
+pub fn ts_notices_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgb(255, 255, 0)
+    } else {
+        Color32::from_rgb(0, 102, 5)
+    }
+}
 
 // // Colours for time series plot backgroud.
 // pub fn ts_back_gnd_colour(dark_mode: bool) -> Color32 {
