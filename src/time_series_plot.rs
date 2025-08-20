@@ -56,7 +56,7 @@ const MARGIN_RIGHT: f32 = 40.0;
 const MARGIN_TOP: f32 = 30.0;
 const MARGIN_BOTTOM: f32 = 40.0;
 const SHOW_MARKERS: bool = false;
-const LINE_THIVKNESS: f32 = 1.0;
+const LINE_THIVKNESS: f32 = 1.5;
 
 // Function to create the data sets to plot.
 fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<TimeSeriesData> {
@@ -134,7 +134,7 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
     // Process each unique event type once to create combined datasets.
     // That is a combined dataset for each type of event.
     // let unique_event_types: std::collections::HashSet<String> = trip_data.iter()
-        let unique_event_types: std::collections::BTreeSet<String> = trip_data.iter()
+    let unique_event_types: std::collections::BTreeSet<String> = trip_data.iter()
         .map(|data| data.event_type.clone())
         .collect();
 
@@ -282,12 +282,21 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
                     // Filter by event type
                     .filter(|data| data.event_type == event_type)
                     .filter_map(|data| {
-                        // Look for event duration in the ev_detail vector.
+                        // Look for event severity in the ev_detail vector.
                         data.ev_detail.iter()
                             .find(|(tag, _)| tag == "Severity")
                             .and_then(|(_, value)| {
-                                // Parse the integer string value to f32.
-                                value.parse::<f32>().ok()
+                                // Translate severity strings to numeric levels.
+                                let numeric_level = match value.as_str() {
+                                    "-" => 1.0,  // Low level
+                                    "W" => 2.0,  // Warning level
+                                    "C" => 3.0,  // Critical level
+                                    _ => {
+                                        // Try to parse as number (fallback).
+                                        value.parse::<f32>().unwrap_or(1.0)
+                                    }
+                                };
+                                Some(numeric_level)
                             })
                             .map(|event_point| SinglePoint {
                                 unix_time: data.unix_time,
@@ -297,21 +306,19 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
                     .collect();
                 
                 if !ev_points.is_empty() {
-                    // Convert single points to impulse data.
-                    // Impulse data is at instance in time, but can have different values.
-                    let pulse_points = convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time);
-    
+                    // For impulse data, we don't convert to pulse data
+                    // We keep the original points as instantaneous events
+                    
                     // Push the impulse time series events to list of datasets.
                     datasets.push(TimeSeriesData {
                         data_type: "Impulse".to_string(),
                         series_name: event_type.clone(),
                         units: "Severity".to_string(),
                         levels: vec!["Low".to_string(), "Warning".to_string(), "Critical".to_string()],
-                        time_series_points: pulse_points,
+                        time_series_points: ev_points,
                     });
                 }
-            }
-            _ => info!("Event type not supported for plotting.")
+            }            _ => info!("Event type not supported for plotting.")
         }
     }
     
@@ -323,58 +330,69 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
 fn convert_to_pulse_data(ev_points: &[SinglePoint], trip_start: u64, trip_end: u64) -> Vec<SinglePoint> {
     let mut pulse_points = Vec::new();
     
-    // Add starting point at trip start (signal not active).
+    // Determine baseline value - for digital signals use 0.0, for impulse use 1.0
+    let baseline_value = if !ev_points.is_empty() && ev_points[0].point_value >= 1.0 {
+        1.0 // Impulse signal - baseline is "Low" level
+    } else {
+        0.0 // Digital signal - baseline is inactive
+    };
+    
+    // Add starting point at trip start (baseline level).
     pulse_points.push(SinglePoint {
         unix_time: trip_start,
-        point_value: 0.0,
+        point_value: baseline_value,
     });
     
     // Convert each event point into a pulse (rising pulse).
     for point in ev_points {
         let event_end_time = point.unix_time;
-        let duration_seconds = point.point_value as u64;
+        let duration_seconds = if baseline_value == 0.0 {
+            // For digital signals, use the point value as duration.
+            point.point_value as u64
+        } else {
+            // For impulse signals, we want instantaneous events, so usec 0 duration.
+            0
+        };
         
         // Calculate when the event started (going back in time by duration).
         let event_start_time = if event_end_time >= duration_seconds {
             event_end_time - duration_seconds
         } else {
             // If duration is longer than time since trip start, use trip start.
-            // Although this shouldn't happen.
-            trip_start 
+            trip_start
         };
         
-        // Add point just before signal goes active (still 0).
+        // Add point just before signal changes (still at baseline).
         if event_start_time > trip_start {
             pulse_points.push(SinglePoint {
-                // unix_time: event_start_time.saturating_sub(1),
                 unix_time: event_start_time,
-                point_value: 0.0,
+                point_value: baseline_value,
             });
         }
         
         // Add point where signal becomes active (rising edge).
         pulse_points.push(SinglePoint {
             unix_time: event_start_time,
-            point_value: 1.0,
+            point_value: point.point_value, // Use the actual severity level
         });
         
-        // Add point where signal is active (constant high).
+        // Add point where signal is active (constant at severity level).
         pulse_points.push(SinglePoint {
             unix_time: event_end_time,
-            point_value: 1.0,
+            point_value: point.point_value,
         });
     
-        // Add point where signal becomes inactive (falling edge).
+        // Add point where signal returns to baseline (falling edge).
         pulse_points.push(SinglePoint {
             unix_time: event_end_time,
-            point_value: 0.0,
+            point_value: baseline_value,
         });
     }
     
-    // Add ending point at trip end (signal inactive).
+    // Add ending point at trip end (baseline level).
     pulse_points.push(SinglePoint {
         unix_time: trip_end,
-        point_value: 0.0,
+        point_value: baseline_value,
     });
     
     pulse_points
@@ -625,7 +643,7 @@ fn draw_plot_with_axes(
             // Draw tick marks.
             painter.line_segment(
                 [egui::pos2(plot_rect.min.x - 5.0, pos_y), 
-                 egui::pos2(plot_rect.min.x, pos_y)],
+                egui::pos2(plot_rect.min.x, pos_y)],
                 egui::Stroke::new(1.0, axis_color),
             );
             
@@ -638,7 +656,7 @@ fn draw_plot_with_axes(
                 text_color,
             );
         }
-    } else {
+    } else if dataset.data_type == "Analog" {
         // For analog signals, show min, middle, and max.
         let positions_and_values = [
             (plot_rect.min.y, y_max),
@@ -650,7 +668,7 @@ fn draw_plot_with_axes(
             // Draw tick mark.
             painter.line_segment(
                 [egui::pos2(plot_rect.min.x - 5.0, pos_y), 
-                 egui::pos2(plot_rect.min.x, pos_y)],
+                egui::pos2(plot_rect.min.x, pos_y)],
                 egui::Stroke::new(1.0, axis_color),
             );
             
@@ -659,6 +677,33 @@ fn draw_plot_with_axes(
                 egui::pos2(plot_rect.min.x - 10.0, pos_y),
                 egui::Align2::RIGHT_CENTER,
                 format!("{:.1}", value),
+                egui::FontId::proportional(10.0),
+                text_color,
+            );
+        }
+    } else if dataset.data_type == "Impulse" {
+        // For impulse signals, show levels 0, 1, 2, 3, 4
+        let positions_and_values = [
+            // Don't need to display the outer tic mark text,
+            // as the impact level is all that is required.
+            (plot_rect.max.y - plot_rect.height() * 0.25, 1.0, "Low"),
+            (plot_rect.max.y - plot_rect.height() * 0.5, 2.0, "Warning"),
+            (plot_rect.max.y - plot_rect.height() * 0.75, 3.0, "Critical"),
+        ];
+        
+        for (pos_y, _value, label) in positions_and_values {
+            // Draw tick marks.
+            painter.line_segment(
+                [egui::pos2(plot_rect.min.x - 5.0, pos_y), 
+                egui::pos2(plot_rect.min.x, pos_y)],
+                egui::Stroke::new(1.0, axis_color),
+            );
+            
+            // Show the level name.
+            painter.text(
+                egui::pos2(plot_rect.min.x - 10.0, pos_y),
+                egui::Align2::RIGHT_CENTER,
+                label.to_string(),
                 egui::FontId::proportional(10.0),
                 text_color,
             );
@@ -701,7 +746,7 @@ fn draw_plot_with_axes(
                 grid_stroke,
             );
         }
-    } else {
+    } else if dataset.data_type == "Analog" {
         let y_positions = [plot_rect.min.y, plot_rect.center().y, plot_rect.max.y];
         for y_pos in y_positions {
             painter.line_segment(
@@ -710,8 +755,30 @@ fn draw_plot_with_axes(
                 grid_stroke,
             );
         }
+    } else if dataset.data_type == "Impulse" {
+        // Grid lines at levels 0, 1, 2, 3, 4
+        // Level 0 (baseline)
+        // Level 1 (Low)
+        // Level 2 (Warning)
+        // Level 3 (Critical)
+        // Level 4 (top)
+        let y_positions = [
+            plot_rect.max.y,
+            plot_rect.max.y - plot_rect.height() * 0.25,
+            plot_rect.max.y - plot_rect.height() * 0.5,
+            plot_rect.max.y - plot_rect.height() * 0.75,
+            plot_rect.min.y,
+        ];
+        
+        for y_pos in y_positions {
+            painter.line_segment(
+                [egui::pos2(plot_rect.min.x, y_pos), 
+                egui::pos2(plot_rect.max.x, y_pos)],
+                grid_stroke,
+            );
+        }
     }
-    
+
     // Plot the actual data.
     plot_data_points(painter, &plot_rect, dataset, panned_time_min, panned_time_max, y_min, y_max, dark_mode);
 }
@@ -732,11 +799,16 @@ fn plot_data_points(
         return;
     }
     
-    // Choose line color based on data type and dark mode.
+    // Choose line colour based on data type and dark mode.
     let line_color = if dataset.data_type == "Digital" {
-        if dark_mode { egui::Color32::from_rgb(100, 255, 100) } else { egui::Color32::from_rgb(0, 150, 0) }
+        colours::ts_digital_colour(dark_mode)
+    } else if dataset.data_type == "Analog" {
+        colours::ts_analog_colour(dark_mode)
+    } else if dataset.data_type == "Impulse" {
+        colours::ts_impulse_colour(dark_mode)
     } else {
-        if dark_mode { egui::Color32::from_rgb(100, 150, 255) } else { egui::Color32::from_rgb(50, 100, 200) }
+        // Fallback colour.
+        colours::ts_digital_colour(dark_mode)
     };
 
     let line_stroke = egui::Stroke::new(LINE_THIVKNESS, line_color);
@@ -764,11 +836,6 @@ fn plot_data_points(
     
     // Add shading for digital signals (active pulses only).
     if dataset.data_type == "Digital" {
-        let fill_color = if dark_mode { 
-            egui::Color32::from_rgba_unmultiplied(100, 255, 100, 50) 
-        } else { 
-            egui::Color32::from_rgba_unmultiplied(0, 150, 0, 50) 
-        };
         
         // Find the Y position for low (0) values.
         let low_y_pos = plot_rect.max.y - (0.0 - y_min) / (y_max - y_min) * plot_rect.height();
@@ -783,9 +850,55 @@ fn plot_data_points(
                     egui::pos2(screen_points[i].x, current_y),
                     egui::pos2(screen_points[i + 1].x, low_y_pos)
                 );
-                painter.rect_filled(rect, 0.0, fill_color);
+                painter.rect_filled(rect, 0.0, colours::ts_digital_fill_colour(dark_mode));
             }
         }
+    }
+
+    // Add special handling for impulse signals after the digital shading section.
+    if dataset.data_type == "Impulse" {
+        // Draw impulse markers as vertical lines from baseline to the impulse level
+        // Y position for level 0.
+        let baseline_y = plot_rect.max.y;
+        
+        for point in &dataset.time_series_points {
+            // Skip points outside the visible time range
+            if point.unix_time < time_min || point.unix_time > time_max {
+                continue;
+            }
+            
+            let x_ratio = (point.unix_time as f64 - time_min as f64) / (time_max as f64 - time_min as f64);
+            let x_pos = plot_rect.min.x + (x_ratio as f32 * plot_rect.width());
+            
+            // Calculate Y position based on impulse level (0-4 scale).
+            // Map the point value (1=Low, 2=Warning, 3=Critical) to the 0-4 scale,
+            // Scale to 0-4 range.
+            let y_ratio = point.point_value / 4.0;
+            let y_pos = plot_rect.max.y - (y_ratio * plot_rect.height());
+            
+            // Choose color based on severity level
+            let impulse_color = match point.point_value as i32 {
+                1 => egui::Color32::from_rgb(255, 255, 0),
+                2 => egui::Color32::from_rgb(255, 165, 0),
+                3 => egui::Color32::from_rgb(255, 0, 0),
+                _ => egui::Color32::GRAY,
+            };
+            
+            // Only draw visible impulses (non-zero values).
+            if point.point_value > 0.0 {
+                // Draw vertical line from baseline to impulse level.
+                painter.line_segment(
+                    [egui::pos2(x_pos, baseline_y), egui::pos2(x_pos, y_pos)],
+                    egui::Stroke::new(LINE_THIVKNESS * 2.0, impulse_color),
+                );
+                
+                // Draw a circle at the top of each impulse.
+                painter.circle_filled(egui::pos2(x_pos, y_pos), 3.0, impulse_color);
+            }
+        }
+        
+        // For impulse signals, we don't draw connecting lines, so return early.
+        return;
     }
 
     // Draw lines connecting the points.
@@ -820,6 +933,13 @@ fn unix_time_to_hms(unix_time: u64) -> String {
 fn calculate_y_range(dataset: &TimeSeriesData) -> (f32, f32) {
     if dataset.time_series_points.is_empty() {
         return (0.0, 1.0);
+    }
+    
+    // Special handling for impulse signals.
+    if dataset.data_type == "Impulse" {
+        // Range from 0 to 4 to accommodate impulse levels:
+        // 0 = baseline, 1 = Low impulse, 2 = Warning impulse, 3 = Critical impulse.
+        return (0.0, 4.0);
     }
     
     let mut y_min = f32::MAX;

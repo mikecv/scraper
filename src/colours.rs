@@ -84,29 +84,38 @@ pub fn ts_notices_colour(dark_mode: bool) -> Color32 {
     }
 }
 
-// // Colours for time series plot backgroud.
-// pub fn ts_back_gnd_colour(dark_mode: bool) -> Color32 {
-//     if dark_mode {
-//         Color32::from_rgb(10, 10, 10)
-//     } else {
-//         Color32::from_rgb(250, 250, 250)
-//     }
-// }
+// Colours for time series digital plot line.
+pub fn ts_digital_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgb(255, 153, 0)
+    } else {
+        Color32::from_rgb(255, 173, 51)
+    }
+}
 
-// // Colours for time series plot grid lines.
-// pub fn ts_grid_colour(dark_mode: bool) -> Color32 {
-//     if dark_mode {
-//         Color32::from_rgb(250, 250, 250)
-//     } else {
-//         Color32::from_rgb(10, 10, 10)
-//     }
-// }
+// Shading colours for time series digital plot line.
+pub fn ts_digital_fill_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgba_unmultiplied(255, 153, 0, 50)
+    } else {
+        Color32::from_rgba_unmultiplied(255, 173, 51, 50)
+    }
+}
 
-// // Colours for time series plot labels.
-// pub fn ts_labels_colour(dark_mode: bool) -> Color32 {
-//     if dark_mode {
-//         Color32::from_rgb(204, 255, 204)
-//     } else {
-//         Color32::from_rgb(0, 0, 75)
-//     }
-// }
+// Colours for time series analog plot line.
+pub fn ts_analog_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgb(0, 255, 0)
+    } else {
+        Color32::from_rgb(102, 255, 102)
+    }
+}
+
+// Impulse signals colour.
+pub fn ts_impulse_colour(dark_mode: bool) -> egui::Color32 {
+    if dark_mode {
+        egui::Color32::from_rgb(255, 165, 0)
+    } else {
+        egui::Color32::from_rgb(255, 140, 0)
+    }
+}
