@@ -51,8 +51,8 @@ impl Default for PlotState {
 // as well as format and spacing between plots.
 const PLOT_HEIGHT: f32 = 140.0;
 const SPACE_BETWEEN_PLOTS: f32 = 5.0;
-const MARGIN_LEFT: f32 = 50.0;
-const MARGIN_RIGHT: f32 = 40.0;
+const MARGIN_LEFT: f32 = 55.0;
+const MARGIN_RIGHT: f32 = 35.0;
 const MARGIN_TOP: f32 = 30.0;
 const MARGIN_BOTTOM: f32 = 40.0;
 const SHOW_MARKERS: bool = false;
@@ -162,8 +162,7 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
                 
                 if !ev_points.is_empty() {
                     // Convert single points to pulse data.
-                    let pulse_points = convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time);
-    
+                    let pulse_points = convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time, "Digital");    
                     // Push the digital time series events to list of datasets.
                     datasets.push(TimeSeriesData {
                         data_type: "Digital".to_string(),
@@ -196,7 +195,7 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
                 
                 if !ev_points.is_empty() {
                     // Convert single points to pulse data.
-                    let pulse_points = convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time);
+                    let pulse_points = convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time, "Digital");    
     
                     // Push the digital time series events to list of datasets.
                     datasets.push(TimeSeriesData {
@@ -230,7 +229,7 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
                 
                 if !ev_points.is_empty() {
                     // Convert single points to pulse data.
-                    let pulse_points = convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time);
+                    let pulse_points = convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time, "Digital");    
     
                     // Push the digital time series events to list of datasets.
                     datasets.push(TimeSeriesData {
@@ -264,7 +263,7 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
                 
                 if !ev_points.is_empty() {
                     // Convert single points to pulse data.
-                    let pulse_points = convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time);
+                    let pulse_points = convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time, "Digital");    
     
                     // Push the digital time series events to list of datasets.
                     datasets.push(TimeSeriesData {
@@ -327,11 +326,11 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
 }
 
 // Helper function to convert single event points to pulse data.
-fn convert_to_pulse_data(ev_points: &[SinglePoint], trip_start: u64, trip_end: u64) -> Vec<SinglePoint> {
+fn convert_to_pulse_data(ev_points: &[SinglePoint], trip_start: u64, trip_end: u64, data_type: &str) -> Vec<SinglePoint> {
     let mut pulse_points = Vec::new();
     
-    // Determine baseline value - for digital signals use 0.0, for impulse use 1.0
-    let baseline_value = if !ev_points.is_empty() && ev_points[0].point_value >= 1.0 {
+    // Determine baseline value based on data type
+    let baseline_value = if data_type == "Impulse" {
         1.0 // Impulse signal - baseline is "Low" level
     } else {
         0.0 // Digital signal - baseline is inactive
@@ -346,11 +345,11 @@ fn convert_to_pulse_data(ev_points: &[SinglePoint], trip_start: u64, trip_end: u
     // Convert each event point into a pulse (rising pulse).
     for point in ev_points {
         let event_end_time = point.unix_time;
-        let duration_seconds = if baseline_value == 0.0 {
+        let duration_seconds = if data_type == "Digital" {
             // For digital signals, use the point value as duration.
             point.point_value as u64
         } else {
-            // For impulse signals, we want instantaneous events, so usec 0 duration.
+            // For impulse signals, we want instantaneous events, so use 0 duration.
             0
         };
         
@@ -373,15 +372,15 @@ fn convert_to_pulse_data(ev_points: &[SinglePoint], trip_start: u64, trip_end: u
         // Add point where signal becomes active (rising edge).
         pulse_points.push(SinglePoint {
             unix_time: event_start_time,
-            point_value: point.point_value, // Use the actual severity level
+            point_value: if data_type == "Digital" { 1.0 } else { point.point_value },
         });
         
-        // Add point where signal is active (constant at severity level).
+        // Add point where signal is active (constant at level).
         pulse_points.push(SinglePoint {
             unix_time: event_end_time,
-            point_value: point.point_value,
+            point_value: if data_type == "Digital" { 1.0 } else { point.point_value },
         });
-    
+
         // Add point where signal returns to baseline (falling edge).
         pulse_points.push(SinglePoint {
             unix_time: event_end_time,
@@ -556,7 +555,7 @@ fn draw_plot_with_axes(
     let panned_time_max = ((center_time as i64) + (half_zoomed_range as i64) - pan_time_offset).max(0) as u64;
 
     // Choose colours based on dark mode.
-    let (bg_color, axis_color, text_color) = if dark_mode {
+    let (bg_color, axis_colour, text_color) = if dark_mode {
         (egui::Color32::from_rgb(30, 30, 30), egui::Color32::LIGHT_GRAY, egui::Color32::WHITE)
     } else {
         (egui::Color32::WHITE, egui::Color32::DARK_GRAY, egui::Color32::BLACK)
@@ -566,7 +565,7 @@ fn draw_plot_with_axes(
     painter.rect_filled(*rect, 4.0, bg_color);
     
     // Draw plot border/frame.
-    painter.rect_stroke(*rect, 4.0, egui::Stroke::new(1.0, axis_color), egui::epaint::StrokeKind::Inside);
+    painter.rect_stroke(*rect, 4.0, egui::Stroke::new(1.0, axis_colour), egui::epaint::StrokeKind::Inside);
     
     // Draw the main plot area background.
     painter.rect_filled(plot_rect, 0.0, if dark_mode { 
@@ -580,14 +579,14 @@ fn draw_plot_with_axes(
     painter.line_segment(
         [egui::pos2(plot_rect.min.x, plot_rect.max.y), 
          egui::pos2(plot_rect.max.x, plot_rect.max.y)],
-        egui::Stroke::new(2.0, axis_color),
+        egui::Stroke::new(2.0, axis_colour),
     );
     
     // Y-axis (left).
     painter.line_segment(
         [egui::pos2(plot_rect.min.x, plot_rect.min.y), 
          egui::pos2(plot_rect.min.x, plot_rect.max.y)],
-        egui::Stroke::new(2.0, axis_color),
+        egui::Stroke::new(2.0, axis_colour),
     );
     
     // Calculate Y-axis range for this dataset.
@@ -617,7 +616,7 @@ fn draw_plot_with_axes(
             painter.line_segment(
                 [egui::pos2(x_pos, plot_rect.max.y), 
                  egui::pos2(x_pos, plot_rect.max.y + 5.0)],
-                egui::Stroke::new(1.0, axis_color),
+                egui::Stroke::new(1.0, axis_colour),
             );
             
             // Draw time label (actual clock time).
@@ -644,7 +643,7 @@ fn draw_plot_with_axes(
             painter.line_segment(
                 [egui::pos2(plot_rect.min.x - 5.0, pos_y), 
                 egui::pos2(plot_rect.min.x, pos_y)],
-                egui::Stroke::new(1.0, axis_color),
+                egui::Stroke::new(1.0, axis_colour),
             );
             
             // Draw value label.
@@ -669,7 +668,7 @@ fn draw_plot_with_axes(
             painter.line_segment(
                 [egui::pos2(plot_rect.min.x - 5.0, pos_y), 
                 egui::pos2(plot_rect.min.x, pos_y)],
-                egui::Stroke::new(1.0, axis_color),
+                egui::Stroke::new(1.0, axis_colour),
             );
             
             // Draw value label.
@@ -696,7 +695,7 @@ fn draw_plot_with_axes(
             painter.line_segment(
                 [egui::pos2(plot_rect.min.x - 5.0, pos_y), 
                 egui::pos2(plot_rect.min.x, pos_y)],
-                egui::Stroke::new(1.0, axis_color),
+                egui::Stroke::new(1.0, axis_colour),
             );
             
             // Show the level name.
