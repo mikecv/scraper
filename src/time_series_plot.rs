@@ -133,7 +133,6 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
 
     // Process each unique event type once to create combined datasets.
     // That is a combined dataset for each type of event.
-    // let unique_event_types: std::collections::HashSet<String> = trip_data.iter()
     let unique_event_types: std::collections::BTreeSet<String> = trip_data.iter()
         .map(|data| data.event_type.clone())
         .collect();
@@ -305,8 +304,8 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
                     .collect();
                 
                 if !ev_points.is_empty() {
-                    // For impulse data, we don't convert to pulse data
-                    // We keep the original points as instantaneous events
+                    // For impulse data, we don't convert to pulse data.
+                    // We keep the original points as instantaneous events.
                     
                     // Push the impulse time series events to list of datasets.
                     datasets.push(TimeSeriesData {
@@ -329,11 +328,13 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
 fn convert_to_pulse_data(ev_points: &[SinglePoint], trip_start: u64, trip_end: u64, data_type: &str) -> Vec<SinglePoint> {
     let mut pulse_points = Vec::new();
     
-    // Determine baseline value based on data type
+    // Determine baseline value based on data type.
     let baseline_value = if data_type == "Impulse" {
-        1.0 // Impulse signal - baseline is "Low" level
+        // Impulse signsl
+        1.0
     } else {
-        0.0 // Digital signal - baseline is inactive
+        // Digital signal.
+        0.0
     };
     
     // Add starting point at trip start (baseline level).
@@ -555,14 +556,14 @@ fn draw_plot_with_axes(
     let panned_time_max = ((center_time as i64) + (half_zoomed_range as i64) - pan_time_offset).max(0) as u64;
 
     // Choose colours based on dark mode.
-    let (bg_color, axis_colour, text_color) = if dark_mode {
+    let (bg_colour, axis_colour, text_colour) = if dark_mode {
         (egui::Color32::from_rgb(30, 30, 30), egui::Color32::LIGHT_GRAY, egui::Color32::WHITE)
     } else {
         (egui::Color32::WHITE, egui::Color32::DARK_GRAY, egui::Color32::BLACK)
     };
     
     // Draw background.
-    painter.rect_filled(*rect, 4.0, bg_color);
+    painter.rect_filled(*rect, 4.0, bg_colour);
     
     // Draw plot border/frame.
     painter.rect_stroke(*rect, 4.0, egui::Stroke::new(1.0, axis_colour), egui::epaint::StrokeKind::Inside);
@@ -599,7 +600,7 @@ fn draw_plot_with_axes(
         egui::Align2::CENTER_CENTER,
         format!("{} ({})", dataset.series_name, dataset.units),
         egui::FontId::proportional(14.0),
-        text_color,
+        text_colour,
     );
     
     // Draw X-axis tick marks and time labels (4 marks total).
@@ -625,7 +626,7 @@ fn draw_plot_with_axes(
                 egui::Align2::CENTER_CENTER,
                 unix_time_to_hms(time_value),
                 egui::FontId::proportional(10.0),
-                text_color,
+                text_colour,
             );
         }
     }
@@ -652,7 +653,7 @@ fn draw_plot_with_axes(
                 egui::Align2::RIGHT_CENTER,
                 format!("{:.0}", value),
                 egui::FontId::proportional(10.0),
-                text_color,
+                text_colour,
             );
         }
     } else if dataset.data_type == "Analog" {
@@ -677,45 +678,61 @@ fn draw_plot_with_axes(
                 egui::Align2::RIGHT_CENTER,
                 format!("{:.1}", value),
                 egui::FontId::proportional(10.0),
-                text_color,
+                text_colour,
             );
         }
     } else if dataset.data_type == "Impulse" {
-        // For impulse signals, show levels 0, 1, 2, 3, 4
-        let positions_and_values = [
-            // Don't need to display the outer tic mark text,
-            // as the impact level is all that is required.
-            (plot_rect.max.y - plot_rect.height() * 0.25, 1.0, "Low"),
-            (plot_rect.max.y - plot_rect.height() * 0.5, 2.0, "Warning"),
-            (plot_rect.max.y - plot_rect.height() * 0.75, 3.0, "Critical"),
-        ];
-        
-        for (pos_y, _value, label) in positions_and_values {
-            // Draw tick marks.
+        // For impulse signals, show levels dynamically based on dataset.levels
+        if !dataset.levels.is_empty() {
+            let total_levels = dataset.levels.len() + 1; // +1 for baseline level 0
+            
+            // Create positions for each level
+            for (index, level_name) in dataset.levels.iter().enumerate() {
+                let level_value = index + 1; // Level values start at 1 (0 is baseline)
+                let y_ratio = level_value as f32 / total_levels as f32;
+                let pos_y = plot_rect.max.y - (y_ratio * plot_rect.height());
+                
+                // Draw tick marks
+                painter.line_segment(
+                    [egui::pos2(plot_rect.min.x - 5.0, pos_y), 
+                    egui::pos2(plot_rect.min.x, pos_y)],
+                    egui::Stroke::new(1.0, axis_colour),
+                );
+                
+                // Show the level name
+                painter.text(
+                    egui::pos2(plot_rect.min.x - 10.0, pos_y),
+                    egui::Align2::RIGHT_CENTER,
+                    level_name.clone(),
+                    egui::FontId::proportional(10.0),
+                    text_colour,
+                );
+            }
+            
+            // Add baseline level (0) tick mark
             painter.line_segment(
-                [egui::pos2(plot_rect.min.x - 5.0, pos_y), 
-                egui::pos2(plot_rect.min.x, pos_y)],
+                [egui::pos2(plot_rect.min.x - 5.0, plot_rect.max.y), 
+                egui::pos2(plot_rect.min.x, plot_rect.max.y)],
                 egui::Stroke::new(1.0, axis_colour),
             );
             
-            // Show the level name.
             painter.text(
-                egui::pos2(plot_rect.min.x - 10.0, pos_y),
+                egui::pos2(plot_rect.min.x - 10.0, plot_rect.max.y),
                 egui::Align2::RIGHT_CENTER,
-                label.to_string(),
+                "Baseline".to_string(),
                 egui::FontId::proportional(10.0),
-                text_color,
+                text_colour,
             );
         }
     }
 
     // Draw grid lines
-    let grid_color = if dark_mode {
+    let grid_colour = if dark_mode {
         egui::Color32::from_rgba_unmultiplied(100, 100, 100, 100)
     } else {
         egui::Color32::from_rgba_unmultiplied(200, 200, 200, 150)
     };
-    let grid_stroke = egui::Stroke::new(0.5, grid_color);
+    let grid_stroke = egui::Stroke::new(0.5, grid_colour);
 
     // Vertical grid lines (same X positions as time tick marks).
     if panned_time_max > panned_time_min {
@@ -755,26 +772,31 @@ fn draw_plot_with_axes(
             );
         }
     } else if dataset.data_type == "Impulse" {
-        // Grid lines at levels 0, 1, 2, 3, 4
-        // Level 0 (baseline)
-        // Level 1 (Low)
-        // Level 2 (Warning)
-        // Level 3 (Critical)
-        // Level 4 (top)
-        let y_positions = [
-            plot_rect.max.y,
-            plot_rect.max.y - plot_rect.height() * 0.25,
-            plot_rect.max.y - plot_rect.height() * 0.5,
-            plot_rect.max.y - plot_rect.height() * 0.75,
-            plot_rect.min.y,
-        ];
-        
-        for y_pos in y_positions {
-            painter.line_segment(
-                [egui::pos2(plot_rect.min.x, y_pos), 
-                egui::pos2(plot_rect.max.x, y_pos)],
-                grid_stroke,
-            );
+        // Grid lines based on actual number of levels in the dataset
+        if !dataset.levels.is_empty() {
+            let total_levels = dataset.levels.len() + 1; // +1 for baseline
+            let mut y_positions = Vec::new();
+            
+            // Add baseline position
+            y_positions.push(plot_rect.max.y);
+            
+            // Add positions for each named level
+            for level_index in 1..total_levels {
+                let y_ratio = level_index as f32 / total_levels as f32;
+                let y_pos = plot_rect.max.y - (y_ratio * plot_rect.height());
+                y_positions.push(y_pos);
+            }
+            
+            // Add top position
+            y_positions.push(plot_rect.min.y);
+            
+            for y_pos in y_positions {
+                painter.line_segment(
+                    [egui::pos2(plot_rect.min.x, y_pos), 
+                    egui::pos2(plot_rect.max.x, y_pos)],
+                    grid_stroke,
+                );
+            }
         }
     }
 
@@ -799,7 +821,7 @@ fn plot_data_points(
     }
     
     // Choose line colour based on data type and dark mode.
-    let line_color = if dataset.data_type == "Digital" {
+    let line_colour = if dataset.data_type == "Digital" {
         colours::ts_digital_colour(dark_mode)
     } else if dataset.data_type == "Analog" {
         colours::ts_analog_colour(dark_mode)
@@ -810,7 +832,7 @@ fn plot_data_points(
         colours::ts_digital_colour(dark_mode)
     };
 
-    let line_stroke = egui::Stroke::new(LINE_THIVKNESS, line_color);
+    let line_stroke = egui::Stroke::new(LINE_THIVKNESS, line_colour);
     
     // Convert data points to screen coordinates.
     let mut screen_points: Vec<egui::Pos2> = Vec::new();
@@ -857,8 +879,14 @@ fn plot_data_points(
     // Add special handling for impulse signals after the digital shading section.
     if dataset.data_type == "Impulse" {
         // Draw impulse markers as vertical lines from baseline to the impulse level
-        // Y position for level 0.
         let baseline_y = plot_rect.max.y;
+        
+        // Calculate total levels for proper scaling
+        let total_levels = if !dataset.levels.is_empty() {
+            dataset.levels.len() + 1 // +1 for baseline level 0
+        } else {
+            4 // Fallback to original behavior
+        };
         
         for point in &dataset.time_series_points {
             // Skip points outside the visible time range
@@ -869,35 +897,52 @@ fn plot_data_points(
             let x_ratio = (point.unix_time as f64 - time_min as f64) / (time_max as f64 - time_min as f64);
             let x_pos = plot_rect.min.x + (x_ratio as f32 * plot_rect.width());
             
-            // Calculate Y position based on impulse level (0-4 scale).
-            // Map the point value (1=Low, 2=Warning, 3=Critical) to the 0-4 scale,
-            // Scale to 0-4 range.
-            let y_ratio = point.point_value / 4.0;
+            // Calculate Y position based on actual impulse level
+            let y_ratio = point.point_value / total_levels as f32;
             let y_pos = plot_rect.max.y - (y_ratio * plot_rect.height());
             
-            // Choose color based on severity level
-            let impulse_color = match point.point_value as i32 {
-                1 => egui::Color32::from_rgb(255, 255, 0),
-                2 => egui::Color32::from_rgb(255, 165, 0),
-                3 => egui::Color32::from_rgb(255, 0, 0),
-                _ => egui::Color32::GRAY,
+            // Choose colour based on severity level - dynamically for any number of levels
+            let impulse_colour = if !dataset.levels.is_empty() {
+                let level_index = (point.point_value as usize).saturating_sub(1); // Convert to 0-based index
+                let total_levels_for_color = dataset.levels.len();
+                
+                if level_index < total_levels_for_color {
+                    // Create smooth color gradient: Green (120°) -> Yellow (60°) -> Red (0°)
+                    let ratio = if total_levels_for_color > 1 {
+                        level_index as f32 / (total_levels_for_color - 1) as f32
+                    } else {
+                        0.5 // Single level gets middle color
+                    };
+                    
+                    // Hue goes from 120 (green) to 0 (red)
+                    let hue = 120.0 * (1.0 - ratio);
+                    let saturation = 1.0;
+                    let value = 1.0;
+                    
+                    // Convert HSV to RGB
+                    hsv_to_rgb(hue, saturation, value)
+                } else {
+                    egui::Color32::GRAY // Invalid level
+                }
+            } else {
+                // Fallback if no levels defined
+                egui::Color32::GRAY
             };
-            
-            // Only draw visible impulses (non-zero values).
+
+            // Only draw visible impulses (non-zero values)
             if point.point_value > 0.0 {
-                // Draw vertical line from baseline to impulse level.
+                // Draw vertical line from baseline to impulse level
                 painter.line_segment(
                     [egui::pos2(x_pos, baseline_y), egui::pos2(x_pos, y_pos)],
-                    egui::Stroke::new(LINE_THIVKNESS * 2.0, impulse_color),
+                    egui::Stroke::new(LINE_THIVKNESS * 2.0, impulse_colour),
                 );
                 
-                // Draw a circle at the top of each impulse.
-                painter.circle_filled(egui::pos2(x_pos, y_pos), 3.0, impulse_color);
+                // Draw a circle at the top of each impulse
+                painter.circle_filled(egui::pos2(x_pos, y_pos), 3.0, impulse_colour);
             }
         }
         
-        // For impulse signals, we don't draw connecting lines, so return early.
-        return;
+        return; // Don't draw connecting lines for impulse signals
     }
 
     // Draw lines connecting the points.
@@ -911,7 +956,7 @@ fn plot_data_points(
     if SHOW_MARKERS {
         if dataset.data_type != "Digital" {
             for point in &screen_points {
-                painter.circle_filled(*point, 2.0, line_color);
+                painter.circle_filled(*point, 2.0, line_colour);
             }
         }
     }
@@ -936,11 +981,15 @@ fn calculate_y_range(dataset: &TimeSeriesData) -> (f32, f32) {
     
     // Special handling for impulse signals.
     if dataset.data_type == "Impulse" {
-        // Range from 0 to 4 to accommodate impulse levels:
-        // 0 = baseline, 1 = Low impulse, 2 = Warning impulse, 3 = Critical impulse.
-        return (0.0, 4.0);
+        // Range comes from actual number of levels in the dataset
+        if !dataset.levels.is_empty() {
+            return (0.0, (dataset.levels.len() + 1) as f32); // +1 for baseline
+        } else {
+            // Fallback to original behavior if no levels defined
+            return (0.0, 4.0);
+        }
     }
-    
+
     let mut y_min = f32::MAX;
     let mut y_max = f32::MIN;
     
@@ -957,4 +1006,31 @@ fn calculate_y_range(dataset: &TimeSeriesData) -> (f32, f32) {
     } else {
         (y_min - padding, y_max + padding)
     }
+}
+
+// Helper function to convert HSV to RGB (add this function to your file)
+fn hsv_to_rgb(h: f32, s: f32, v: f32) -> egui::Color32 {
+    let c = v * s;
+    let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
+    let m = v - c;
+    
+    let (r_prime, g_prime, b_prime) = if h < 60.0 {
+        (c, x, 0.0)
+    } else if h < 120.0 {
+        (x, c, 0.0)
+    } else if h < 180.0 {
+        (0.0, c, x)
+    } else if h < 240.0 {
+        (0.0, x, c)
+    } else if h < 300.0 {
+        (x, 0.0, c)
+    } else {
+        (c, 0.0, x)
+    };
+    
+    let r = ((r_prime + m) * 255.0) as u8;
+    let g = ((g_prime + m) * 255.0) as u8;
+    let b = ((b_prime + m) * 255.0) as u8;
+    
+    egui::Color32::from_rgb(r, g, b)
 }
