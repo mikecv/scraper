@@ -25,6 +25,8 @@ mod log_display;
 mod colours;
 mod gps_plot;
 mod time_series_plot;
+mod helpers_ts;
+mod dataset_ts;
 
 // Create a global variable for application settings.
 // This will be available in other files.

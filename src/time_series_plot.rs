@@ -4,11 +4,14 @@
 // Note that zooming is only in the time axis.
 
 use log::info;
+use log::warn;
 
 use eframe::egui;
 
 use crate::colours;
-use crate::scraper::{Scraper, ScrapedData};
+use crate::helpers_ts;
+use crate::dataset_ts;
+use crate::scraper::Scraper;
 
 // SinglePoint struct.
 #[derive(Debug, Clone)]
@@ -58,418 +61,6 @@ const MARGIN_BOTTOM: f32 = 40.0;
 const SHOW_MARKERS: bool = false;
 const LINE_THIVKNESS: f32 = 1.5;
 
-// Function to create the data sets to plot.
-fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<TimeSeriesData> {
-    // Create datasets of plots.
-    let mut datasets = Vec::new();
-    
-    // Get all points for the selected trip.
-    let trip_data: Vec<&ScrapedData> = scraper.scrapings.iter()
-        .filter(|scraped| scraped.trip_num == *selected_trip)
-        .collect();
-    
-    // Abort if no data in the trip.
-    if trip_data.is_empty() {
-        return datasets;
-    }
-    
-    // Find the overall trip start and end times.
-    let trip_start_time = trip_data.iter()
-        .map(|data| data.unix_time)
-        .min()
-        .unwrap_or(0);
-    
-    let trip_end_time = trip_data.iter()
-        .map(|data| data.unix_time)
-        .max()
-        .unwrap_or(0);
-
-    // Battery voltage time series.
-    let battery_points: Vec<SinglePoint> = trip_data.iter()
-    .filter_map(|data| {
-        // Look for "Battery voltage" in the ev_detail vector.
-        // This is in all events, even the logic ones.
-        data.ev_detail.iter()
-            .find(|(tag, _)| tag == "Battery voltage")
-            .and_then(|(_, value)| {
-                // Parse the f16 string value to f32.
-                value.parse::<f32>().ok()
-            })
-            .map(|voltage| SinglePoint {
-                unix_time: data.unix_time,
-                point_value: voltage,
-            })
-    })
-    .collect();
-
-    if !battery_points.is_empty() {
-        datasets.push(TimeSeriesData {
-            data_type: "Analog".to_string(),
-            series_name: "Battery".to_string(),
-            units: "V".to_string(),
-            levels: Vec::new(),
-            time_series_points: battery_points,
-        });
-    }
-
-    // Speed time series.
-    // This is in all events, even the logic ones if they contain gps data.
-    let speed_points: Vec<SinglePoint> = trip_data.iter()
-        .map(|data| SinglePoint {
-            unix_time: data.unix_time,
-            point_value: data.gps_speed as f32,
-        })
-        .collect();
-
-    if !speed_points.is_empty() {
-        datasets.push(TimeSeriesData {
-            data_type: "Analog".to_string(),
-            series_name: "Speed".to_string(),
-            units: "kph".to_string(),
-            levels: Vec::new(),
-            time_series_points: speed_points,
-        });
-    }
-
-    // Process each unique event type once to create combined datasets.
-    // That is a combined dataset for each type of event.
-    let unique_event_types: std::collections::BTreeSet<String> = trip_data.iter()
-        .map(|data| data.event_type.clone())
-        .collect();
-
-    for event_type in unique_event_types {
-        match event_type.as_str() {
-            "ENGINETEMP" => {
-                // Get all points for this event type in the selected trip.
-                let ev_points: Vec<SinglePoint> = trip_data.iter()
-                    // Filter by event type.
-                    .filter(|data| data.event_type == event_type)
-                    .filter_map(|data| {
-                        // Look for event duration in the ev_detail vector.
-                        data.ev_detail.iter()
-                            .find(|(tag, _)| tag == "Duration")
-                            .and_then(|(_, value)| {
-                                // Parse the integer string value to f32.
-                                value.parse::<f32>().ok()
-                            })
-                            .map(|event_point| SinglePoint {
-                                unix_time: data.unix_time,
-                                point_value: event_point,
-                            })
-                    })
-                    .collect();
-                
-                if !ev_points.is_empty() {
-                    // Convert single points to pulse data.
-                    let pulse_points = convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time, "Digital");    
-                    // Push the digital time series events to list of datasets.
-                    datasets.push(TimeSeriesData {
-                        data_type: "Digital".to_string(),
-                        series_name: event_type.clone(),
-                        units: "Active".to_string(),
-                        levels: Vec::new(),
-                        time_series_points: pulse_points,
-                    });
-                }
-            }
-            "LOWCOOLANT" => {
-                // Get all points for this event type in the selected trip.
-                let ev_points: Vec<SinglePoint> = trip_data.iter()
-                    // Filter by event type.
-                    .filter(|data| data.event_type == event_type)
-                    .filter_map(|data| {
-                        // Look for event duration in the ev_detail vector.
-                        data.ev_detail.iter()
-                            .find(|(tag, _)| tag == "Duration")
-                            .and_then(|(_, value)| {
-                                // Parse the integer string value to f32.
-                                value.parse::<f32>().ok()
-                            })
-                            .map(|event_point| SinglePoint {
-                                unix_time: data.unix_time,
-                                point_value: event_point,
-                            })
-                    })
-                    .collect();
-                
-                if !ev_points.is_empty() {
-                    // Convert single points to pulse data.
-                    let pulse_points = convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time, "Digital");    
-    
-                    // Push the digital time series events to list of datasets.
-                    datasets.push(TimeSeriesData {
-                        data_type: "Digital".to_string(),
-                        series_name: event_type.clone(),
-                        units: "Active".to_string(),
-                        levels: Vec::new(),
-                        time_series_points: pulse_points,
-                    });
-                }
-            }
-            "OILPRESSURE" => {
-                // Get all points for this event type in the selected trip.
-                let ev_points: Vec<SinglePoint> = trip_data.iter()
-                    // Filter by event type.
-                    .filter(|data| data.event_type == event_type)
-                    .filter_map(|data| {
-                        // Look for event duration in the ev_detail vector.
-                        data.ev_detail.iter()
-                            .find(|(tag, _)| tag == "Duration")
-                            .and_then(|(_, value)| {
-                                // Parse the integer string value to f32.
-                                value.parse::<f32>().ok()
-                            })
-                            .map(|event_point| SinglePoint {
-                                unix_time: data.unix_time,
-                                point_value: event_point,
-                            })
-                    })
-                    .collect();
-                
-                if !ev_points.is_empty() {
-                    // Convert single points to pulse data.
-                    let pulse_points = convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time, "Digital");    
-    
-                    // Push the digital time series events to list of datasets.
-                    datasets.push(TimeSeriesData {
-                        data_type: "Digital".to_string(),
-                        series_name: event_type.clone(),
-                        units: "Active".to_string(),
-                        levels: Vec::new(),
-                        time_series_points: pulse_points,
-                    });
-                }
-            }
-            "OVERSPEED" => {
-                // Get all points for this event type in the selected trip.
-                let ev_points: Vec<SinglePoint> = trip_data.iter()
-                    // Filter by event type
-                    .filter(|data| data.event_type == event_type)
-                    .filter_map(|data| {
-                        // Look for event duration in the ev_detail vector.
-                        data.ev_detail.iter()
-                            .find(|(tag, _)| tag == "Duration")
-                            .and_then(|(_, value)| {
-                                // Parse the integer string value to f32.
-                                value.parse::<f32>().ok()
-                            })
-                            .map(|event_point| SinglePoint {
-                                unix_time: data.unix_time,
-                                point_value: event_point,
-                            })
-                    })
-                    .collect();
-                
-                if !ev_points.is_empty() {
-                    // Convert single points to pulse data.
-                    let pulse_points = convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time, "Digital");    
-    
-                    // Push the digital time series events to list of datasets.
-                    datasets.push(TimeSeriesData {
-                        data_type: "Digital".to_string(),
-                        series_name: event_type.clone(),
-                        units: "Active".to_string(),
-                        levels: Vec::new(),
-                        time_series_points: pulse_points,
-                    });
-                }
-            }
-            "ZONEOVERSPEED" => {
-                // Get all points for this event type in the selected trip.
-                let ev_points: Vec<SinglePoint> = trip_data.iter()
-                    // Filter by event type
-                    .filter(|data| data.event_type == event_type)
-                    .filter_map(|data| {
-                        // Look for event duration in the ev_detail vector.
-                        data.ev_detail.iter()
-                            .find(|(tag, _)| tag == "Duration")
-                            .and_then(|(_, value)| {
-                                // Parse the integer string value to f32.
-                                value.parse::<f32>().ok()
-                            })
-                            .map(|event_point| SinglePoint {
-                                unix_time: data.unix_time,
-                                point_value: event_point,
-                            })
-                    })
-                    .collect();
-                
-                if !ev_points.is_empty() {
-                    // Convert single points to pulse data.
-                    let pulse_points = convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time, "Digital");    
-    
-                    // Push the digital time series events to list of datasets.
-                    datasets.push(TimeSeriesData {
-                        data_type: "Digital".to_string(),
-                        series_name: event_type.clone(),
-                        units: "Active".to_string(),
-                        levels: Vec::new(),
-                        time_series_points: pulse_points,
-                    });
-                }
-            }
-            "IMPACT" => {
-                // Get all points for this event type in the selected trip.
-                let ev_points: Vec<SinglePoint> = trip_data.iter()
-                    // Filter by event type.
-                    .filter(|data| data.event_type == event_type)
-                    .filter_map(|data| {
-                        // Look for event severity in the ev_detail vector.
-                        data.ev_detail.iter()
-                            .find(|(tag, _)| tag == "Severity")
-                            .and_then(|(_, value)| {
-                                // Translate severity strings to numeric levels.
-                                let numeric_level = match value.as_str() {
-                                    "-" => 1.0,  // Low
-                                    "W" => 2.0,  // Warning
-                                    "C" => 3.0,  // Critical
-                                    _ => {
-                                        // Try to parse as number (fallback).
-                                        value.parse::<f32>().unwrap_or(1.0)
-                                    }
-                                };
-                                Some(numeric_level)
-                            })
-                            .map(|event_point| SinglePoint {
-                                unix_time: data.unix_time,
-                                point_value: event_point,
-                            })
-                    })
-                    .collect();
-
-                    if !ev_points.is_empty() {
-                    // For impulse data, we don't convert to pulse data.
-                    // We keep the original points as instantaneous events.
-                    
-                    // Push the impulse time series events to list of datasets.
-                    datasets.push(TimeSeriesData {
-                        data_type: "Impulse".to_string(),
-                        series_name: event_type.clone(),
-                        units: "Severity".to_string(),
-                        levels: vec!["Low".to_string(), "Warning".to_string(), "Critical".to_string()],
-                        time_series_points: ev_points,
-                    });
-                }
-            } 
-            "ZONECHANGE" => {
-                // Get all points for this event type in the selected trip.
-                let ev_points: Vec<SinglePoint> = trip_data.iter()
-                    // Filter by event type.
-                    .filter(|data| data.event_type == event_type)
-                    .filter_map(|data| {
-                        // Look for event zone output in the ev_detail vector.
-                        data.ev_detail.iter()
-                            .find(|(tag, _)| tag == "Zone output")
-                            .and_then(|(_, value)| {
-                                // Parse the integer string value to f32.
-                                // Note that we want the no zonw 0 value to
-                                // be above the baseline so add 1 to the zone output value.
-                                value.parse::<f32>().ok()
-                            })
-                            .map(|event_point| SinglePoint {
-                                unix_time: data.unix_time,
-                                point_value: event_point + 1.0,
-                            })
-                    })
-                    .collect();
-
-                    if !ev_points.is_empty() {
-                    // For impulse data, we don't convert to pulse data.
-                    // We keep the original points as instantaneous events.
-                    
-                    // Push the impulse time series events to list of datasets.
-                    // While there are 4 zones, there is also the condition of no zone,
-                    // i.e. not in any zone.
-                    datasets.push(TimeSeriesData {
-                        data_type: "Impulse".to_string(),
-                        series_name: event_type.clone(),
-                        units: "Zone Output".to_string(),
-                        levels: vec!["No Zone".to_string(), "1".to_string(), "2".to_string(), "3".to_string(), "4".to_string()],
-                        time_series_points: ev_points,
-                    });
-                }
-            } _ => info!("Event type not supported for plotting.")
-        }
-    }
-    
-    // Set of all data series to plot.
-    datasets
-}
-
-// Helper function to convert single event points to pulse data.
-fn convert_to_pulse_data(ev_points: &[SinglePoint], trip_start: u64, trip_end: u64, data_type: &str) -> Vec<SinglePoint> {
-    let mut pulse_points = Vec::new();
-    
-    // Determine baseline value based on data type.
-    let baseline_value = if data_type == "Impulse" {
-        // Impulse signsl
-        1.0
-    } else {
-        // Digital signal.
-        0.0
-    };
-    
-    // Add starting point at trip start (baseline level).
-    pulse_points.push(SinglePoint {
-        unix_time: trip_start,
-        point_value: baseline_value,
-    });
-    
-    // Convert each event point into a pulse (rising pulse).
-    for point in ev_points {
-        let event_end_time = point.unix_time;
-        let duration_seconds = if data_type == "Digital" {
-            // For digital signals, use the point value as duration.
-            point.point_value as u64
-        } else {
-            // For impulse signals, we want instantaneous events, so use 0 duration.
-            0
-        };
-        
-        // Calculate when the event started (going back in time by duration).
-        let event_start_time = if event_end_time >= duration_seconds {
-            event_end_time - duration_seconds
-        } else {
-            // If duration is longer than time since trip start, use trip start.
-            trip_start
-        };
-        
-        // Add point just before signal changes (still at baseline).
-        if event_start_time > trip_start {
-            pulse_points.push(SinglePoint {
-                unix_time: event_start_time,
-                point_value: baseline_value,
-            });
-        }
-        
-        // Add point where signal becomes active (rising edge).
-        pulse_points.push(SinglePoint {
-            unix_time: event_start_time,
-            point_value: if data_type == "Digital" { 1.0 } else { point.point_value },
-        });
-        
-        // Add point where signal is active (constant at level).
-        pulse_points.push(SinglePoint {
-            unix_time: event_end_time,
-            point_value: if data_type == "Digital" { 1.0 } else { point.point_value },
-        });
-
-        // Add point where signal returns to baseline (falling edge).
-        pulse_points.push(SinglePoint {
-            unix_time: event_end_time,
-            point_value: baseline_value,
-        });
-    }
-    
-    // Add ending point at trip end (baseline level).
-    pulse_points.push(SinglePoint {
-        unix_time: trip_end,
-        point_value: baseline_value,
-    });
-    
-    pulse_points
-}
-
 // Function to plot time series data.
 // This is called from the ui.rs file where the UI panel is defined and created.
 pub fn plot_time_series_data(
@@ -513,10 +104,10 @@ pub fn plot_time_series_data(
             if let Some(trip_id) = selected_trip {
                 if !trip_id.is_empty() {
                     // If trip selected, and not empty, get datasets to plot.
-                    let datasets = create_time_series_datasets(scraper, trip_id);
+                    let datasets = dataset_ts::create_time_series_datasets(scraper, trip_id);
 
                     // Calculate overall time range for all datasets.
-                    let (time_min, time_max) = calculate_time_range(&datasets);
+                    let (time_min, time_max) = helpers_ts::calculate_time_range(&datasets);
 
                     for dataset in datasets {
                         // Here's the space allocation for a single plot.
@@ -574,26 +165,6 @@ pub fn plot_time_series_data(
             }
         });
     });
-}
-
-// Helper function to calculate the overall time range across all datasets.
-fn calculate_time_range(datasets: &[TimeSeriesData]) -> (u64, u64) {
-    let mut time_min = u64::MAX;
-    let mut time_max = u64::MIN;
-    
-    for dataset in datasets {
-        for point in &dataset.time_series_points {
-            time_min = time_min.min(point.unix_time);
-            time_max = time_max.max(point.unix_time);
-        }
-    }
-    
-    // If no data points, return reasonable defaults.
-    if time_min == u64::MAX {
-        (0, 1)
-    } else {
-        (time_min, time_max)
-    }
 }
 
 // Helper function to draw a plot with axes.
@@ -663,7 +234,7 @@ fn draw_plot_with_axes(
     );
     
     // Calculate Y-axis range for this dataset.
-    let (y_min, y_max) = calculate_y_range(dataset);
+    let (y_min, y_max) = helpers_ts::calculate_y_range(dataset);
     
     // Add plot title.
     let title_pos = egui::pos2(rect.center().x, rect.min.y + 15.0);
@@ -696,7 +267,7 @@ fn draw_plot_with_axes(
             painter.text(
                 egui::pos2(x_pos, plot_rect.max.y + 20.0),
                 egui::Align2::CENTER_CENTER,
-                unix_time_to_hms(time_value),
+                helpers_ts::unix_time_to_hms(time_value),
                 egui::FontId::proportional(10.0),
                 text_colour,
             );
@@ -927,17 +498,23 @@ fn plot_data_points(
         let low_y_pos = plot_rect.max.y - (0.0 - y_min) / (y_max - y_min) * plot_rect.height();
         
         // Find pairs of rising/falling edges to shade.
-        for i in 0..screen_points.len() - 1 {
-            let current_y = screen_points[i].y;
-            
-            // If current point is high (active), shade to the next point.
-            if current_y < plot_rect.center().y {
-                let rect = egui::Rect::from_two_pos(
-                    egui::pos2(screen_points[i].x, current_y),
-                    egui::pos2(screen_points[i + 1].x, low_y_pos)
-                );
-                painter.rect_filled(rect, 0.0, colours::ts_digital_fill_colour(dark_mode));
+        // Need to avoid a panic if the plot is scrolled off the page.
+        if screen_points.len() > 1 {
+            for i in 0..screen_points.len() - 1 {
+                let current_y = screen_points[i].y;
+                
+                // If current point is high (active), shade to the next point.
+                if current_y < plot_rect.center().y {
+                    let rect = egui::Rect::from_two_pos(
+                        egui::pos2(screen_points[i].x, current_y),
+                        egui::pos2(screen_points[i + 1].x, low_y_pos)
+                    );
+                    painter.rect_filled(rect, 0.0, colours::ts_digital_fill_colour(dark_mode));
+                }
             }
+        }
+        else {
+            warn!("Catching panic when scrolling trace off the plot.")
         }
     }
 
@@ -1017,52 +594,5 @@ fn plot_data_points(
                 painter.circle_filled(*point, 2.0, line_colour);
             }
         }
-    }
-}
-
-// Helper function to convert Unix timestamp to hh:mm:ss format.
-fn unix_time_to_hms(unix_time: u64) -> String {
-    // Convert Unix timestamp to time of day (UTC).
-    let seconds_in_day = unix_time % 86400;
-    let hours = seconds_in_day / 3600;
-    let minutes = (seconds_in_day % 3600) / 60;
-    let seconds = seconds_in_day % 60;
-    
-    format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
-}
-
-// Helper function to calculate Y-axis range for a dataset.
-fn calculate_y_range(dataset: &TimeSeriesData) -> (f32, f32) {
-    if dataset.time_series_points.is_empty() {
-        return (0.0, 1.0);
-    }
-    
-    // Special handling for impulse signals.
-    if dataset.data_type == "Impulse" {
-        // Range comes from actual number of levels in the dataset.
-        // There is also the baseline level added.
-        if !dataset.levels.is_empty() {
-            return (0.0, (dataset.levels.len() + 1) as f32);
-        } else {
-            // Fallback to original behavior if no levels defined.
-            return (0.0, 4.0);
-        }
-    }
-
-    let mut y_min = f32::MAX;
-    let mut y_max = f32::MIN;
-    
-    for point in &dataset.time_series_points {
-        y_min = y_min.min(point.point_value);
-        y_max = y_max.max(point.point_value);
-    }
-    
-    // Add some padding for better visualization.
-    let padding = (y_max - y_min) * 0.1;
-    if padding == 0.0 {
-        // For flat lines (like digital signals), add fixed padding.
-        (y_min - 0.1, y_max + 0.1)
-    } else {
-        (y_min - padding, y_max + padding)
     }
 }
