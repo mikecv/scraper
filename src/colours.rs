@@ -119,3 +119,12 @@ pub fn ts_impulse_colour(dark_mode: bool) -> egui::Color32 {
         egui::Color32::from_rgb(255, 140, 0)
     }
 }
+
+// Impulse signals error colour.
+pub fn ts_impulse_error_colour(dark_mode: bool) -> egui::Color32 {
+    if dark_mode {
+        egui::Color32::from_rgb(178, 102, 255)
+    } else {
+        egui::Color32::from_rgb(76, 0, 153)
+    }
+}

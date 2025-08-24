@@ -274,6 +274,40 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
                     });
                 }
             }
+            "ZONEOVERSPEED" => {
+                // Get all points for this event type in the selected trip.
+                let ev_points: Vec<SinglePoint> = trip_data.iter()
+                    // Filter by event type
+                    .filter(|data| data.event_type == event_type)
+                    .filter_map(|data| {
+                        // Look for event duration in the ev_detail vector.
+                        data.ev_detail.iter()
+                            .find(|(tag, _)| tag == "Duration")
+                            .and_then(|(_, value)| {
+                                // Parse the integer string value to f32.
+                                value.parse::<f32>().ok()
+                            })
+                            .map(|event_point| SinglePoint {
+                                unix_time: data.unix_time,
+                                point_value: event_point,
+                            })
+                    })
+                    .collect();
+                
+                if !ev_points.is_empty() {
+                    // Convert single points to pulse data.
+                    let pulse_points = convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time, "Digital");    
+    
+                    // Push the digital time series events to list of datasets.
+                    datasets.push(TimeSeriesData {
+                        data_type: "Digital".to_string(),
+                        series_name: event_type.clone(),
+                        units: "Active".to_string(),
+                        levels: Vec::new(),
+                        time_series_points: pulse_points,
+                    });
+                }
+            }
             "IMPACT" => {
                 // Get all points for this event type in the selected trip.
                 let ev_points: Vec<SinglePoint> = trip_data.iter()
@@ -316,7 +350,45 @@ fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<Ti
                         time_series_points: ev_points,
                     });
                 }
-            }            _ => info!("Event type not supported for plotting.")
+            } 
+            "ZONECHANGE" => {
+                // Get all points for this event type in the selected trip.
+                let ev_points: Vec<SinglePoint> = trip_data.iter()
+                    // Filter by event type.
+                    .filter(|data| data.event_type == event_type)
+                    .filter_map(|data| {
+                        // Look for event zone output in the ev_detail vector.
+                        data.ev_detail.iter()
+                            .find(|(tag, _)| tag == "Zone output")
+                            .and_then(|(_, value)| {
+                                // Parse the integer string value to f32.
+                                // Note that we want the no zonw 0 value to
+                                // be above the baseline so add 1 to the zone output value.
+                                value.parse::<f32>().ok()
+                            })
+                            .map(|event_point| SinglePoint {
+                                unix_time: data.unix_time,
+                                point_value: event_point + 1.0,
+                            })
+                    })
+                    .collect();
+
+                    if !ev_points.is_empty() {
+                    // For impulse data, we don't convert to pulse data.
+                    // We keep the original points as instantaneous events.
+                    
+                    // Push the impulse time series events to list of datasets.
+                    // While there are 4 zones, there is also the condition of no zone,
+                    // i.e. not in any zone.
+                    datasets.push(TimeSeriesData {
+                        data_type: "Impulse".to_string(),
+                        series_name: event_type.clone(),
+                        units: "Zone Output".to_string(),
+                        levels: vec!["No Zone".to_string(), "1".to_string(), "2".to_string(), "3".to_string(), "4".to_string()],
+                        time_series_points: ev_points,
+                    });
+                }
+            } _ => info!("Event type not supported for plotting.")
         }
     }
     
@@ -710,18 +782,11 @@ fn draw_plot_with_axes(
             }
             
             // Add baseline level (0) tick mark.
+            // But don't label the tick mark, it is just a separator.
             painter.line_segment(
                 [egui::pos2(plot_rect.min.x - 5.0, plot_rect.max.y), 
                 egui::pos2(plot_rect.min.x, plot_rect.max.y)],
                 egui::Stroke::new(1.0, axis_colour),
-            );
-            
-            painter.text(
-                egui::pos2(plot_rect.min.x - 10.0, plot_rect.max.y),
-                egui::Align2::RIGHT_CENTER,
-                "Baseline".to_string(),
-                egui::FontId::proportional(10.0),
-                text_colour,
             );
         }
     }
@@ -901,7 +966,7 @@ fn plot_data_points(
             let y_ratio = point.point_value / total_levels as f32;
             let y_pos = plot_rect.max.y - (y_ratio * plot_rect.height());
             
-            // Choose colour based on severity level.
+            // Choose colour based on level.
             let mut impulse_colour = egui::Color32::GRAY;
 
             if dataset.series_name == "IMPACT" {
@@ -911,6 +976,14 @@ fn plot_data_points(
                     3 => egui::Color32::from_rgb(255, 0, 0),
                     _ => egui::Color32::GRAY,
                 };
+            }
+            else if dataset.series_name == "ZONECHANGE" {
+                if point.point_value as i32 == 1 {
+                    impulse_colour = colours::ts_impulse_error_colour(dark_mode);
+                }
+                else {
+                    impulse_colour = colours::ts_impulse_colour(dark_mode);
+                }
             }
 
             // Only draw visible impulses (non-zero values).
@@ -926,7 +999,7 @@ fn plot_data_points(
             }
         }
 
-        // Don't draw connecting lines for impulse signals
+        // Don't draw connecting lines for impulse signals.
         return; 
     }
 
@@ -967,8 +1040,9 @@ fn calculate_y_range(dataset: &TimeSeriesData) -> (f32, f32) {
     // Special handling for impulse signals.
     if dataset.data_type == "Impulse" {
         // Range comes from actual number of levels in the dataset.
+        // There is also the baseline level added.
         if !dataset.levels.is_empty() {
-            return (0.0, (dataset.levels.len() + 1) as f32); // +1 for baseline.
+            return (0.0, (dataset.levels.len() + 1) as f32);
         } else {
             // Fallback to original behavior if no levels defined.
             return (0.0, 4.0);
