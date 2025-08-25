@@ -1,8 +1,3 @@
-// Draw the time series data plots to a separate UI.
-// All plots share the same time x axis.
-// Pan and zoom on any one plot pan and zooms the others.
-// Note that zooming is only in the time axis.
-
 use log::info;
 use log::warn;
 
@@ -37,6 +32,7 @@ pub struct PlotState {
     pub auto_bounds: bool,
     pub zoom_factor: f32,
     pub pan_offset: f32,
+    pub pan_zoom_enabled: bool,
 }
 
 impl Default for PlotState {
@@ -46,6 +42,7 @@ impl Default for PlotState {
             auto_bounds: true,
             zoom_factor: 1.0,
             pan_offset: 0.0,
+            pan_zoom_enabled: false,
         }
     }
 }
@@ -76,22 +73,62 @@ pub fn plot_time_series_data(
             ui.heading("Time Series Plots");
             
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.button("Reset Pan/Zoom").clicked() {
-                    plot_state.x_range = None;
-                    plot_state.auto_bounds = true;
-                    plot_state.pan_offset = 0.0;
-                    plot_state.zoom_factor = 1.0;
+                // Reset button (only show when pan/zoom is enabled and has been used).
+                if plot_state.pan_zoom_enabled && (!plot_state.auto_bounds || plot_state.zoom_factor != 1.0 || plot_state.pan_offset != 0.0) {
+                    if ui.button("Reset View").clicked() {
+                        plot_state.x_range = None;
+                        plot_state.auto_bounds = true;
+                        plot_state.pan_offset = 0.0;
+                        plot_state.zoom_factor = 1.0;
+                    }
+                }
+                
+                // Toggle button for pan/zoom functionality.
+                let button_text = if plot_state.pan_zoom_enabled {
+                    "🔍 Pan/Zoom ON"
+                } else {
+                    "🔍 Pan/Zoom OFF"
+                };
+
+                // Set botton colour and button text colour.
+                let (button_color, text_color) = if plot_state.pan_zoom_enabled {
+                    (colours::ts_enabled_button_colour(*dark_mode), colours::ts_enabled_button_text_colour(*dark_mode))
+                } else {
+                    (colours::ts_disabled_button_colour(*dark_mode), colours::ts_disabled_button_text_colour(*dark_mode))
+                };
+
+                let button = egui::Button::new(egui::RichText::new(button_text).color(text_color)).fill(button_color);
+                if ui.add(button).clicked() {
+                    plot_state.pan_zoom_enabled = !plot_state.pan_zoom_enabled;
+                    // Reset view when disabling pan/zoom.
+                    if !plot_state.pan_zoom_enabled {
+                        plot_state.x_range = None;
+                        plot_state.auto_bounds = true;
+                        plot_state.pan_offset = 0.0;
+                        plot_state.zoom_factor = 1.0;
+                    }
                 }
             });
         });
         
-        // Show trip selection status.
-        match selected_trip {
-            Some(trip_id) if !trip_id.is_empty() => {
-                ui.label(format!("Current trip ID: {}", trip_id));
+        // Show trip selection status and pan/zoom hint.
+        ui.horizontal(|ui| {
+            match selected_trip {
+                Some(trip_id) if !trip_id.is_empty() => {
+                    ui.label(format!("Current trip ID: {}", trip_id));
+                }
+                _ => info!("No trip selected."),
             }
-            _ => info!("No trip selected."),
-        }
+            
+            // Show helpful hint when pan/zoom is enabled.
+            if plot_state.pan_zoom_enabled {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.label(egui::RichText::new("💡 Drag to pan, scroll wheel to zoom")
+                        .color(colours::ts_notices_colour(*dark_mode))
+                        .size(12.0));
+                });
+            }
+        });
     });
 
     egui::CentralPanel::default().show_inside(ui, |ui| {
@@ -114,22 +151,25 @@ pub fn plot_time_series_data(
                         let plot_size = egui::vec2(ui.available_width(), PLOT_HEIGHT);
                         let (plot_response, painter) = ui.allocate_painter(plot_size, egui::Sense::click_and_drag());
 
-                        // Handle panning.
-                        if plot_response.dragged() {
-                            let drag_delta = plot_response.drag_delta();
-                            plot_state.pan_offset += drag_delta.x;
-                            plot_state.auto_bounds = false;
-                        }
-
-                        // Handle limited zooming with mouse wheel.
-                        if plot_response.hovered() {
-                            let scroll_delta = ui.input(|i| i.raw_scroll_delta.y);
-                            if scroll_delta != 0.0 {
-                                let zoom_speed = 0.001;
-                                let zoom_change = 1.0 + (scroll_delta * zoom_speed);
-                                plot_state.zoom_factor *= zoom_change;
-                                plot_state.zoom_factor = plot_state.zoom_factor.clamp(0.1, 10.0);
+                        // Only handle panning and zooming if enabled.
+                        if plot_state.pan_zoom_enabled {
+                            // Handle panning.
+                            if plot_response.dragged() {
+                                let drag_delta = plot_response.drag_delta();
+                                plot_state.pan_offset += drag_delta.x;
                                 plot_state.auto_bounds = false;
+                            }
+
+                            // Handle limited zooming with mouse wheel.
+                            if plot_response.hovered() {
+                                let scroll_delta = ui.input(|i| i.raw_scroll_delta.y);
+                                if scroll_delta != 0.0 {
+                                    let zoom_speed = 0.001;
+                                    let zoom_change = 1.0 + (scroll_delta * zoom_speed);
+                                    plot_state.zoom_factor *= zoom_change;
+                                    plot_state.zoom_factor = plot_state.zoom_factor.clamp(0.1, 10.0);
+                                    plot_state.auto_bounds = false;
+                                }
                             }
                         }
 
@@ -186,25 +226,30 @@ fn draw_plot_with_axes(
         ),
     );
 
-    // Calculate panned and zoomed time range.
-    let time_range = time_max - time_min;
-    let zoomed_time_range = (time_range as f32 / plot_state.zoom_factor) as u64;
-    let pan_pixels_to_time = zoomed_time_range as f32 / plot_rect.width();
-    let pan_time_offset = (plot_state.pan_offset * pan_pixels_to_time) as i64;
+    // Calculate panned and zoomed time range (only if pan/zoom is enabled).
+    let (panned_time_min, panned_time_max) = if plot_state.pan_zoom_enabled {
+        let time_range = time_max - time_min;
+        let zoomed_time_range = (time_range as f32 / plot_state.zoom_factor) as u64;
+        let pan_pixels_to_time = zoomed_time_range as f32 / plot_rect.width();
+        let pan_time_offset = (plot_state.pan_offset * pan_pixels_to_time) as i64;
 
-    let center_time = (time_min + time_max) / 2;
-    let half_zoomed_range = zoomed_time_range / 2;
+        let center_time = (time_min + time_max) / 2;
+        let half_zoomed_range = zoomed_time_range / 2;
 
-    let panned_time_min = ((center_time as i64) - (half_zoomed_range as i64) - pan_time_offset).max(0) as u64;
-    let panned_time_max = ((center_time as i64) + (half_zoomed_range as i64) - pan_time_offset).max(0) as u64;
-
-    // Choose colours based on dark mode.
-    let (bg_colour, axis_colour, text_colour) = if dark_mode {
-        (egui::Color32::from_rgb(30, 30, 30), egui::Color32::LIGHT_GRAY, egui::Color32::WHITE)
+        let panned_time_min = ((center_time as i64) - (half_zoomed_range as i64) - pan_time_offset).max(0) as u64;
+        let panned_time_max = ((center_time as i64) + (half_zoomed_range as i64) - pan_time_offset).max(0) as u64;
+        
+        (panned_time_min, panned_time_max)
     } else {
-        (egui::Color32::WHITE, egui::Color32::DARK_GRAY, egui::Color32::BLACK)
+        // Use full time range when pan/zoom is disabled.
+        (time_min, time_max)
     };
-    
+
+    // Set colours for plot background, axes, and text.
+    let bg_colour = colours::plot_area_colour(dark_mode);
+    let axis_colour = colours::plot_axis_colour(dark_mode);
+    let text_colour = colours::plot_text_colour(dark_mode);
+
     // Draw background.
     painter.rect_filled(*rect, 4.0, bg_colour);
     
@@ -212,12 +257,8 @@ fn draw_plot_with_axes(
     painter.rect_stroke(*rect, 4.0, egui::Stroke::new(1.0, axis_colour), egui::epaint::StrokeKind::Inside);
     
     // Draw the main plot area background.
-    painter.rect_filled(plot_rect, 0.0, if dark_mode { 
-        egui::Color32::from_rgb(40, 40, 40) 
-    } else { 
-        egui::Color32::from_rgb(250, 250, 250) 
-    });
-    
+    painter.rect_filled(plot_rect, 0.0, colours::plot_bkgnd_colour(dark_mode));
+
     // Draw axes.
     // X-axis (bottom).
     painter.line_segment(
@@ -363,11 +404,7 @@ fn draw_plot_with_axes(
     }
 
     // Draw grid lines
-    let grid_colour = if dark_mode {
-        egui::Color32::from_rgba_unmultiplied(100, 100, 100, 100)
-    } else {
-        egui::Color32::from_rgba_unmultiplied(200, 200, 200, 150)
-    };
+    let grid_colour = colours::ts_grid_lines_colour(dark_mode);
     let grid_stroke = egui::Stroke::new(0.5, grid_colour);
 
     // Vertical grid lines (same X positions as time tick marks).
@@ -548,10 +585,10 @@ fn plot_data_points(
 
             if dataset.series_name == "IMPACT" {
                 impulse_colour = match point.point_value as i32 {
-                    1 => egui::Color32::from_rgb(255, 255, 0),
-                    2 => egui::Color32::from_rgb(255, 165, 0),
-                    3 => egui::Color32::from_rgb(255, 0, 0),
-                    _ => egui::Color32::GRAY,
+                    1 => colours::ts_impact_low_colour(dark_mode),
+                    2 => colours::ts_impact_warning_colour(dark_mode),
+                    3 => colours::ts_impact_critical_colour(dark_mode),
+                    _ => colours::ts_fallback_colour(dark_mode),
                 };
             }
             else if dataset.series_name == "ZONECHANGE" {

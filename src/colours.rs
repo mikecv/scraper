@@ -3,6 +3,51 @@
 
 use eframe::egui::Color32;
 
+// Colours for plot area background.
+pub fn plot_area_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgb(30, 30, 30)
+    } else {
+        Color32::from_rgb(255, 255, 255)
+    }
+}
+
+// Colours for plot background.
+pub fn plot_bkgnd_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgb(40, 40, 40)
+    } else {
+        Color32::from_rgb(250, 250, 250)
+    }
+}
+
+// Colours for plot axis.
+pub fn plot_axis_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgb(169, 169, 169)
+    } else {
+        Color32::from_rgb(211, 211, 211)
+    }
+}
+
+// Shading colours for time series digital plot line.
+pub fn ts_grid_lines_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgba_unmultiplied(200, 200, 200, 150)
+    } else {
+        Color32::from_rgba_unmultiplied(100, 100, 100, 100)
+    }
+}
+
+// Colours for plot text.
+pub fn plot_text_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgb(255, 255, 255)
+    } else {
+        Color32::from_rgb(0, 0, 0)
+    }
+}
+
 // Colours for event labels in scraped logs.
 pub fn event_colour(dark_mode: bool) -> Color32 {
     if dark_mode {
@@ -126,5 +171,78 @@ pub fn ts_impulse_error_colour(dark_mode: bool) -> egui::Color32 {
         egui::Color32::from_rgb(178, 102, 255)
     } else {
         egui::Color32::from_rgb(76, 0, 153)
+    }
+}
+
+// Impact level critical colour.
+pub fn ts_impact_critical_colour(dark_mode: bool) -> egui::Color32 {
+    if dark_mode {
+        egui::Color32::from_rgb(158, 6, 33)
+    } else {
+        egui::Color32::from_rgb(161, 52, 71)
+    }
+}
+
+// Impact level warning colour.
+pub fn ts_impact_warning_colour(dark_mode: bool) -> egui::Color32 {
+    if dark_mode {
+        egui::Color32::from_rgb(242, 165, 93)
+    } else {
+        egui::Color32::from_rgb(240, 118, 4)
+    }
+}
+
+// Impact level warning colour.
+pub fn ts_impact_low_colour(dark_mode: bool) -> egui::Color32 {
+    if dark_mode {
+        egui::Color32::from_rgb(238, 245, 78)
+    } else {
+        egui::Color32::from_rgb(236, 245, 7)
+    }
+}
+
+// Time series fallback colour.
+pub fn ts_fallback_colour(dark_mode: bool) -> egui::Color32 {
+    if dark_mode {
+        egui::Color32::from_rgb(178, 179, 174)
+    } else {
+        egui::Color32::from_rgb(61, 61, 59)
+    }
+}
+
+// Pan and zoom (enabled) button colour.
+pub fn ts_enabled_button_colour(dark_mode: bool) -> egui::Color32 {
+    if dark_mode {
+        egui::Color32::from_rgb(200, 255, 200)
+    } else {
+        egui::Color32::from_rgb(100, 150, 100)
+    }
+}
+
+// Pan and zoom (enabled) button text colour.
+pub fn ts_enabled_button_text_colour(dark_mode: bool) -> egui::Color32 {
+    if dark_mode {
+        egui::Color32::from_rgb(0, 0, 0)
+    } else {
+        egui::Color32::from_rgb(255, 255, 255)
+    }
+}
+
+
+// Pan and zoom (disabled) button colour.
+pub fn ts_disabled_button_colour(dark_mode: bool) -> egui::Color32 {
+    if dark_mode {
+        egui::Color32::from_rgb(80, 80, 80)
+    } else {
+        egui::Color32::from_rgb(230, 230, 230)
+    }
+}
+
+// Pan and zoom (disabled) button text colour.
+pub fn ts_disabled_button_text_colour(dark_mode: bool) -> egui::Color32 {
+    if dark_mode {
+        egui::Color32::from_rgb(200, 200, 200)
+    } else {
+        egui::Color32::from_rgb(60, 60, 60)
     }
 }
