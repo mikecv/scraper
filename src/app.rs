@@ -15,6 +15,7 @@ use crate::time_series_plot::PlotState;
 pub struct MyApp {
     pub scraper: Scraper,
     pub show_oot_events: bool,
+    pub show_unsupported_events: bool,
     pub show_input_events: bool,
     pub show_report_events: bool,
     pub show_debug_events: bool,
@@ -66,6 +67,7 @@ impl Default for MyApp {
         Self {
             scraper: Scraper::default(),
             show_oot_events: false,
+            show_unsupported_events: false,
             show_input_events: false,
             show_report_events: false,
             show_debug_events: false,

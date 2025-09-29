@@ -45,6 +45,7 @@ pub struct ScrapedData {
     pub trip_num: String,
     pub event_type: String,
     pub ev_detail: Vec<(String, String)>,
+    pub ev_supported: bool,
     pub gps_rssi: u32,
     pub gps_speed: u32,
     pub gps_locn: GpsLocation,
@@ -218,7 +219,7 @@ impl Scraper {
             // Check if we should stop processing.
             if let Some(captures) = sn_pattern.captures(&line) {
                 found_sn = true;
-                // Group 3 contains the serialnumber.
+                // Group 3 contains the serial number.
                 let sn_str = captures.get(3).unwrap().as_str();
                 self.controller_id = sn_str.to_string();
                 info!("Found controller s/n: {:0>6}", sn_str); 
@@ -251,14 +252,15 @@ impl Scraper {
             // Check if we should stop uprocessing.
             if let Some(captures) = fw_pattern.captures(&line) {
                 found_fw = true;
-                // Group 11 contains the firmware version.
+                // Group 11 contains the firmware versin.
                 let fw_str = captures.get(11).unwrap().as_str();
                 self.controller_fw = fw_str.to_string();
                 info!("Found controller firmware: {:?}", fw_str); 
             }
             if found_fw {
                 // Have found one instance of firmware version.
-                // Don'n nee to look any further.
+                // Don't need to look any further as for now we are only
+                // looking for the first instance.
                 break;
             }
         }
@@ -275,9 +277,6 @@ impl Scraper {
         // Get the controller events.
         let ev_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2})(?:\.[0-9]{3})? EVENT ([0-9]+) ([0-9]+) ([-0-9]+)/([0-9]+)/([0-9]+)/([0-9]+)/([0-9]+) ([A-Z_]+) (.+)$")?;
 
-        // Track if we are in or out of trip.
-        let mut intrip = false;
-
         // Trip number for SIGNON event so that it can
         // be copied to the other events in the trip.
         let mut trip_num_id = "".to_string();
@@ -286,7 +285,7 @@ impl Scraper {
         for line_result in reader.lines() {
             let line = line_result?;
             
-            // Check for event pattern
+            // Check for event pattern.
             if let Some(captures) = ev_pattern.captures(&line) {
                 
                 // Extract key fields for logging.
@@ -295,7 +294,9 @@ impl Scraper {
                 let unix_time = captures.get(4).unwrap().as_str();
                 let event_type = captures.get(10).unwrap().as_str();
                 let event_detail = captures.get(11).unwrap().as_str();
-                let ev_key_vals = ungroup_event_data(event_type.to_string(), event_detail);
+                let mut on_trip = true;
+                let mut ev_supported = true;
+                let ev_key_vals = ungroup_event_data(event_type.to_string(), event_detail, &mut on_trip, &mut ev_supported);
                 let trip_id = captures.get(3).unwrap().as_str();
 
                 // Get the gps location from the event data.
@@ -334,21 +335,19 @@ impl Scraper {
                 // SIGNON sets TRIP clears.
                 if event_type == "SIGNON" { 
                     // Save the trip number to apply to other events.
-                    trip_num_id = trip_id.to_string();      
-                    intrip = true;
-                } else if event_type == "TRIP" {
-                    intrip = true;
-                }
+                    trip_num_id = trip_id.to_string();   
+                }   
 
-                // Create and populate the struct correctly.
+                // Create and populate the struct.
+                // Initialise events to be supported; change later if not.
                 let ev_data = ScrapedData {
                     date_time: format!("{} {}", date, time),
                     unix_time: unix_time.parse().expect("Invalid Unix time string"),
-                    on_trip: intrip,
-                    // Apply trip number to all events.
+                    on_trip: on_trip,
                     trip_num: trip_num_id.clone(),
                     event_type: event_type.to_string(),
                     ev_detail: ev_key_vals,
+                    ev_supported: ev_supported,
                     gps_locn: gps_locn,
                     gps_rssi: gps_rssi,
                     gps_speed: gps_speed,
@@ -360,7 +359,6 @@ impl Scraper {
                 // Clear on trip flag after TRIP event.
                 // This makes TRIP still part of the trip.
                 if event_type == "TRIP" {
-                   intrip = false;
                    // Clear the saved trip number as
                    // following events are out of trip.
                    trip_num_id = "".to_string();
@@ -391,7 +389,7 @@ impl Scraper {
 }
 
 // Function to expand on the scraped data.
-fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String)> {
+fn ungroup_event_data(event_type: String, sub_data: &str, on_trip: &mut bool, ev_supported: &mut bool) -> Vec<(String, String)> {
     // Initialise result vector.
     let mut result = Vec::new();
 
@@ -860,6 +858,7 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
 
 
         // Search for the event sub-data for the SWSTART event.
+        // NOTE that the SWSTART event occurs outside of trips.
         "SWSTART" => {
             let sub_swstart_pattern = Regex::new(r"([.0-9]+ .*) v:(.+?)$")
                 .expect("Invalid SWSTART regex pattern");
@@ -874,6 +873,11 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
                         result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
                     }
                 }
+
+                // The SWSTART event only occurs out of trip.
+                // Setting SWSSTART on_trip flag to false.
+                *on_trip = false;
+
             } else {
                 warn!("Failed to extract sub-data from SWSTART");
             }
@@ -1084,8 +1088,11 @@ fn ungroup_event_data(event_type: String, sub_data: &str) -> Vec<(String, String
             }
         },
         _ => {
-            // Handle other event types or add a default case
-            result.push(("Raw data".to_string(), sub_data.to_string()));
+            // Events not currently supported.
+            // Only appear if show out of trip or supported flag set.
+            // Event and attributes will not be formatted.
+            // Setting unsupported flag to false.
+            *ev_supported = false;
         }
     }
 

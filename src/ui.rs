@@ -36,6 +36,7 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
                 ui.checkbox(&mut app.show_gps_events, "GPS event data");
                 ui.separator();                
                 ui.checkbox(&mut app.show_oot_events, "Out of trip events");
+                ui.checkbox(&mut app.show_unsupported_events, "Unsupported events");
             });
 
             // Plot menu.
@@ -217,6 +218,7 @@ pub fn draw_central_panel(app: &mut MyApp, ctx: &egui::Context) {
             available_height,
             available_width,
             app.show_oot_events,
+            app.show_unsupported_events,
             app.show_input_events,
             app.show_report_events,
             app.show_debug_events,

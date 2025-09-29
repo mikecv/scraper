@@ -48,6 +48,7 @@ pub fn render_scraped_data(
         available_height: f32,
         available_width: f32,
         show_oot_events: bool,
+        show_unsupported_events: bool,
         show_input_events: bool,
         show_report_events: bool,
         show_debug_events: bool,
@@ -78,7 +79,12 @@ pub fn render_scraped_data(
         let filtered_data: Vec<(usize, &ScrapedData)> = scraped_data
             .iter()
             .enumerate()
-            .filter(|(_, item)| should_show_event(item, show_oot_events, show_input_events, show_report_events, show_debug_events))
+            .filter(|(_, item)| should_show_event(item,
+                                show_oot_events,
+                                show_unsupported_events,
+                                show_input_events,
+                                show_report_events,
+                                show_debug_events))
             .collect();
 
         let mut current_trip_header: Option<&ScrapedData> = None;
@@ -140,6 +146,7 @@ pub fn render_scraped_data(
 fn should_show_event(
     item: &ScrapedData,
     show_oot_events: bool,
+    show_unsupported_events: bool,
     show_input_events: bool,
     show_report_events: bool,
     show_debug_events: bool,
@@ -149,17 +156,19 @@ fn should_show_event(
         "SIGNON" => true,
         // Show TRIP events unless not on trip.
         "TRIP" => item.on_trip,
-        // Show these events according to the Show menut settings,
+        // Show these events according to the Show menu settings,
         // unless they are out of trip.
         "REPORT" => show_report_events && item.on_trip,
         "DEBUG" => show_debug_events && item.on_trip,
         "INPUT" => show_input_events && item.on_trip,
         _ => {
             // For other events, decide based on whether they're on trip.
-            if item.on_trip {
+            // Unless the event is unsupported and show unsupported events is enabled.
+            if (!item.ev_supported && show_unsupported_events) ||
+            (!item.on_trip && show_oot_events) {
                 true
             } else {
-                show_oot_events
+                false
             }
         }
     }

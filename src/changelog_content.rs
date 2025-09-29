@@ -13,6 +13,7 @@ pub fn draw_changelog_content(ui: &mut egui::Ui, _app: &mut MyApp) {
     ui.collapsing("0.2.0 - update release", |ui| {
         ui.label("Bug fixes to window sizing.");
         ui.label("Added time series data plotting, for analog, digital, and impulse series.");
+        ui.label("Added display of unsupported events; no elaboration of event attributes.");
    });
 
     ui.collapsing("0.1.0 - Initial release", |ui| {
