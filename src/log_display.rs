@@ -312,84 +312,105 @@ fn render_top_level_event(
     let settings: Settings = SETTINGS.lock().unwrap().clone();
 
     let event_id = format!("{}_{}", index, &item.event_type);
-    ui.push_id(&event_id, |ui| {
-        ui.collapsing(
-            // Event name and the date/time.
-            RichText::new(format!("{:} {}",&item.event_type, &item.date_time))
-                .color(colours::subtle_colour(dark_mode))
-                .family(egui::FontFamily::Monospace)
-                .size(settings.event_font_size),
-            |ui| {
-                
-                // Do the event data key value pairs.
-                for (key, value) in &item.ev_detail {
+
+    // Event is not supported.
+    // For unsupprted events attributes are not included.
+    // Similarly, gps data is not included.
+    if !item.ev_supported {
+
+        ui.push_id(&event_id, |ui| {
+            ui.collapsing(
+                RichText::new(format!("{:20} {}",&item.event_type, &item.date_time))
+                    .color(colours::us_event_colour(dark_mode))
+                    .family(egui::FontFamily::Monospace)
+                    .size(settings.event_font_size),
+                |_ui| {
+                }
+            );
+        });
+    }
+    // Event is not inside trip.
+    // This could be an event that is supposed to occure out of trip,
+    // or a trip that is supposed to be in a trip but wasn't.
+    else if !item.on_trip {
+        ui.push_id(&event_id, |ui| {
+            ui.collapsing(
+                RichText::new(format!("{:20} {}",&item.event_type, &item.date_time))
+                    .color(colours::oot_event_colour(dark_mode))
+                    .family(egui::FontFamily::Monospace)
+                    .size(settings.event_font_size),
+                |ui| {
+
+                    // Do the event data key value pairs.
+                    for (key, value) in &item.ev_detail {
+                        ui.horizontal(|ui| {
+                            ui.label(RichText::new(format!("{:20}", key))
+                                .color(colours::key_colour(dark_mode))
+                                .family(egui::FontFamily::Monospace)
+                                .size(settings.event_font_size)
+                                .italics());
+                            ui.label(RichText::new(format!("{}", value))
+                                .color(colours::value_colour(dark_mode))
+                                .family(egui::FontFamily::Monospace)
+                                .size(settings.event_font_size)
+                                .italics());
+                        });
+                    }
+                    // Add the gps lat/lon value from GPS to key value data for the event.
                     ui.horizontal(|ui| {
-                        ui.label(RichText::new(format!("{:20}", key))
-                            .color(colours::subtle_colour(dark_mode))
+                        ui.label(RichText::new(format!("{:20}", "GPS Latitude"))
+                            .color(colours::gps_key_colour(dark_mode))
                             .family(egui::FontFamily::Monospace)
                             .size(settings.event_font_size)
                             .italics());
-                        ui.label(RichText::new(format!("{}", value))
-                            .color(colours::subtle_colour(dark_mode))
+                        ui.label(RichText::new(format!("{}", &item.gps_locn.lat))
+                            .color(colours::gps_value_colour(dark_mode))
+                            .family(egui::FontFamily::Monospace)
+                            .size(settings.event_font_size)
+                            .italics());
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new(format!("{:20}", "GPS Longitude"))
+                            .color(colours::gps_key_colour(dark_mode))
+                            .family(egui::FontFamily::Monospace)
+                            .size(settings.event_font_size)
+                            .italics());
+                        ui.label(RichText::new(format!("{}", &item.gps_locn.lon))
+                            .color(colours::gps_value_colour(dark_mode))
+                            .family(egui::FontFamily::Monospace)
+                            .size(settings.event_font_size)
+                            .italics());
+                    });
+                    // Add the speed value from GPS to key value data for the event.
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new(format!("{:20}", "GPS Speed"))
+                            .color(colours::gps_key_colour(dark_mode))
+                            .family(egui::FontFamily::Monospace)
+                            .size(settings.event_font_size)
+                            .italics());
+                        ui.label(RichText::new(format!("{}", &item.gps_speed))
+                            .color(colours::gps_value_colour(dark_mode))
+                            .family(egui::FontFamily::Monospace)
+                            .size(settings.event_font_size)
+                            .italics());
+                    });
+                    // Add the gps RSSI value from GPS to key value data for the event.
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new(format!("{:20}", "GPS RSSI"))
+                            .color(colours::gps_key_colour(dark_mode))
+                            .family(egui::FontFamily::Monospace)
+                            .size(settings.event_font_size)
+                            .italics());
+                        ui.label(RichText::new(format!("{}", &item.gps_rssi))
+                            .color(colours::gps_value_colour(dark_mode))
                             .family(egui::FontFamily::Monospace)
                             .size(settings.event_font_size)
                             .italics());
                     });
                 }
-                // Add the gps lat/lon value from GPS to key value data for the event.
-                ui.horizontal(|ui| {
-                    ui.label(RichText::new(format!("{:20}", "GPS Latitude"))
-                        .color(colours::subtle_colour(dark_mode))
-                        .family(egui::FontFamily::Monospace)
-                        .size(settings.event_font_size)
-                        .italics());
-                    ui.label(RichText::new(format!("{}", &item.gps_locn.lat))
-                        .color(colours::subtle_colour(dark_mode))
-                        .family(egui::FontFamily::Monospace)
-                        .size(settings.event_font_size)
-                        .italics());
-                });
-                ui.horizontal(|ui| {
-                    ui.label(RichText::new(format!("{:20}", "GPS Longitude"))
-                        .color(colours::subtle_colour(dark_mode))
-                        .family(egui::FontFamily::Monospace)
-                        .size(settings.event_font_size)
-                        .italics());
-                    ui.label(RichText::new(format!("{}", &item.gps_locn.lon))
-                        .color(colours::subtle_colour(dark_mode))
-                        .family(egui::FontFamily::Monospace)
-                        .size(settings.event_font_size)
-                        .italics());
-                });
-                // Add the speed value from GPS to key value data for the event.
-                ui.horizontal(|ui| {
-                    ui.label(RichText::new(format!("{:20}", "GPS Speed"))
-                        .color(colours::subtle_colour(dark_mode))
-                        .family(egui::FontFamily::Monospace)
-                        .size(settings.event_font_size)
-                        .italics());
-                    ui.label(RichText::new(format!("{}", &item.gps_speed))
-                        .color(colours::subtle_colour(dark_mode))
-                        .family(egui::FontFamily::Monospace)
-                        .size(settings.event_font_size)
-                        .italics());
-                });
-                // Add the gps RSSI value from GPS to key value data for the event.
-                ui.horizontal(|ui| {
-                    ui.label(RichText::new(format!("{:20}", "GPS RSSI"))
-                        .color(colours::subtle_colour(dark_mode))
-                        .family(egui::FontFamily::Monospace)
-                        .size(settings.event_font_size)
-                        .italics());
-                    ui.label(RichText::new(format!("{}", &item.gps_rssi))
-                        .color(colours::subtle_colour(dark_mode))
-                        .family(egui::FontFamily::Monospace)
-                        .size(settings.event_font_size)
-                        .italics());
-                });
-            }
-        );
-    });
+            );
+        });
+    }
 }
 
 // Handler functions for trip header selection.

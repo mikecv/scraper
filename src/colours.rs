@@ -57,6 +57,24 @@ pub fn event_colour(dark_mode: bool) -> Color32 {
     }
 }
 
+// Colours for (Unsupported) event labels in scraped logs.
+pub fn us_event_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgb(204, 153, 255)
+    } else {
+        Color32::from_rgb(153, 0, 204)
+    }
+}
+
+// Colours for Out of Trip event labels in scraped logs.
+pub fn oot_event_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgb(255, 204, 102)
+    } else {
+        Color32::from_rgb(255, 153, 0)
+    }
+}
+
 // Colours for top level trip labels in scraped logs.
 pub fn trip_colour(dark_mode: bool) -> Color32 {
     if dark_mode {
@@ -81,15 +99,6 @@ pub fn value_colour(dark_mode: bool) -> Color32 {
         Color32::from_rgb(112, 123, 124)
     } else {
         Color32::from_rgb(52, 73, 94)
-    }
-}
-
-// Colours for out of trip values (not outstanding).
-pub fn subtle_colour(dark_mode: bool) -> Color32 {
-    if dark_mode {
-        Color32::from_rgb(77, 77, 77)
-    } else {
-        Color32::from_rgb(204, 204, 204)
     }
 }
 
