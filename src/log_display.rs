@@ -166,11 +166,15 @@ fn should_show_event(
             // Unless the event is unsupported and show unsupported events is enabled.
             if (!item.ev_supported && show_unsupported_events) ||
             (!item.on_trip && show_oot_events) {
-                true
+                return true;
             } else {
-                false
+                // Show in-trip supported event.
+                if item.on_trip && item.ev_supported {
+                    return true;
+                }
             }
-        }
+            return false;
+        } 
     }
 }
 
