@@ -237,7 +237,6 @@ pub fn ts_enabled_button_text_colour(dark_mode: bool) -> egui::Color32 {
     }
 }
 
-
 // Pan and zoom (disabled) button colour.
 pub fn ts_disabled_button_colour(dark_mode: bool) -> egui::Color32 {
     if dark_mode {
@@ -253,5 +252,23 @@ pub fn ts_disabled_button_text_colour(dark_mode: bool) -> egui::Color32 {
         egui::Color32::from_rgb(200, 200, 200)
     } else {
         egui::Color32::from_rgb(60, 60, 60)
+    }
+}
+
+// Cursor colour.
+pub fn ts_cursor_colour(dark_mode: bool) -> egui::Color32 {
+    if dark_mode {
+        egui::Color32::from_rgb(255, 179, 255)
+    } else {
+        egui::Color32::from_rgb(153, 0, 153)
+    }
+}
+
+// Time cursor label colour.
+pub fn ts_cursor_label_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgba_premultiplied(40, 40, 40, 230)
+    } else {
+        Color32::from_rgba_premultiplied(245, 245, 245, 230)
     }
 }

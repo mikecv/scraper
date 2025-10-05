@@ -26,6 +26,7 @@ pub struct TimeSeriesData {
 }
 
 // Plot state to maintain synchronized pan/zoom across multiple plots.
+// Unix time at cursor position.
 #[derive(Debug, Clone)]
 pub struct PlotState {
     pub x_range: Option<(f64, f64)>,
@@ -33,8 +34,12 @@ pub struct PlotState {
     pub zoom_factor: f32,
     pub pan_offset: f32,
     pub pan_zoom_enabled: bool,
+    pub cursor_enabled: bool,
+    pub cursor_time: Option<u64>,
+    pub current_trip: Option<String>,
 }
 
+// Default plot effect states.
 impl Default for PlotState {
     fn default() -> Self {
         Self {
@@ -43,6 +48,9 @@ impl Default for PlotState {
             zoom_factor: 1.0,
             pan_offset: 0.0,
             pan_zoom_enabled: false,
+            cursor_enabled: false,
+            cursor_time: None,
+            current_trip: None,
         }
     }
 }
@@ -73,8 +81,8 @@ pub fn plot_time_series_data(
             ui.heading("Time Series Plots");
             
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                // Reset button (only show when pan/zoom is enabled and has been used).
-                if plot_state.pan_zoom_enabled && (!plot_state.auto_bounds || plot_state.zoom_factor != 1.0 || plot_state.pan_offset != 0.0) {
+                // Reset button - only show when there's actual pan/zoom state to reset.
+                if !plot_state.auto_bounds || plot_state.zoom_factor != 1.0 || plot_state.pan_offset != 0.0 {
                     if ui.button("Reset View").clicked() {
                         plot_state.x_range = None;
                         plot_state.auto_bounds = true;
@@ -83,30 +91,57 @@ pub fn plot_time_series_data(
                     }
                 }
                 
-                // Toggle button for pan/zoom functionality.
-                let button_text = if plot_state.pan_zoom_enabled {
-                    "🔍 Pan/Zoom ON"
+                // Toggle button for time cursor functionality.
+                let cursor_button_text = if plot_state.cursor_enabled {
+                    "Cursor ON"
                 } else {
-                    "🔍 Pan/Zoom OFF"
+                    "Cursor OFF"
                 };
 
-                // Set botton colour and button text colour.
-                let (button_color, text_color) = if plot_state.pan_zoom_enabled {
+                let (cursor_button_colour, cursor_text_colour) = if plot_state.cursor_enabled {
                     (colours::ts_enabled_button_colour(*dark_mode), colours::ts_enabled_button_text_colour(*dark_mode))
                 } else {
                     (colours::ts_disabled_button_colour(*dark_mode), colours::ts_disabled_button_text_colour(*dark_mode))
                 };
 
-                let button = egui::Button::new(egui::RichText::new(button_text).color(text_color)).fill(button_color);
+                let cursor_button = egui::Button::new(egui::RichText::new(cursor_button_text).color(cursor_text_colour)).fill(cursor_button_colour);
+                if ui.add(cursor_button).clicked() {
+                    // If enabling cursor, disable pan/zoom.
+                    if !plot_state.cursor_enabled {
+                        plot_state.pan_zoom_enabled = false;
+                    }
+                    plot_state.cursor_enabled = !plot_state.cursor_enabled;
+                    // Initialize cursor at centre when enabling.
+                    if plot_state.cursor_enabled && plot_state.cursor_time.is_none() {
+                        plot_state.cursor_time = None;
+                    }
+                }
+                
+                // Toggle button for pan/zoom functionality.
+                let button_text = if plot_state.pan_zoom_enabled {
+                    "Pan/Zoom ON"
+                } else {
+                    "Pan/Zoom OFF"
+                };
+
+                let (button_colour, text_colour) = if plot_state.pan_zoom_enabled {
+                    (colours::ts_enabled_button_colour(*dark_mode), colours::ts_enabled_button_text_colour(*dark_mode))
+                } else {
+                    (colours::ts_disabled_button_colour(*dark_mode), colours::ts_disabled_button_text_colour(*dark_mode))
+                };
+
+                let button = egui::Button::new(egui::RichText::new(button_text).color(text_colour)).fill(button_colour);
                 if ui.add(button).clicked() {
-                    plot_state.pan_zoom_enabled = !plot_state.pan_zoom_enabled;
-                    // Reset view when disabling pan/zoom.
+                    // If enabling pan/zoom, disable cursor AND reset view to full.
                     if !plot_state.pan_zoom_enabled {
+                        plot_state.cursor_enabled = false;
+                        // Reset to full view when enabling pan/zoom.
                         plot_state.x_range = None;
                         plot_state.auto_bounds = true;
                         plot_state.pan_offset = 0.0;
                         plot_state.zoom_factor = 1.0;
                     }
+                    plot_state.pan_zoom_enabled = !plot_state.pan_zoom_enabled;
                 }
             });
         });
@@ -120,14 +155,26 @@ pub fn plot_time_series_data(
                 _ => info!("No trip selected."),
             }
             
-            // Show helpful hint when pan/zoom is enabled.
-            if plot_state.pan_zoom_enabled {
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.label(egui::RichText::new("💡 Drag to pan, scroll wheel to zoom")
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                // Show cursor time if cursor is enabled and positioned.
+                if plot_state.cursor_enabled {
+                    if let Some(cursor_time) = plot_state.cursor_time {
+                        ui.label(egui::RichText::new(format!("Cursor: {}", helpers_ts::unix_time_to_hms(cursor_time)))
+                            .color(colours::ts_notices_colour(*dark_mode))
+                            .size(12.0));
+                    } else {
+                        ui.label(egui::RichText::new("Click on a plot to place cursor")
+                            .color(colours::ts_notices_colour(*dark_mode))
+                            .size(12.0));
+                    }
+                }
+                // Show helpful hint when pan/zoom is enabled.
+                else if plot_state.pan_zoom_enabled {
+                    ui.label(egui::RichText::new("Drag to pan, scroll wheel to zoom")
                         .color(colours::ts_notices_colour(*dark_mode))
                         .size(12.0));
-                });
-            }
+                }
+            });
         });
     });
 
@@ -140,19 +187,80 @@ pub fn plot_time_series_data(
             // Check if a trip is currently selected.
             if let Some(trip_id) = selected_trip {
                 if !trip_id.is_empty() {
+                    // Check if trip has changed and reset state if it has.
+                    if plot_state.current_trip.as_ref() != Some(trip_id) {
+                        plot_state.x_range = None;
+                        plot_state.auto_bounds = true;
+                        plot_state.zoom_factor = 1.0;
+                        plot_state.pan_offset = 0.0;
+                        plot_state.pan_zoom_enabled = false;
+                        plot_state.cursor_enabled = false;
+                        plot_state.cursor_time = None;
+                        plot_state.current_trip = Some(trip_id.clone());
+                    }
+        
                     // If trip selected, and not empty, get datasets to plot.
                     let datasets = dataset_ts::create_time_series_datasets(scraper, trip_id);
 
                     // Calculate overall time range for all datasets.
                     let (time_min, time_max) = helpers_ts::calculate_time_range(&datasets);
 
+                    // Initialize cursor to centre time if not set.
+                    if plot_state.cursor_enabled && plot_state.cursor_time.is_none() {
+                        plot_state.cursor_time = Some((time_min + time_max) / 2);
+                    }
+
                     for dataset in datasets {
                         // Here's the space allocation for a single plot.
                         let plot_size = egui::vec2(ui.available_width(), PLOT_HEIGHT);
                         let (plot_response, painter) = ui.allocate_painter(plot_size, egui::Sense::click_and_drag());
 
-                        // Only handle panning and zooming if enabled.
-                        if plot_state.pan_zoom_enabled {
+                        // Handle cursor interaction (takes priority when enabled).
+                        if plot_state.cursor_enabled {
+                            // Calculate the plot rect for cursor positioning.
+                            let rect = plot_response.rect;
+                            let plot_rect = egui::Rect::from_min_size(
+                                egui::pos2(rect.min.x + MARGIN_LEFT, rect.min.y + MARGIN_TOP),
+                                egui::vec2(
+                                    rect.width() - MARGIN_LEFT - MARGIN_RIGHT,
+                                    rect.height() - MARGIN_TOP - MARGIN_BOTTOM,
+                                ),
+                            );
+
+                            // Calculate current time range (considering pan/zoom).
+                            let (panned_time_min, panned_time_max) = if !plot_state.auto_bounds || plot_state.zoom_factor != 1.0 || plot_state.pan_offset != 0.0 {
+                                let time_range = time_max - time_min;
+                                let zoomed_time_range = (time_range as f32 / plot_state.zoom_factor) as u64;
+                                let pan_pixels_to_time = zoomed_time_range as f32 / plot_rect.width();
+                                let pan_time_offset = (plot_state.pan_offset * pan_pixels_to_time) as i64;
+
+                                let center_time = (time_min + time_max) / 2;
+                                let half_zoomed_range = zoomed_time_range / 2;
+
+                                let panned_time_min = ((center_time as i64) - (half_zoomed_range as i64) - pan_time_offset).max(0) as u64;
+                                let panned_time_max = ((center_time as i64) + (half_zoomed_range as i64) - pan_time_offset).max(0) as u64;
+                                
+                                (panned_time_min, panned_time_max)
+                            } else {
+                                (time_min, time_max)
+                            };
+
+                            // Handle cursor dragging and clicking.
+                            if (plot_response.dragged() || plot_response.clicked()) && plot_response.hover_pos().is_some() {
+                                let hover_pos = plot_response.hover_pos().unwrap();
+                                
+                                // Only update cursor if within plot area.
+                                if hover_pos.x >= plot_rect.min.x && hover_pos.x <= plot_rect.max.x {
+                                    // Convert X position to time.
+                                    let x_ratio = (hover_pos.x - plot_rect.min.x) / plot_rect.width();
+                                    let cursor_time = panned_time_min + ((panned_time_max - panned_time_min) as f32 * x_ratio) as u64;
+                                    plot_state.cursor_time = Some(cursor_time);
+                                }
+                            }
+                        }
+
+                        // Only handle panning and zooming if enabled and cursor is disabled.
+                        else if plot_state.pan_zoom_enabled {
                             // Handle panning.
                             if plot_response.dragged() {
                                 let drag_delta = plot_response.drag_delta();
@@ -188,7 +296,7 @@ pub fn plot_time_series_data(
                         ui.add_space(SPACE_BETWEEN_PLOTS);
                     }
                 } else {
-                    // Show a centreed message when trip is empty.
+                    // Show a centred message when trip is empty.
                     ui.vertical_centered(|ui| {
                         ui.add_space(100.0);
                         ui.label(egui::RichText::new("No time series plots to display.")
@@ -196,7 +304,7 @@ pub fn plot_time_series_data(
                     });
                 }
             } else {
-                // Show a centreed message when no trip is selected.
+                // Show a centred message when no trip is selected.
                 ui.vertical_centered(|ui| {
                     ui.add_space(100.0);
                     ui.label(egui::RichText::new("Please select a trip from the trip list to view time series plots.")
@@ -227,7 +335,7 @@ fn draw_plot_with_axes(
     );
 
     // Calculate panned and zoomed time range (only if pan/zoom is enabled).
-    let (panned_time_min, panned_time_max) = if plot_state.pan_zoom_enabled {
+    let (panned_time_min, panned_time_max) = if !plot_state.auto_bounds || plot_state.zoom_factor != 1.0 || plot_state.pan_offset != 0.0 {
         let time_range = time_max - time_min;
         let zoomed_time_range = (time_range as f32 / plot_state.zoom_factor) as u64;
         let pan_pixels_to_time = zoomed_time_range as f32 / plot_rect.width();
@@ -241,7 +349,7 @@ fn draw_plot_with_axes(
         
         (panned_time_min, panned_time_max)
     } else {
-        // Use full time range when pan/zoom is disabled.
+        // Use full time range when no pan/zoom state exists.
         (time_min, time_max)
     };
 
@@ -260,14 +368,14 @@ fn draw_plot_with_axes(
     painter.rect_filled(plot_rect, 0.0, colours::plot_bkgnd_colour(dark_mode));
 
     // Draw axes.
-    // X-axis (bottom).
+    // X-axis (Time at bottom).
     painter.line_segment(
         [egui::pos2(plot_rect.min.x, plot_rect.max.y), 
          egui::pos2(plot_rect.max.x, plot_rect.max.y)],
         egui::Stroke::new(2.0, axis_colour),
     );
     
-    // Y-axis (left).
+    // Y-axis (left side).
     painter.line_segment(
         [egui::pos2(plot_rect.min.x, plot_rect.min.y), 
          egui::pos2(plot_rect.min.x, plot_rect.max.y)],
@@ -306,7 +414,7 @@ fn draw_plot_with_axes(
             
             // Draw time label (actual clock time).
             painter.text(
-                egui::pos2(x_pos, plot_rect.max.y + 20.0),
+                egui::pos2(x_pos, plot_rect.max.y + 23.0),
                 egui::Align2::CENTER_CENTER,
                 helpers_ts::unix_time_to_hms(time_value),
                 egui::FontId::proportional(10.0),
@@ -366,7 +474,7 @@ fn draw_plot_with_axes(
             );
         }
     } else if dataset.data_type == "Impulse" {
-        // For impulse signals, show levels dynamically based on dataset.levels
+        // For impulse signals, show levels dynamically based on dataset levels.
         if !dataset.levels.is_empty() {
             let total_levels = dataset.levels.len() + 1;
             
@@ -403,7 +511,7 @@ fn draw_plot_with_axes(
         }
     }
 
-    // Draw grid lines
+    // Draw grid lines.
     let grid_colour = colours::ts_grid_lines_colour(dark_mode);
     let grid_stroke = egui::Stroke::new(0.5, grid_colour);
 
@@ -460,7 +568,7 @@ fn draw_plot_with_axes(
                 y_positions.push(y_pos);
             }
             
-            // Add top position
+            // Add top position.
             y_positions.push(plot_rect.min.y);
             
             for y_pos in y_positions {
@@ -475,6 +583,57 @@ fn draw_plot_with_axes(
 
     // Plot the actual data.
     plot_data_points(painter, &plot_rect, dataset, panned_time_min, panned_time_max, y_min, y_max, dark_mode);
+
+    // Draw cursor line if enabled and positioned.
+    if plot_state.cursor_enabled {
+        if let Some(cursor_time) = plot_state.cursor_time {
+            // Only draw if cursor is within visible time range.
+            if cursor_time >= panned_time_min && cursor_time <= panned_time_max {
+                // Calculate cursor X position.
+                let x_ratio = (cursor_time as f64 - panned_time_min as f64) / (panned_time_max as f64 - panned_time_min as f64);
+                let cursor_x = plot_rect.min.x + (x_ratio as f32 * plot_rect.width());
+                
+                // Choose cursor colour (bright and visible).
+                let cursor_colour = colours::ts_cursor_colour(dark_mode);
+                
+                // Draw vertical cursor line (thin).
+                painter.line_segment(
+                    [egui::pos2(cursor_x, plot_rect.min.y), 
+                     egui::pos2(cursor_x, plot_rect.max.y)],
+                    egui::Stroke::new(1.0, cursor_colour),
+                );
+                
+                // Draw time label at the bottom of the cursor (between plot and time scale).
+                let time_text = helpers_ts::unix_time_to_hms(cursor_time);
+                let label_bg = colours::ts_cursor_label_colour(dark_mode);
+                
+                // Calculate label size and position.
+                let font_id = egui::FontId::proportional(10.0);
+                let galley = painter.layout_no_wrap(time_text.clone(), font_id.clone(), text_colour);
+                let label_width = galley.rect.width() + 8.0;
+                let label_height = galley.rect.height() + 4.0;
+                
+                // Position label below plot, between the X-axis and time labels.
+                let label_rect = egui::Rect::from_center_size(
+                    egui::pos2(cursor_x, plot_rect.max.y + 10.0),
+                    egui::vec2(label_width, label_height)
+                );
+                
+                // Draw label background.
+                painter.rect_filled(label_rect, 3.0, label_bg);
+                painter.rect_stroke(label_rect, 3.0, egui::Stroke::new(1.0, cursor_colour), egui::epaint::StrokeKind::Inside);
+                
+                // Draw label text.
+                painter.text(
+                    label_rect.center(),
+                    egui::Align2::CENTER_CENTER,
+                    time_text,
+                    font_id,
+                    text_colour,
+                );
+            }
+        }
+    }
 }
 
 // Helper function to plot the actual data points.
