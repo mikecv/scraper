@@ -56,6 +56,11 @@ pub struct MyApp {
     pub help_image_14: Option<egui::TextureHandle>,
     pub help_image_15: Option<egui::TextureHandle>,
     pub help_image_16: Option<egui::TextureHandle>,
+    pub help_image_17: Option<egui::TextureHandle>,
+    pub help_image_18: Option<egui::TextureHandle>,
+    pub help_image_19: Option<egui::TextureHandle>,
+    pub help_image_20: Option<egui::TextureHandle>,
+    pub help_image_21: Option<egui::TextureHandle>,
 }
 
 impl Default for MyApp {
@@ -108,6 +113,11 @@ impl Default for MyApp {
             help_image_14: None,
             help_image_15: None,
             help_image_16: None,
+            help_image_17: None,
+            help_image_18: None,
+            help_image_19: None,
+            help_image_20: None,
+            help_image_21: None,
         }
     }
 }
@@ -222,6 +232,21 @@ impl MyApp {
                     self.help_image_5 = Some(ctx.load_texture("help_image_5", color_image, Default::default()));
                 }
                 Err(e) => info!("Failed to load help image 5: {}", e),
+            }
+        }
+
+
+        // Help image 17 - show unsupported events.
+        if self.help_image_17.is_none() {
+            let icon_bytes = include_bytes!("../assets/help-17.png");
+            match image::load_from_memory(icon_bytes) {
+                Ok(img) => {
+                    let rgba = img.to_rgba8();
+                    let size = [img.width() as usize, img.height() as usize];
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    self.help_image_17 = Some(ctx.load_texture("help_image_17", color_image, Default::default()));
+                }
+                Err(e) => info!("Failed to load help image 17: {}", e),
             }
         }
 
@@ -376,6 +401,63 @@ impl MyApp {
                     self.help_image_16 = Some(ctx.load_texture("help_image_16", color_image, Default::default()));
                 }
                 Err(e) => info!("Failed to load help image 16: {}", e),
+            }
+        }
+
+
+        // Help image 18 - time series plots.
+        if self.help_image_18.is_none() {
+            let icon_bytes = include_bytes!("../assets/help-18.png");
+            match image::load_from_memory(icon_bytes) {
+                Ok(img) => {
+                    let rgba = img.to_rgba8();
+                    let size = [img.width() as usize, img.height() as usize];
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    self.help_image_18 = Some(ctx.load_texture("help_image_18", color_image, Default::default()));
+                }
+                Err(e) => info!("Failed to load help image 18: {}", e),
+            }
+        }
+
+        // Help image 19 - time series chart scrolling.
+        if self.help_image_19.is_none() {
+            let icon_bytes = include_bytes!("../assets/help-19.png");
+            match image::load_from_memory(icon_bytes) {
+                Ok(img) => {
+                    let rgba = img.to_rgba8();
+                    let size = [img.width() as usize, img.height() as usize];
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    self.help_image_19 = Some(ctx.load_texture("help_image_19", color_image, Default::default()));
+                }
+                Err(e) => info!("Failed to load help image 19: {}", e),
+            }
+        }
+
+        // Help image 20 - time series pan and zoom.
+        if self.help_image_20.is_none() {
+            let icon_bytes = include_bytes!("../assets/help-20.png");
+            match image::load_from_memory(icon_bytes) {
+                Ok(img) => {
+                    let rgba = img.to_rgba8();
+                    let size = [img.width() as usize, img.height() as usize];
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    self.help_image_20 = Some(ctx.load_texture("help_image_20", color_image, Default::default()));
+                }
+                Err(e) => info!("Failed to load help image 20: {}", e),
+            }
+        }
+
+        // Help image 21 - time series time cursor.
+        if self.help_image_21.is_none() {
+            let icon_bytes = include_bytes!("../assets/help-21.png");
+            match image::load_from_memory(icon_bytes) {
+                Ok(img) => {
+                    let rgba = img.to_rgba8();
+                    let size = [img.width() as usize, img.height() as usize];
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    self.help_image_21 = Some(ctx.load_texture("help_image_21", color_image, Default::default()));
+                }
+                Err(e) => info!("Failed to load help image 21: {}", e),
             }
         }
     }

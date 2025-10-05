@@ -1,7 +1,5 @@
 // Draw the gps data plots to a separate UI.
 
-use log::debug;
-
 use eframe::egui;
 use egui::epaint;
 use geo_types::Point;
@@ -462,8 +460,6 @@ pub fn plot_gps_data_with_tiles(
         } else {
             17.0
         };
-
-        debug!("Max span: {:?}, Zoom level: {:?}", max_span, zoom);
 
         // Set the centre and zoom for the plot.
         map_memory.center_at(centre_position);

@@ -8,7 +8,7 @@ use eframe::{egui};
 use lazy_static::lazy_static;
 use std::fs;
 use std::fs::File;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::sync::{Mutex};
 
 use app::MyApp;
@@ -50,8 +50,25 @@ lazy_static! {
                     Err(_) => Settings::default(),
                 }
             }
-            // Settings file not found.
-            Err(_) => Settings::default(),
+            // Settings file not found - create it with defaults.
+            Err(_) => {
+                let default_settings = Settings::default();
+                
+                // Try to create the settings file.
+                if let Ok(yaml) = serde_yaml::to_string(&default_settings) {
+                    if let Ok(mut file) = File::create("settings.yml") {
+                        let content = format!(
+                            "# User settings for Scraper application\n\
+                             # Font sizes must be between 12.0 and 20.0\n\n\
+                             {}", 
+                            yaml
+                        );
+                        let _ = file.write_all(content.as_bytes());
+                    }
+                }
+                
+                default_settings
+            }
         };
         Mutex::new(settings)
     };

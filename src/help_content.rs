@@ -27,7 +27,7 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
 
     ui.collapsing("2.1 Initial View", |ui| {
         ui.label("At the top of the image above we see that the log file contains 3 trips.");
-        ui.label("The trip is identified by the trip number, and the date and time of the start of the trip.");
+        ui.label("The trips are identified by the trip number, and the date and time of the start of the trip.");
         ui.label("Notice the small arrow at the start of each trip - this indicates that the trip has collapsed data associated with it.");
         ui.label("Clicking on the trip label will expand 1 level below.");
     });
@@ -83,8 +83,21 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
         ui.add_space(10.0);
     }
 
-    ui.collapsing("2.6 Trip events showing optional REPORT events", |ui| {
-        ui.label("The following figure shows that REPORT events can be included with the other trip events list by selecting 'Report events' from the 'Show' menu.");
+    ui.collapsing("2.6 Trip events showing optional unsupported events", |ui| {
+        ui.label("There may be some events that are not supported (although they may be supported in the future).");
+        ui.label("Unsupported event titles will be shown in the trip/event listing in a special colour as illustrated in purple in the figure below.");
+        ui.label("Note that for unsupported events there is no event attribute data included; other than gps data.");
+    });
+
+    // Optional unsupported events displayed.
+    if let Some(texture) = &app.help_image_17 {
+        ui.add_space(10.0);
+        ui.add(egui::Image::new(texture).max_width(400.0));
+        ui.add_space(10.0);
+    }
+
+    ui.collapsing("2.7 Trip events showing optional REPORT events", |ui| {
+        ui.label("The following figure shows that REPORT events can be included with the other trip events by selecting 'Report events' from the 'Show' menu.");
     });
 
     // Optional report events displayed.
@@ -94,9 +107,9 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
         ui.add_space(10.0);
     }
 
-    ui.collapsing("2.7 Trip events showing GPS data", |ui| {
+    ui.collapsing("2.8 Trip events showing GPS data", |ui| {
         ui.label("Most trip events include some GPS data in the event string.");
-        ui.label("By checking the 'GPS event data' from the 'Show' menu option, GPS data is apended to the event data for each event as illustrated in below.");
+        ui.label("By checking the 'GPS event data' from the 'Show' menu option, GPS data is appended to the event data for each event as illustrated in the figure below.");
         ui.label("Note that GPS data relies on a gps fix for data to be accurate or useful.");
     });
 
@@ -107,8 +120,8 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
         ui.add_space(10.0);
     }
 
-    ui.collapsing("2.8 Out of trip events", |ui| {
-        ui.label("By checking the Show Out of trip events' from the 'Show' menu the trip events list will include any (supported) events that occured out of trip, where out of trip means after an end of trip and before a start of trip.");
+    ui.collapsing("2.9 Out of trip events", |ui| {
+        ui.label("By checking the 'Show Out of trip events' item from the 'Show' menu the trip events list will include any (supported) events that occured out of trip, where out of trip means after an end of trip or before a start of trip.");
     });
 
     // Optional out of trip events.
@@ -118,7 +131,7 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
         ui.add_space(10.0);
     }
 
-    ui.collapsing("2.9 Out of trip event data", |ui| {
+    ui.collapsing("2.10 Out of trip event data", |ui| {
         ui.label("Out of trip events, if displayed, can be expanded to show event data as illustrated below.");
     });
 
@@ -130,8 +143,8 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
     }
 
     ui.collapsing("3.0 GPS breadcrumb plots", |ui| {
-        ui.label("As described in early sections event data has collected gps data associated with it.");
-        ui.label("As events are recorded in sequence, when plotted, the gps data is a breadcrumn trail of the machine in question.");
+        ui.label("As described in earlier sections event data has collected gps data associated with it.");
+        ui.label("As events are recorded in sequence, when plotted, the gps data is a breadcrumb trail of the machine in question.");
         ui.label("From the Plot menu the user can select to show the gps plot for the currently selected trip (if there is one selected).");
         ui.label("The Plot menu allows the user to select a simple plot (no background), or one with an Open street (OSM), or ESRI satelitte view tile background as illustrated belwo.");
     });
@@ -189,13 +202,78 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
         ui.add_space(10.0);
     }
 
-    ui.collapsing("4.0 User settings", |ui| {
+    ui.collapsing("4.0 Time series data plots", |ui| {
+        ui.label("As data is collected per trip (discounting out of trip events) it is possible to plot this time series data.");
+        ui.label("From the Plot menu the user can select to show time series plots for the currently selected trip (if there is one selected).");
+        ui.label("On selecting the Time Series Data option from the Plot menu a separate application window will be displayed.");
+        ui.label("The window will be blank or complete with plots depending on whether or not there is a current trip selected.");
+        ui.label("In the figure below a trip is already selected so time series events from the trip are displayed.");
+        ui.label("\nNote that unsupported events are not displayed in the time series plots, and currently only digital, analog, and impulse events are plotted.");
+    });
+
+    // Time series data plotting.
+    if let Some(texture) = &app.help_image_18 {
+        ui.add_space(10.0);
+        ui.add(egui::Image::new(texture).max_width(400.0));
+        ui.add_space(10.0);
+    }
+
+    ui.collapsing("4.1 Time series data plot window scrolling", |ui| {
+        ui.label("As illustrated in the figure above all the time series data is plotted, one event above the other.");
+        ui.label("In the case above the window needs to be scrolled down to see the event plot at the bottom, as shown in the figure below.");
+    });
+
+    // Time series data window scrolling.
+    if let Some(texture) = &app.help_image_19 {
+        ui.add_space(10.0);
+        ui.add(egui::Image::new(texture).max_width(400.0));
+        ui.add_space(10.0);
+    }
+
+    ui.collapsing("4.2 Time series data Pan and Zoom", |ui| {
+        ui.label("My selecting the Pan/Zoom button it is possible to pan and zoom the time series data.");
+        ui.label("Note that panning and zooming can only be done in the X (time) direction.");
+        ui.label("Note also the all plots will pan and zoom together, i.e. the time scale of the plots remain in alignment.");
+        ui.label("Panning and zooming of the time series data is illustrated in the figure below.");
+    });
+
+    // Time series data pan and zoom.
+    if let Some(texture) = &app.help_image_20 {
+        ui.add_space(10.0);
+        ui.add(egui::Image::new(texture).max_width(400.0));
+        ui.add_space(10.0);
+    }
+
+    ui.collapsing("4.3 Cancelling Pan and Zoom", |ui| {
+        ui.label("By pressing the Pan/Zoom button again, it will turn panning and zooming off, but the current state will remain.");
+        ui.label("If desired, select the Reset View button to cancel the panning and zooming to return to the original state.");
+    });
+
+    ui.collapsing("4.4 Time series data Time Cursor", |ui| {
+        ui.label("My selecting the Cursor button it is possible to dispay a time cursor on each of the time series plots.");
+        ui.label("Click on a time series plot, and then move the cursor line to time left or right, doing so will move the cursor line on all plots together.");
+        ui.label("At the bottom of each cursor line is the plot time corresponding to the time at that location.");
+        ui.label("An example of using the time cursor is illustrated in the figure below.");
+    });
+
+    // Time series data time cursor.
+    if let Some(texture) = &app.help_image_21 {
+        ui.add_space(10.0);
+        ui.add(egui::Image::new(texture).max_width(400.0));
+        ui.add_space(10.0);
+    }
+
+    ui.collapsing("4.5 Cancelling the time cursor", |ui| {
+        ui.label("By pressing the Cursor button again, it will remove the time cursor from all plots.");
+    });
+
+    ui.collapsing("5.0 User settings", |ui| {
         ui.label("There are some program related settings that the user can select or use independent of the log scraping functionality.");
         ui.label("These include the dark/light program setting, and the font size of trip and event data information, on the main display.");
         ui.label("These settings will be described in the following sections.");
     });
 
-    ui.collapsing("4.1 Background settings", |ui| {
+    ui.collapsing("5.1 Background settings", |ui| {
         ui.label("From the 'View' menu, the user can select between light and dark mode as illustrated below.");
         ui.label("Note that menu selection is effectively a toggle button.");
         ui.label("Note also that this will change the background to all the application windows.");
@@ -208,7 +286,7 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
         ui.add_space(10.0);
     }
 
-    ui.collapsing("4.2 Trip and event list font size", |ui| {
+    ui.collapsing("5.2 Trip and event list font size", |ui| {
         ui.label("There is an option to change the font size used for Trip and Event data.");
         ui.label("This is achieved via the 'settings.yml' file, an example of which is shown in the following example (these are also the default values).");
     });
