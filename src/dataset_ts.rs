@@ -1,7 +1,5 @@
 // Function to create dataset for time series plots.
 
-use log::info;
-
 use crate::scraper::{Scraper, ScrapedData};
 use crate::time_series_plot::TimeSeriesData;
 use crate::time_series_plot::SinglePoint;
@@ -338,7 +336,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         time_series_points: ev_points,
                     });
                 }
-            } _ => info!("Event type not supported for plotting.")
+            } _ => {}
         }
     }
     

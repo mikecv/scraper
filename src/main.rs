@@ -1,6 +1,9 @@
 // Application to perform custom scraping of log files,
 // and present results in tabular and graphical format.
 
+// Release build for Windows without launching a console window.
+#![windows_subsystem = "windows"]
+
 use log4rs;
 use log::info;
 
