@@ -105,9 +105,9 @@ pub fn value_colour(dark_mode: bool) -> Color32 {
 // Colours for gps key / value pairs (key).
 pub fn gps_key_colour(dark_mode: bool) -> Color32 {
     if dark_mode {
-        Color32::from_rgb(178, 186, 187)
+        Color32::from_rgb(131, 198, 229)
     } else {
-        Color32::from_rgb(74, 35, 90)
+        Color32::from_rgb(79, 97, 106)
     }
 }
 
@@ -129,7 +129,7 @@ pub fn border_colour(dark_mode: bool) -> Color32 {
     }
 }
 
-// // Colours for time series plot notices.
+//Colours for time series plot notices.
 pub fn ts_notices_colour(dark_mode: bool) -> Color32 {
     if dark_mode {
         Color32::from_rgb(255, 255, 0)

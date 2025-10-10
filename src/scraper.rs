@@ -562,6 +562,26 @@ fn ungroup_event_data(event_type: String, sub_data: &str, on_trip: &mut bool, ev
             }
         },
 
+         // Search for the event sub-data for the HARDWARE event.
+        "HARDWARE" => {
+            let sub_hardware_pattern = Regex::new(r"(.*) v:(.+?)$")
+                .expect("Invalid HARDWARE regex pattern");
+
+            if let Some(captures) = sub_hardware_pattern.captures(sub_data) {
+                if let Some(eq_fail) = captures.get(1) {
+                    result.push(("Equipment fault".to_string(), eq_fail.as_str().to_string()));
+                }
+                if let Some(battery) = captures.get(2) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
+            } else {
+                warn!("Failed to extract sub-data from ENGINETEMP");
+            }
+        },
+
          // Search for the event sub-data for the ENGINETEMP event.
         "ENGINETEMP" => {
             let sub_enginetemp_pattern = Regex::new(r"([0-9]+) ([0-9]+)(.*) v:(.+?)$")
@@ -958,6 +978,33 @@ fn ungroup_event_data(event_type: String, sub_data: &str, on_trip: &mut bool, ev
                 }
             } else {
                 warn!("Failed to extract sub-data from XSIDLESTART");
+            }
+        },
+
+        // Search for the event sub-data for the ZONE_OK event.
+        "ZONE_OK" => {
+        // CHECKED //
+            let zone_ok_pattern = Regex::new(r"([0-9]+) ([0-9]+) (.*) v:(.+?)$")
+                .expect("Invalid ZONE_OK regex pattern");
+
+            if let Some(captures) = zone_ok_pattern.captures(sub_data) {
+                if let Some(zones_loaded) = captures.get(1) {
+                    result.push(("Zones loaded".to_string(), zones_loaded.as_str().to_string()));
+                }
+                if let Some(max_zones) = captures.get(2) {
+                    result.push(("Max zones".to_string(), max_zones.as_str().to_string()));
+                }
+                if let Some(firmware) = captures.get(3) {
+                    result.push(("GPS firmware version".to_string(), firmware.as_str().to_string()));
+                }
+                if let Some(battery) = captures.get(4) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
+            } else {
+                warn!("Failed to extract sub-data from ZONE_OK");
             }
         },
 
