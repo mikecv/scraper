@@ -310,7 +310,45 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                             .find(|(tag, _)| tag == "Zone output")
                             .and_then(|(_, value)| {
                                 // Parse the integer string value to f32.
-                                // Note that we want the no zonw 0 value to
+                                // Note that we want the no zone 0 value to
+                                // be above the baseline so add 1 to the zone output value.
+                                value.parse::<f32>().ok()
+                            })
+                            .map(|event_point| SinglePoint {
+                                unix_time: data.unix_time,
+                                point_value: event_point + 1.0,
+                            })
+                    })
+                    .collect();
+
+                    if !ev_points.is_empty() {
+                    // For impulse data, we don't convert to pulse data.
+                    // We keep the original points as instantaneous events.
+                    
+                    // Push the impulse time series events to list of datasets.
+                    // While there are 4 zones, there is also the condition of no zone,
+                    // i.e. not in any zone.
+                    datasets.push(TimeSeriesData {
+                        data_type: "Impulse".to_string(),
+                        series_name: event_type.clone(),
+                        units: "Zone Output".to_string(),
+                        levels: vec!["No Zone".to_string(), "1".to_string(), "2".to_string(), "3".to_string(), "4".to_string()],
+                        time_series_points: ev_points,
+                    });
+                }
+            }
+            "ZONETRANSITION" => {
+                // Get all points for this event type in the selected trip.
+                let ev_points: Vec<SinglePoint> = trip_data.iter()
+                    // Filter by event type.
+                    .filter(|data| data.event_type == event_type)
+                    .filter_map(|data| {
+                        // Look for event zone output in the ev_detail vector.
+                        data.ev_detail.iter()
+                            .find(|(tag, _)| tag == "Zone output")
+                            .and_then(|(_, value)| {
+                                // Parse the integer string value to f32.
+                                // Note that we want the no zone 0 value to
                                 // be above the baseline so add 1 to the zone output value.
                                 value.parse::<f32>().ok()
                             })
