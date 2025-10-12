@@ -56,6 +56,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
             units: "V".to_string(),
             levels: Vec::new(),
             time_series_points: battery_points,
+            multi_traces: Vec::new(),
         });
     }
 
@@ -75,6 +76,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
             units: "kph".to_string(),
             levels: Vec::new(),
             time_series_points: speed_points,
+            multi_traces: Vec::new(),
         });
     }
 
@@ -117,6 +119,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         units: "Active".to_string(),
                         levels: Vec::new(),
                         time_series_points: pulse_points,
+                        multi_traces: Vec::new(),
                     });
                 }
             }
@@ -151,6 +154,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         units: "Active".to_string(),
                         levels: Vec::new(),
                         time_series_points: pulse_points,
+                        multi_traces: Vec::new(),
                     });
                 }
             }
@@ -185,6 +189,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         units: "Active".to_string(),
                         levels: Vec::new(),
                         time_series_points: pulse_points,
+                        multi_traces: Vec::new(),
                     });
                 }
             }
@@ -219,6 +224,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         units: "Active".to_string(),
                         levels: Vec::new(),
                         time_series_points: pulse_points,
+                        multi_traces: Vec::new(),
                     });
                 }
             }
@@ -253,6 +259,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         units: "Active".to_string(),
                         levels: Vec::new(),
                         time_series_points: pulse_points,
+                        multi_traces: Vec::new(),
                     });
                 }
             }
@@ -296,6 +303,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         units: "Severity".to_string(),
                         levels: vec!["Low".to_string(), "Warning".to_string(), "Critical".to_string()],
                         time_series_points: ev_points,
+                        multi_traces: Vec::new(),
                     });
                 }
             } 
@@ -334,6 +342,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         units: "Zone Output".to_string(),
                         levels: vec!["No Zone".to_string(), "1".to_string(), "2".to_string(), "3".to_string(), "4".to_string()],
                         time_series_points: ev_points,
+                        multi_traces: Vec::new(),
                     });
                 }
             }
@@ -372,12 +381,133 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         units: "Zone Output".to_string(),
                         levels: vec!["No Zone".to_string(), "1".to_string(), "2".to_string(), "3".to_string(), "4".to_string()],
                         time_series_points: ev_points,
+                        multi_traces: Vec::new(),
+                    });
+                }
+            }
+            "UNBUCKLED" => {
+                let mut driver_points: Vec<SinglePoint> = Vec::new();
+                let mut passenger_points: Vec<SinglePoint> = Vec::new();
+                
+                // Add trip start baseline for driver trace.
+                driver_points.push(SinglePoint {
+                    unix_time: trip_start_time,
+                    point_value: 0.0,
+                });
+                
+                // Process Driver unbuckled events (pulses at level 2.0).
+                for data in trip_data.iter().filter(|d| d.event_type == event_type) {
+                    let is_driver = data.ev_detail.iter()
+                        .find(|(tag, _)| tag == "Seat owner")
+                        .map(|(_, value)| value == "D")
+                        .unwrap_or(false);
+                    
+                    if is_driver {
+                        if let Some(duration) = data.ev_detail.iter()
+                            .find(|(tag, _)| tag == "Duration")
+                            .and_then(|(_, value)| value.parse::<u64>().ok())
+                        {
+                            let event_end_time = data.unix_time;
+                            let event_start_time = if event_end_time >= duration {
+                                event_end_time - duration
+                            } else {
+                                trip_start_time
+                            };
+                            
+                            // Create pulse at level 2.0.
+                            driver_points.push(SinglePoint {
+                                unix_time: event_start_time,
+                                point_value: 0.0,
+                            });
+                            driver_points.push(SinglePoint {
+                                unix_time: event_start_time,
+                                point_value: 1.0,
+                            });
+                            driver_points.push(SinglePoint {
+                                unix_time: event_end_time,
+                                point_value: 1.0,
+                            });
+                            driver_points.push(SinglePoint {
+                                unix_time: event_end_time,
+                                point_value: 0.0,
+                            });
+                        }
+                    }
+                }
+                
+                // Add trip end baseline for driver trace.
+                driver_points.push(SinglePoint {
+                    unix_time: trip_end_time,
+                    point_value: 0.0,
+                });
+                
+                // Add trip start baseline for passenger trace.
+                passenger_points.push(SinglePoint {
+                    unix_time: trip_start_time,
+                    point_value: 0.0,
+                });
+                
+                // Process Passenger unbuckled events (pulses at level 1.0).
+                for data in trip_data.iter().filter(|d| d.event_type == event_type) {
+                    let is_passenger = data.ev_detail.iter()
+                        .find(|(tag, _)| tag == "Seat owner")
+                        .map(|(_, value)| value == "P")
+                        .unwrap_or(false);
+                    
+                    if is_passenger {
+                        if let Some(duration) = data.ev_detail.iter()
+                            .find(|(tag, _)| tag == "Duration")
+                            .and_then(|(_, value)| value.parse::<u64>().ok())
+                        {
+                            let event_end_time = data.unix_time;
+                            let event_start_time = if event_end_time >= duration {
+                                event_end_time - duration
+                            } else {
+                                trip_start_time
+                            };
+                            
+                            // Create pulse at level 1.0.
+                            passenger_points.push(SinglePoint {
+                                unix_time: event_start_time,
+                                point_value: 0.0,
+                            });
+                            passenger_points.push(SinglePoint {
+                                unix_time: event_start_time,
+                                point_value: 0.5,
+                            });
+                            passenger_points.push(SinglePoint {
+                                unix_time: event_end_time,
+                                point_value: 0.5,
+                            });
+                            passenger_points.push(SinglePoint {
+                                unix_time: event_end_time,
+                                point_value: 0.0,
+                            });
+                        }
+                    }
+                }
+                
+                // Add trip end baseline for passenger trace.
+                passenger_points.push(SinglePoint {
+                    unix_time: trip_end_time,
+                    point_value: 0.0,
+                });
+                
+                // Only create dataset if there's at least one trace with events.
+                // Using "Crew" instead of Passenger as it fits on the plot better.
+                if driver_points.len() > 2 || passenger_points.len() > 2 {
+                    datasets.push(TimeSeriesData {
+                        data_type: "Multilevel".to_string(),
+                        series_name: "UNBUCKLED".to_string(),
+                        units: "Active".to_string(),
+                        levels: vec!["Crew".to_string(), "Driver".to_string()],
+                        time_series_points: Vec::new(),
+                        multi_traces: vec![passenger_points, driver_points],
                     });
                 }
             } _ => {}
         }
     }
-    
     // Set of all data series to plot.
     datasets
 }

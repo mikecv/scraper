@@ -51,6 +51,18 @@ pub fn calculate_y_range(dataset: &TimeSeriesData) -> (f32, f32) {
             return (0.0, 4.0);
         }
     }
+    
+    // Special handling for multilevel signals.
+    if dataset.data_type == "Multilevel" {
+        // Range must match how tick marks are calculated
+        // Tick marks use: y_ratio = level_value / total_levels
+        // So range should be 0 to total_levels
+        if !dataset.levels.is_empty() {
+            return (0.0, dataset.levels.len() as f32);
+        } else {
+            return (0.0, 2.0);
+        }
+    }
 
     let mut y_min = f32::MAX;
     let mut y_max = f32::MIN;

@@ -23,6 +23,7 @@ pub struct TimeSeriesData {
     pub units: String,
     pub levels: Vec<String>,
     pub time_series_points: Vec<SinglePoint>,
+    pub multi_traces: Vec<Vec<SinglePoint>>,
 }
 
 // Plot state to maintain synchronized pan/zoom across multiple plots.
@@ -64,7 +65,7 @@ const MARGIN_RIGHT: f32 = 35.0;
 const MARGIN_TOP: f32 = 30.0;
 const MARGIN_BOTTOM: f32 = 40.0;
 const SHOW_MARKERS: bool = false;
-const LINE_THIVKNESS: f32 = 1.5;
+const LINE_THICKNESS: f32 = 1.5;
 
 // Function to plot time series data.
 // This is called from the ui.rs file where the UI panel is defined and created.
@@ -448,6 +449,49 @@ fn draw_plot_with_axes(
                 text_colour,
             );
         }
+    } else if dataset.data_type == "Multilevel" {
+        // For multilevel signals, show each level with its label.
+        if !dataset.levels.is_empty() {
+            let total_levels = dataset.levels.len();
+            
+            // Draw baseline (0).
+            painter.line_segment(
+                [egui::pos2(plot_rect.min.x - 5.0, plot_rect.max.y), 
+                egui::pos2(plot_rect.min.x, plot_rect.max.y)],
+                egui::Stroke::new(1.0, axis_colour),
+            );
+            
+            painter.text(
+                egui::pos2(plot_rect.min.x - 10.0, plot_rect.max.y),
+                egui::Align2::RIGHT_CENTER,
+                "0".to_string(),
+                egui::FontId::proportional(10.0),
+                text_colour,
+            );
+            
+            // Draw each level.
+            for (index, level_name) in dataset.levels.iter().enumerate() {
+                let level_value = (index + 1) as f32;
+                let y_ratio = level_value / total_levels as f32;
+                let pos_y = plot_rect.max.y - (y_ratio * plot_rect.height());
+                
+                // Draw tick mark.
+                painter.line_segment(
+                    [egui::pos2(plot_rect.min.x - 5.0, pos_y), 
+                    egui::pos2(plot_rect.min.x, pos_y)],
+                    egui::Stroke::new(1.0, axis_colour),
+                );
+                
+                // Draw level name.
+                painter.text(
+                    egui::pos2(plot_rect.min.x - 10.0, pos_y),
+                    egui::Align2::RIGHT_CENTER,
+                    level_name.clone(),
+                    egui::FontId::proportional(10.0),
+                    text_colour,
+                );
+            }
+        }
     } else if dataset.data_type == "Analog" {
         // For analog signals, show min, middle, and max.
         let positions_and_values = [
@@ -542,6 +586,30 @@ fn draw_plot_with_axes(
                 egui::pos2(plot_rect.max.x, y_pos)],
                 grid_stroke,
             );
+        }
+    } else if dataset.data_type == "Multilevel" {
+        // Grid lines for each level.
+        if !dataset.levels.is_empty() {
+            let total_levels = dataset.levels.len();
+            let mut y_positions = Vec::new();
+            
+            // Add baseline.
+            y_positions.push(plot_rect.max.y);
+            
+            // Add positions for each level.
+            for level_index in 1..=total_levels {
+                let y_ratio = level_index as f32 / total_levels as f32;
+                let y_pos = plot_rect.max.y - (y_ratio * plot_rect.height());
+                y_positions.push(y_pos);
+            }
+            
+            for y_pos in y_positions {
+                painter.line_segment(
+                    [egui::pos2(plot_rect.min.x, y_pos), 
+                    egui::pos2(plot_rect.max.x, y_pos)],
+                    grid_stroke,
+                );
+            }
         }
     } else if dataset.data_type == "Analog" {
         let y_positions = [plot_rect.min.y, plot_rect.center().y, plot_rect.max.y];
@@ -648,7 +716,74 @@ fn plot_data_points(
     dark_mode: bool,
 ) {
     // Check for empty dataset, or no real data.
-    if dataset.time_series_points.is_empty() || time_max == time_min || y_max == y_min {
+    if time_max == time_min || y_max == y_min {
+        return;
+    }
+    
+    // Special handling for Multilevel - plot each trace separately.
+    if dataset.data_type == "Multilevel" {
+        let line_colour = colours::ts_digital_colour(dark_mode);
+        let line_stroke = egui::Stroke::new(LINE_THICKNESS, line_colour);
+        
+        // Plot each trace independently.
+        for trace in &dataset.multi_traces {
+            if trace.is_empty() {
+                continue;
+            }
+            
+            // Convert data points to screen coordinates for this trace.
+            let mut screen_points: Vec<egui::Pos2> = Vec::new();
+            
+            for point in trace {
+                // Skip points outside the visible time range.
+                if point.unix_time < time_min || point.unix_time > time_max {
+                    continue;
+                }
+                
+                // Convert time to X coordinate.
+                let x_ratio = (point.unix_time as f64 - time_min as f64) / (time_max as f64 - time_min as f64);
+                let x_pos = plot_rect.min.x + (x_ratio as f32 * plot_rect.width());
+                
+                // Convert value to Y coordinate.
+                let y_ratio = (point.point_value - y_min) / (y_max - y_min);
+                let y_pos = plot_rect.max.y - (y_ratio * plot_rect.height());
+                
+                screen_points.push(egui::pos2(x_pos, y_pos));
+            }
+            
+            // Add shading for active regions in this trace.
+            let low_y_pos = plot_rect.max.y;
+            if screen_points.len() > 1 {
+                for i in 0..screen_points.len() - 1 {
+                    // Find corresponding point value.
+                    let point_value = trace.iter()
+                        .filter(|p| p.unix_time >= time_min && p.unix_time <= time_max)
+                        .nth(i)
+                        .map(|p| p.point_value)
+                        .unwrap_or(0.0);
+                    
+                    // If point value is non-zero (active), shade to baseline.
+                    if point_value > 0.0 {
+                        let rect = egui::Rect::from_two_pos(
+                            egui::pos2(screen_points[i].x, screen_points[i].y),
+                            egui::pos2(screen_points[i + 1].x, low_y_pos)
+                        );
+                        painter.rect_filled(rect, 0.0, colours::ts_digital_fill_colour(dark_mode));
+                    }
+                }
+            }
+            
+            // Draw lines connecting the points for this trace,
+            for i in 1..screen_points.len() {
+                painter.line_segment([screen_points[i-1], screen_points[i]], line_stroke);
+            }
+        }
+        
+        return;
+    }
+    
+    // Original code for other data types follows...
+    if dataset.time_series_points.is_empty() {
         return;
     }
     
@@ -664,7 +799,7 @@ fn plot_data_points(
         colours::ts_digital_colour(dark_mode)
     };
 
-    let line_stroke = egui::Stroke::new(LINE_THIVKNESS, line_colour);
+    let line_stroke = egui::Stroke::new(LINE_THICKNESS, line_colour);
     
     // Convert data points to screen coordinates.
     let mut screen_points: Vec<egui::Pos2> = Vec::new();
@@ -764,7 +899,7 @@ fn plot_data_points(
                 // Draw vertical line from baseline to impulse level.
                 painter.line_segment(
                     [egui::pos2(x_pos, baseline_y), egui::pos2(x_pos, y_pos)],
-                    egui::Stroke::new(LINE_THIVKNESS * 2.0, impulse_colour),
+                    egui::Stroke::new(LINE_THICKNESS * 2.0, impulse_colour),
                 );
                 
                 // Draw a circle at the top of each impulse.
