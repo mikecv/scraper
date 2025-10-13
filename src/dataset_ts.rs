@@ -497,7 +497,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                 // Using "Crew" instead of Passenger as it fits on the plot better.
                 if driver_points.len() > 2 || passenger_points.len() > 2 {
                     datasets.push(TimeSeriesData {
-                        data_type: "Multilevel".to_string(),
+                        data_type: "DualDigital".to_string(),
                         series_name: "UNBUCKLED".to_string(),
                         units: "Active".to_string(),
                         levels: vec!["Crew".to_string(), "Driver".to_string()],

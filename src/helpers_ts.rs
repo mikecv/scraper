@@ -52,8 +52,8 @@ pub fn calculate_y_range(dataset: &TimeSeriesData) -> (f32, f32) {
         }
     }
     
-    // Special handling for multilevel signals.
-    if dataset.data_type == "Multilevel" {
+    // Special handling for dual digital signals.
+    if dataset.data_type == "DualDigital" {
         // Range must match how tick marks are calculated
         // Tick marks use: y_ratio = level_value / total_levels
         // So range should be 0 to total_levels

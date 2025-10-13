@@ -449,8 +449,8 @@ fn draw_plot_with_axes(
                 text_colour,
             );
         }
-    } else if dataset.data_type == "Multilevel" {
-        // For multilevel signals, show each level with its label.
+    } else if dataset.data_type == "DualDigital" {
+        // For dual digital signals, show each level with its label.
         if !dataset.levels.is_empty() {
             let total_levels = dataset.levels.len();
             
@@ -587,7 +587,7 @@ fn draw_plot_with_axes(
                 grid_stroke,
             );
         }
-    } else if dataset.data_type == "Multilevel" {
+    } else if dataset.data_type == "DualDigital" {
         // Grid lines for each level.
         if !dataset.levels.is_empty() {
             let total_levels = dataset.levels.len();
@@ -720,8 +720,8 @@ fn plot_data_points(
         return;
     }
     
-    // Special handling for Multilevel - plot each trace separately.
-    if dataset.data_type == "Multilevel" {
+    // Special handling for DualDigital - plot each trace separately.
+    if dataset.data_type == "DualDigital" {
         let line_colour = colours::ts_digital_colour(dark_mode);
         let line_stroke = egui::Stroke::new(LINE_THICKNESS, line_colour);
         
