@@ -153,7 +153,7 @@ pub fn plot_time_series_data(
                 Some(trip_id) if !trip_id.is_empty() => {
                     ui.label(format!("Current trip ID: {}", trip_id));
                 }
-                _ => info!("No trip selected."),
+                _ => (),
             }
             
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -449,7 +449,8 @@ fn draw_plot_with_axes(
                 text_colour,
             );
         }
-    } else if dataset.data_type == "DualDigital" {
+
+    } else if dataset.data_type == "DualDigital" || dataset.data_type == "ImpulseDigitalCombo" {
         // For dual digital signals, show each level with its label.
         if !dataset.levels.is_empty() {
             let total_levels = dataset.levels.len();
@@ -587,7 +588,7 @@ fn draw_plot_with_axes(
                 grid_stroke,
             );
         }
-    } else if dataset.data_type == "DualDigital" {
+    } else if dataset.data_type == "DualDigital" || dataset.data_type == "ImpulseDigitalCombo" {
         // Grid lines for each level.
         if !dataset.levels.is_empty() {
             let total_levels = dataset.levels.len();
@@ -719,7 +720,7 @@ fn plot_data_points(
     if time_max == time_min || y_max == y_min {
         return;
     }
-    
+
     // Special handling for DualDigital - plot each trace separately.
     if dataset.data_type == "DualDigital" {
         let line_colour = colours::ts_digital_colour(dark_mode);
@@ -781,8 +782,105 @@ fn plot_data_points(
         
         return;
     }
-    
-    // Original code for other data types follows...
+   
+    // Special handling for DualDigitalImpulse - plot each trace separately.
+    if dataset.data_type == "ImpulseDigitalCombo" {
+        let line_colour_digital = colours::ts_digital_colour(dark_mode);
+        let line_colour_impulse = colours::ts_xsidle_impulse_colour(dark_mode);
+        let line_stroke_digital = egui::Stroke::new(LINE_THICKNESS, line_colour_digital);
+        let line_stroke_impulse = egui::Stroke::new(LINE_THICKNESS * 2.0, line_colour_impulse);
+
+        // Get min/max Y for shading calculation.
+        let low_y_pos = plot_rect.max.y; 
+        let baseline_y = plot_rect.max.y;
+        
+        // XSIDLE Digital Pulse (Index 0 in multi_traces)
+        // So that XSIDLESTART pulses not overshadowed by XSIDLE pulses have them at the back.
+        let digital_trace = &dataset.multi_traces[0];
+        
+        // Convert data points to screen coordinates for this trace.
+        let mut screen_points: Vec<egui::Pos2> = Vec::new();
+        
+        for point in digital_trace {
+            // Skip points outside the visible time range.
+            if point.unix_time < time_min || point.unix_time > time_max {
+                continue;
+            }
+            
+            // Convert time to X coordinate.
+            let x_ratio = (point.unix_time as f64 - time_min as f64) / (time_max as f64 - time_min as f64);
+            let x_pos = plot_rect.min.x + (x_ratio as f32 * plot_rect.width());
+            
+            // Convert value to Y coordinate (y_min is 0.0, y_max is 2.0).
+            let y_ratio = (point.point_value - y_min) / (y_max - y_min); 
+            let y_pos = plot_rect.max.y - (y_ratio * plot_rect.height());
+            
+            screen_points.push(egui::pos2(x_pos, y_pos));
+        }
+
+        // Add shading for active regions.
+        if screen_points.len() > 1 {
+            for i in 0..screen_points.len() - 1 {
+                // Determine if the current point is the active level.
+                let point_value = digital_trace.iter()
+                    .filter(|p| p.unix_time >= time_min && p.unix_time <= time_max)
+                    .nth(i)
+                    .map(|p| p.point_value)
+                    .unwrap_or(0.0);
+                
+                // If point value is non-zero (active), shade to baseline.
+                if point_value > 0.0 {
+                    let rect = egui::Rect::from_two_pos(
+                        egui::pos2(screen_points[i].x, screen_points[i].y),
+                        egui::pos2(screen_points[i + 1].x, low_y_pos)
+                    );
+                    painter.rect_filled(rect, 0.0, colours::ts_digital_fill_colour(dark_mode));
+                }
+            }
+        }
+
+        // XSIDLESTART Impulse (Index 0 in multi_traces)
+        // So that XSIDLESTART pulses stand out have them at the front.
+        let impulse_trace = &dataset.multi_traces[1];
+
+        // The Y-max is 2.0 (from helpers_ts::calculate_y_range)
+        let total_levels = 2.0; 
+
+        for point in impulse_trace {
+            // Skip points outside the visible time range.
+            if point.unix_time < time_min || point.unix_time > time_max {
+                continue;
+            }
+
+            let x_ratio = (point.unix_time as f64 - time_min as f64) / (time_max as f64 - time_min as f64);
+            let x_pos = plot_rect.min.x + (x_ratio as f32 * plot_rect.width());
+            
+            // Calculate Y position based on actual impulse level.
+            let y_ratio = point.point_value / total_levels;
+            let y_pos = plot_rect.max.y - (y_ratio * plot_rect.height());
+
+            // Only draw visible impulses.
+            if point.point_value > 0.0 {
+                // Draw vertical line from baseline to impulse level.
+                painter.line_segment(
+                    [egui::pos2(x_pos, baseline_y), egui::pos2(x_pos, y_pos)],
+                    line_stroke_impulse,
+                );
+                
+                // Draw a circle at the top of each impulse.
+                painter.circle_filled(egui::pos2(x_pos, y_pos), 3.0, line_colour_impulse);
+            }
+        }
+                
+        // Draw lines connecting the points for the digital trace.
+        for i in 1..screen_points.len() {
+            painter.line_segment([screen_points[i-1], screen_points[i]], line_stroke_digital);
+        }
+
+        return;
+    }
+
+    // Check if dataset not empty else continue rendering other types.
     if dataset.time_series_points.is_empty() {
         return;
     }

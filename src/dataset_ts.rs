@@ -80,6 +80,76 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
         });
     }
 
+    // The impulse is an instantaneous event marker.
+    let xsidlestart_points: Vec<SinglePoint> = trip_data.iter()
+        .filter(|data| data.event_type == "XSIDLESTART")
+        .map(|data| SinglePoint {
+            unix_time: data.unix_time,
+            point_value: 1.0,
+        })
+        .collect();
+
+    // The digital pulse shows the active duration.
+    let mut xsidle_pulse_points: Vec<SinglePoint> = Vec::new();
+    
+    // Process XSIDLE events (similar to UNBUCKLED pulse creation)
+    for data in trip_data.iter().filter(|d| d.event_type == "XSIDLE") {
+        if let Some(duration) = data.ev_detail.iter()
+            .find(|(tag, _)| tag == "Max idle")
+            .and_then(|(_, value)| value.parse::<u64>().ok())
+        {
+            let event_end_time = data.unix_time;
+            let event_start_time = if event_end_time >= duration {
+                event_end_time - duration
+            } else {
+                trip_start_time
+            };
+
+            // Create pulse at full scale for visual separation above the impulse.
+            xsidle_pulse_points.push(SinglePoint {
+                unix_time: event_start_time,
+                point_value: 0.0,
+            });
+            xsidle_pulse_points.push(SinglePoint {
+                unix_time: event_start_time,
+                point_value: 1.0,
+            });
+            xsidle_pulse_points.push(SinglePoint {
+                unix_time: event_end_time,
+                point_value: 1.0,
+            });
+            xsidle_pulse_points.push(SinglePoint {
+                unix_time: event_end_time,
+                point_value: 0.0,
+            });
+        }
+    }
+
+    // Add trip start and end baselines for the pulse trace.
+    let mut xsidle_trace_points = Vec::new();
+    xsidle_trace_points.push(SinglePoint {
+        unix_time: trip_start_time,
+        point_value: 0.0,
+    });
+    xsidle_trace_points.extend(xsidle_pulse_points);
+    xsidle_trace_points.push(SinglePoint {
+        unix_time: trip_end_time,
+        point_value: 0.0,
+    });
+
+    // Only create dataset if there's at least one trace with events.
+    if !xsidlestart_points.is_empty() || xsidle_trace_points.len() > 2 {
+        datasets.push(TimeSeriesData {
+            data_type: "ImpulseDigitalCombo".to_string(),
+            series_name: "EXCESS_IDLE".to_string(),
+            units: "Active".to_string(),
+            levels: vec!["Start".to_string(), "Active".to_string()],
+            time_series_points: Vec::new(),
+            // multi_traces: vec![xsidlestart_points, xsidle_trace_points],
+            multi_traces: vec![xsidle_trace_points, xsidlestart_points],
+        });
+    }
+
     // Process each unique event type once to create combined datasets.
     // That is a combined dataset for each type of event.
     let unique_event_types: std::collections::BTreeSet<String> = trip_data.iter()
@@ -259,69 +329,6 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         units: "Active".to_string(),
                         levels: Vec::new(),
                         time_series_points: pulse_points,
-                        multi_traces: Vec::new(),
-                    });
-                }
-            }
-            "XSIDLE" => {
-                // Get all points for this event type in the selected trip.
-                let ev_points: Vec<SinglePoint> = trip_data.iter()
-                    // Filter by event type
-                    .filter(|data| data.event_type == event_type)
-                    .filter_map(|data| {
-                        // Look for event duration in the ev_detail vector.
-                        data.ev_detail.iter()
-                            .find(|(tag, _)| tag == "Max idle")
-                            .and_then(|(_, value)| {
-                                // Parse the integer string value to f32.
-                                value.parse::<f32>().ok()
-                            })
-                            .map(|event_point| SinglePoint {
-                                unix_time: data.unix_time,
-                                point_value: event_point,
-                            })
-                    })
-                    .collect();
-                
-                if !ev_points.is_empty() {
-                    // Convert single points to pulse data.
-                    let pulse_points = helpers_ts::convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time, "Digital");    
-    
-                    // Push the digital time series events to list of datasets.
-                    datasets.push(TimeSeriesData {
-                        data_type: "Digital".to_string(),
-                        series_name: event_type.clone(),
-                        units: "Active".to_string(),
-                        levels: Vec::new(),
-                        time_series_points: pulse_points,
-                        multi_traces: Vec::new(),
-                    });
-                }
-            }
-            "XSIDLESTART" => {
-                // Get all points for this event type in the selected trip.
-                // The XSIDLESTART event has no attributes - just a moment in time.
-                let ev_points: Vec<SinglePoint> = trip_data.iter()
-                    // Filter by event type.
-                    .filter(|data| data.event_type == event_type)
-                    .map(|data| SinglePoint {
-                        unix_time: data.unix_time,
-                        // Fixed impulse height of 1.0 .
-                        point_value: 1.0,
-                    })
-                    .collect();
-
-                if !ev_points.is_empty() {
-                    // For impulse data, we don't convert to pulse data.
-                    // We keep the original points as instantaneous events.
-                    
-                    // Push the impulse time series events to list of datasets.
-                    datasets.push(TimeSeriesData {
-                        data_type: "Impulse".to_string(),
-                        series_name: event_type.clone(),
-                        units: "Event".to_string(),
-                        levels: Vec::new(),
-                        time_series_points: ev_points,
                         multi_traces: Vec::new(),
                     });
                 }
@@ -549,28 +556,10 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         }
                     }
                 }
-                
-                // Add trip end baseline for passenger trace.
-                passenger_points.push(SinglePoint {
-                    unix_time: trip_end_time,
-                    point_value: 0.0,
-                });
-                
-                // Only create dataset if there's at least one trace with events.
-                // Using "Crew" instead of Passenger as it fits on the plot better.
-                if driver_points.len() > 2 || passenger_points.len() > 2 {
-                    datasets.push(TimeSeriesData {
-                        data_type: "DualDigital".to_string(),
-                        series_name: "UNBUCKLED".to_string(),
-                        units: "Active".to_string(),
-                        levels: vec!["Crew".to_string(), "Driver".to_string()],
-                        time_series_points: Vec::new(),
-                        multi_traces: vec![passenger_points, driver_points],
-                    });
-                }
             } _ => {}
+                
+        // Set of all data series to plot.
         }
     }
-    // Set of all data series to plot.
     datasets
 }

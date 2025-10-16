@@ -53,12 +53,13 @@ pub fn calculate_y_range(dataset: &TimeSeriesData) -> (f32, f32) {
     }
     
     // Special handling for dual digital signals.
-    if dataset.data_type == "DualDigital" {
+    if dataset.data_type == "DualDigital" || dataset.data_type == "ImpulseDigitalCombo" {
         // Range must match how tick marks are calculated
         // Tick marks use: y_ratio = level_value / total_levels
-        // So range should be 0 to total_levels
+        // So range should be 0 to total_levels.
         if !dataset.levels.is_empty() {
-            return (0.0, dataset.levels.len() as f32);
+            // The range goes from 0.0 up to the number of levels (2 in this case).
+            return (0.0, dataset.levels.len() as f32); 
         } else {
             return (0.0, 2.0);
         }
