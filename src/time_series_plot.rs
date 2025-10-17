@@ -1,4 +1,3 @@
-use log::info;
 use log::warn;
 
 use eframe::egui;

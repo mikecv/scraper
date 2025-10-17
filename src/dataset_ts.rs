@@ -556,6 +556,19 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         }
                     }
                 }
+
+                // Only create dataset if there's at least one trace with events.
+                // Using "Crew" instead of Passenger as it fits on the plot better.
+                if driver_points.len() > 2 || passenger_points.len() > 2 {
+                    datasets.push(TimeSeriesData {
+                        data_type: "DualDigital".to_string(),
+                        series_name: "UNBUCKLED".to_string(),
+                        units: "Active".to_string(),
+                        levels: vec!["Crew".to_string(), "Driver".to_string()],
+                        time_series_points: Vec::new(),
+                        multi_traces: vec![passenger_points, driver_points],
+                    });
+                }
             } _ => {}
                 
         // Set of all data series to plot.
