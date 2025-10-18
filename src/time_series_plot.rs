@@ -234,11 +234,11 @@ pub fn plot_time_series_data(
                                 let pan_pixels_to_time = zoomed_time_range as f32 / plot_rect.width();
                                 let pan_time_offset = (plot_state.pan_offset * pan_pixels_to_time) as i64;
 
-                                let center_time = (time_min + time_max) / 2;
+                                let centre_time = (time_min + time_max) / 2;
                                 let half_zoomed_range = zoomed_time_range / 2;
 
-                                let panned_time_min = ((center_time as i64) - (half_zoomed_range as i64) - pan_time_offset).max(0) as u64;
-                                let panned_time_max = ((center_time as i64) + (half_zoomed_range as i64) - pan_time_offset).max(0) as u64;
+                                let panned_time_min = ((centre_time as i64) - (half_zoomed_range as i64) - pan_time_offset).max(0) as u64;
+                                let panned_time_max = ((centre_time as i64) + (half_zoomed_range as i64) - pan_time_offset).max(0) as u64;
                                 
                                 (panned_time_min, panned_time_max)
                             } else {
@@ -307,7 +307,7 @@ pub fn plot_time_series_data(
                 // Show a centred message when no trip is selected.
                 ui.vertical_centered(|ui| {
                     ui.add_space(100.0);
-                    ui.label(egui::RichText::new("Please select a trip from the trip list to view time series plots.")
+                    ui.label(egui::RichText::new("Please select a trip to view time series plots.")
                         .color(colours::ts_notices_colour(*dark_mode)));
                 });
             }
@@ -341,11 +341,11 @@ fn draw_plot_with_axes(
         let pan_pixels_to_time = zoomed_time_range as f32 / plot_rect.width();
         let pan_time_offset = (plot_state.pan_offset * pan_pixels_to_time) as i64;
 
-        let center_time = (time_min + time_max) / 2;
+        let centre_time = (time_min + time_max) / 2;
         let half_zoomed_range = zoomed_time_range / 2;
 
-        let panned_time_min = ((center_time as i64) - (half_zoomed_range as i64) - pan_time_offset).max(0) as u64;
-        let panned_time_max = ((center_time as i64) + (half_zoomed_range as i64) - pan_time_offset).max(0) as u64;
+        let panned_time_min = ((centre_time as i64) - (half_zoomed_range as i64) - pan_time_offset).max(0) as u64;
+        let panned_time_max = ((centre_time as i64) + (half_zoomed_range as i64) - pan_time_offset).max(0) as u64;
         
         (panned_time_min, panned_time_max)
     } else {
@@ -782,7 +782,7 @@ fn plot_data_points(
         return;
     }
    
-    // Special handling for DualDigitalImpulse - plot each trace separately.
+    // Special handling for ImpulseDigitalCombo - plot each trace separately.
     if dataset.data_type == "ImpulseDigitalCombo" {
         let line_colour_digital = colours::ts_digital_colour(dark_mode);
         let line_colour_impulse = colours::ts_xsidle_impulse_colour(dark_mode);
@@ -982,13 +982,8 @@ fn plot_data_points(
                     _ => colours::ts_fallback_colour(dark_mode),
                 };
             }
-            else if dataset.series_name == "ZONECHANGE" {
-                if point.point_value as i32 == 1 {
-                    impulse_colour = colours::ts_impulse_error_colour(dark_mode);
-                }
-                else {
+            else if dataset.series_name == "ZONECHANGE" || dataset.series_name == "ZONETRANSITION" {
                     impulse_colour = colours::ts_impulse_colour(dark_mode);
-                }
             }
 
             // Only draw visible impulses (non-zero values).

@@ -983,7 +983,6 @@ fn ungroup_event_data(event_type: String, sub_data: &str, on_trip: &mut bool, ev
 
         // Search for the event sub-data for the ZONE_OK event.
         "ZONE_OK" => {
-        // CHECKED //
             let zone_ok_pattern = Regex::new(r"([0-9]+) ([0-9]+) (.*) v:(.+?)$")
                 .expect("Invalid ZONE_OK regex pattern");
 
@@ -1010,7 +1009,6 @@ fn ungroup_event_data(event_type: String, sub_data: &str, on_trip: &mut bool, ev
 
         // Search for the event sub-data for the ZONECHANGE event.
         "ZONECHANGE" => {
-        // CHECKED //
             let sub_zone_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+) v:(.+?)$")
                 .expect("Invalid ZONECHANGE regex pattern");
 
@@ -1100,7 +1098,6 @@ fn ungroup_event_data(event_type: String, sub_data: &str, on_trip: &mut bool, ev
         },
 
         // Search for the event sub-data for the TRIP event.
-        // CHECKED //
         "TRIP" => {
             let sub_trip_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+)(.*) v:(.+?)$")
                 .expect("Invalid TRIP regex pattern");
