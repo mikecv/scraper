@@ -47,7 +47,7 @@ pub fn calculate_y_range(dataset: &TimeSeriesData) -> (f32, f32) {
         if !dataset.levels.is_empty() {
             return (0.0, (dataset.levels.len() + 1) as f32);
         } else {
-            // Fallback to original behavior if no levels defined.
+            // Fallback to default behavior if no levels defined.
             return (0.0, 4.0);
         }
     }
@@ -58,7 +58,7 @@ pub fn calculate_y_range(dataset: &TimeSeriesData) -> (f32, f32) {
         // Tick marks use: y_ratio = level_value / total_levels
         // So range should be 0 to total_levels.
         if !dataset.levels.is_empty() {
-            // The range goes from 0.0 up to the number of levels (2 in this case).
+            // The range goes from 0.0 up to the number of levels.
             return (0.0, dataset.levels.len() as f32); 
         } else {
             return (0.0, 2.0);

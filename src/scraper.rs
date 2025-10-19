@@ -517,19 +517,14 @@ fn ungroup_event_data(event_type: String, sub_data: &str, on_trip: &mut bool, ev
         },
 
         // Search for the event sub-data for the DEBUG event.
+        // Loosely one attribute after the DEBUG event name.
         "DEBUG" => {
-            let sub_debug_pattern = Regex::new(r"(.+) v:(.+?)$")
+            let sub_debug_pattern = Regex::new(r"(.+)$")
                 .expect("Invalid DEBUG regex pattern");
 
             if let Some(captures) = sub_debug_pattern.captures(sub_data) {
                 if let Some(error) = captures.get(1) {
                     result.push(("Debug error".to_string(), error.as_str().to_string()));
-                }
-                if let Some(battery) = captures.get(2) {
-                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
-                        let voltage_volts = voltage_tens / 10.0;
-                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
-                    }
                 }
             } else {
                 warn!("Failed to extract sub-data from DEBUG");
@@ -562,26 +557,6 @@ fn ungroup_event_data(event_type: String, sub_data: &str, on_trip: &mut bool, ev
             }
         },
 
-         // Search for the event sub-data for the HARDWARE event.
-        "HARDWARE" => {
-            let sub_hardware_pattern = Regex::new(r"(.*) v:(.+?)$")
-                .expect("Invalid HARDWARE regex pattern");
-
-            if let Some(captures) = sub_hardware_pattern.captures(sub_data) {
-                if let Some(eq_fail) = captures.get(1) {
-                    result.push(("Equipment fault".to_string(), eq_fail.as_str().to_string()));
-                }
-                if let Some(battery) = captures.get(2) {
-                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
-                        let voltage_volts = voltage_tens / 10.0;
-                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
-                    }
-                }
-            } else {
-                warn!("Failed to extract sub-data from ENGINETEMP");
-            }
-        },
-
          // Search for the event sub-data for the ENGINETEMP event.
         "ENGINETEMP" => {
             let sub_enginetemp_pattern = Regex::new(r"([0-9]+) ([0-9]+)(.*) v:(.+?)$")
@@ -605,7 +580,27 @@ fn ungroup_event_data(event_type: String, sub_data: &str, on_trip: &mut bool, ev
             }
         },
 
-        // Search for the event sub-data for the IMPACT event.
+         // Search for the event sub-data for the HARDWARE event.
+        "HARDWARE" => {
+            let sub_hardware_pattern = Regex::new(r"(.*) v:(.+?)$")
+                .expect("Invalid HARDWARE regex pattern");
+
+            if let Some(captures) = sub_hardware_pattern.captures(sub_data) {
+                if let Some(eq_fail) = captures.get(1) {
+                    result.push(("Equipment fault".to_string(), eq_fail.as_str().to_string()));
+                }
+                if let Some(battery) = captures.get(2) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
+            } else {
+                warn!("Failed to extract sub-data from ENGINETEMP");
+            }
+        },
+
+       // Search for the event sub-data for the IMPACT event.
         "IMPACT" => {
             let sub_impact_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+) ([\-a-zA-Z]+) v:(.+?)$")
                 .expect("Invalid IMPACT regex pattern");
@@ -827,13 +822,12 @@ fn ungroup_event_data(event_type: String, sub_data: &str, on_trip: &mut bool, ev
             }
         },
 
-        // Search for the event sub-data for the CONFIG event.
+        // Search for the event sub-data for the POWERDOWN event.
         "POWERDOWN" => {
                 info!("POWERDOWN event found, no sub-data applicable.");
         },
 
         // Search for the event sub-data for the REPORT event.
-        // CHECKED //
         "REPORT" => {
             let sub_report_pattern = Regex::new(r"(\*|[0-9]+) ([0-9]+) ([0-9]+) v:(.+?)$")
                 .expect("Invalid REPORT regex pattern");

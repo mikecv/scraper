@@ -455,6 +455,76 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                     });
                 }
             }
+            "OVERLOAD" => {
+                // Get all points for this event type in the selected trip.
+                let ev_points: Vec<SinglePoint> = trip_data.iter()
+                    // Filter by event type.
+                    .filter(|data| data.event_type == event_type)
+                    .filter_map(|data| {
+                        // Look for event duration in the ev_detail vector.
+                        data.ev_detail.iter()
+                            .find(|(tag, _)| tag == "Duration")
+                            .and_then(|(_, value)| {
+                                // Parse the integer string value to f32.
+                                value.parse::<f32>().ok()
+                            })
+                            .map(|event_point| SinglePoint {
+                                unix_time: data.unix_time,
+                                point_value: event_point,
+                            })
+                    })
+                    .collect();
+                
+                if !ev_points.is_empty() {
+                    // Convert single points to pulse data.
+                    let pulse_points = helpers_ts::convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time, "Digital");    
+    
+                    // Push the digital time series events to list of datasets.
+                    datasets.push(TimeSeriesData {
+                        data_type: "Digital".to_string(),
+                        series_name: event_type.clone(),
+                        units: "Active".to_string(),
+                        levels: Vec::new(),
+                        time_series_points: pulse_points,
+                        multi_traces: Vec::new(),
+                    });
+                }
+            }
+            "OFFSEAT" => {
+                // Get all points for this event type in the selected trip.
+                let ev_points: Vec<SinglePoint> = trip_data.iter()
+                    // Filter by event type.
+                    .filter(|data| data.event_type == event_type)
+                    .filter_map(|data| {
+                        // Look for event duration in the ev_detail vector.
+                        data.ev_detail.iter()
+                            .find(|(tag, _)| tag == "Duration")
+                            .and_then(|(_, value)| {
+                                // Parse the integer string value to f32.
+                                value.parse::<f32>().ok()
+                            })
+                            .map(|event_point| SinglePoint {
+                                unix_time: data.unix_time,
+                                point_value: event_point,
+                            })
+                    })
+                    .collect();
+                
+                if !ev_points.is_empty() {
+                    // Convert single points to pulse data.
+                    let pulse_points = helpers_ts::convert_to_pulse_data(&ev_points, trip_start_time, trip_end_time, "Digital");    
+    
+                    // Push the digital time series events to list of datasets.
+                    datasets.push(TimeSeriesData {
+                        data_type: "Digital".to_string(),
+                        series_name: event_type.clone(),
+                        units: "Active".to_string(),
+                        levels: Vec::new(),
+                        time_series_points: pulse_points,
+                        multi_traces: Vec::new(),
+                    });
+                }
+            }
             "UNBUCKLED" => {
                 let mut driver_points: Vec<SinglePoint> = Vec::new();
                 let mut passenger_points: Vec<SinglePoint> = Vec::new();
