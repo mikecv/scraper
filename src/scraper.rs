@@ -394,7 +394,6 @@ fn ungroup_event_data(event_type: String, sub_data: &str, on_trip: &mut bool, ev
     let mut result = Vec::new();
 
     // Search for the event sub-data for the SIGNON event.
-    // CHECKED //
     match event_type.as_str() {
         "SIGNON" => {
             let sub_signon_pattern = Regex::new(r"([-\*\+0-9]+) ([0-9a-fA-F]+) (.+?) ([0-9]+) ([0-9]+) ([0-9]+) v:(.+?)$")
@@ -595,8 +594,13 @@ fn ungroup_event_data(event_type: String, sub_data: &str, on_trip: &mut bool, ev
                         result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
                     }
                 }
+
+                // The HARDWARE event only occurs out of trip.
+                // Setting HARDWARE on_trip flag to false.
+                *on_trip = false;
+
             } else {
-                warn!("Failed to extract sub-data from ENGINETEMP");
+                warn!("Failed to extract sub-data from HARDWARE");
             }
         },
 
@@ -870,7 +874,6 @@ fn ungroup_event_data(event_type: String, sub_data: &str, on_trip: &mut bool, ev
             }
         },
 
-
         // Search for the event sub-data for the SWSTART event.
         // NOTE that the SWSTART event occurs outside of trips.
         "SWSTART" => {
@@ -996,6 +999,11 @@ fn ungroup_event_data(event_type: String, sub_data: &str, on_trip: &mut bool, ev
                         result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
                     }
                 }
+
+                // The ZONE_OK event only occurs out of trip.
+                // Setting ZONE_OK on_trip flag to false.
+                *on_trip = false;
+
             } else {
                 warn!("Failed to extract sub-data from ZONE_OK");
             }

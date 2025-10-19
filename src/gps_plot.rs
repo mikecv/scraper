@@ -41,7 +41,7 @@ pub struct SatelliteTiles;
 
 impl TileSource for SatelliteTiles {
     fn tile_url(&self, tile_id: walkers::TileId) -> String {
-        // Using ESRI World Imagery (free satellite tiles)
+        // Using ESRI World Imagery (free satellite tiles)'
         format!(
             "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{}/{}/{}",
             tile_id.zoom, tile_id.y, tile_id.x

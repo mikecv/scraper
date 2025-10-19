@@ -10,7 +10,7 @@ pub struct Settings {
 // Fumction to clamp settings to limits
 // when checking if user values.
 impl Settings {
-    // Font sizes are limited to the range 12.0 to 20.0
+    // Font sizes are limited to the range 12.0 to 20.0 .
     pub fn validate(&mut self) {
         self.trip_font_size = self.trip_font_size.clamp(12.0, 20.0);
         self.event_font_size = self.event_font_size.clamp(12.0, 20.0);

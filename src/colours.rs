@@ -8,7 +8,7 @@ pub fn plot_area_colour(dark_mode: bool) -> Color32 {
     if dark_mode {
         Color32::from_rgb(30, 30, 30)
     } else {
-        Color32::from_rgb(255, 255, 255)
+        Color32::from_rgb(240, 240, 240)
     }
 }
 
@@ -17,7 +17,7 @@ pub fn plot_bkgnd_colour(dark_mode: bool) -> Color32 {
     if dark_mode {
         Color32::from_rgb(40, 40, 40)
     } else {
-        Color32::from_rgb(250, 250, 250)
+        Color32::from_rgb(230, 230, 230)
     }
 }
 
@@ -161,7 +161,7 @@ pub fn ts_analog_colour(dark_mode: bool) -> Color32 {
     if dark_mode {
         Color32::from_rgb(0, 255, 0)
     } else {
-        Color32::from_rgb(102, 255, 102)
+        Color32::from_rgb(0, 255, 85)
     }
 }
 
@@ -188,7 +188,7 @@ pub fn ts_impact_critical_colour(dark_mode: bool) -> egui::Color32 {
     if dark_mode {
         egui::Color32::from_rgb(255, 0, 0)
     } else {
-        egui::Color32::from_rgb(161, 52, 71)
+        egui::Color32::from_rgb(255, 51, 51)
     }
 }
 
