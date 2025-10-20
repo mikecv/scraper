@@ -159,26 +159,62 @@ fn set_up_logging() {
         Ok(_) => {},
 
         // Log settings not found or invalid, so
-        // set up default console logging instead.
+        // create default log4rs.yml file.
         Err(_) => {
-            // log4rs.yml missing or invalid
-            use log4rs::append::console::ConsoleAppender;
-            use log4rs::encode::pattern::PatternEncoder;
-            use log4rs::config::{Appender, Config, Root};
-            use log::LevelFilter;
+            // Create default log4rs.yml content
+            let default_log_config = "\
+appenders:
+  log_file:
+    kind: rolling_file
+    append: true
+    path: \"logs/scraper.log\"
+    encoder:
+      pattern: \"{h({d(%d-%m-%Y %H:%M:%S)})} - {l:<5} {t}:{L} - {m}{n}\"
+    policy:
+      kind: compound
+      trigger:
+        kind: size
+        limit: 10mb
+      roller:
+        kind: fixed_window
+        base: 1
+        count: 3
+        pattern: \"logs/scraper{}.log\"
 
-            let stdout = ConsoleAppender::builder()
-                .encoder(Box::new(PatternEncoder::new(
-                    "{h({d(%H:%M:%S)})} - {m}{n}"
-                )))
-                .build();
+root:
+  level: debug
+  appenders:
+    - log_file
+";
+            // Try to create the log4rs.yml file.
+            if let Ok(mut file) = File::create("log4rs.yml") {
+                let _ = file.write_all(default_log_config.as_bytes());
+            }
 
-            let config = Config::builder()
-                .appender(Appender::builder().build("stdout", Box::new(stdout)))
-                .build(Root::builder().appender("stdout").build(LevelFilter::Debug))
-                .unwrap();
+            // Now try to initialize logging again with the newly created file.
+            match log4rs::init_file("log4rs.yml", Default::default()) {
+                Ok(_) => {},
+                // If it still fails, fall back to console logging
+                Err(_) => {
+                    use log4rs::append::console::ConsoleAppender;
+                    use log4rs::encode::pattern::PatternEncoder;
+                    use log4rs::config::{Appender, Config, Root};
+                    use log::LevelFilter;
 
-            log4rs::init_config(config).unwrap();
+                    let stdout = ConsoleAppender::builder()
+                        .encoder(Box::new(PatternEncoder::new(
+                            "{h({d(%H:%M:%S)})} - {m}{n}"
+                        )))
+                        .build();
+
+                    let config = Config::builder()
+                        .appender(Appender::builder().build("stdout", Box::new(stdout)))
+                        .build(Root::builder().appender("stdout").build(LevelFilter::Debug))
+                        .unwrap();
+
+                    log4rs::init_config(config).unwrap();
+                }
+            }
         }
     }
 }
