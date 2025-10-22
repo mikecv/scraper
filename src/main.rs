@@ -88,22 +88,29 @@ lazy_static! {
             program_date:           "2025".to_string(),
             program_devs:           vec!["mdc".to_string()],
             program_web:            "galacticwingcommander".to_string(),
-            min_win_width:          300.0,
-            win_width:              400.0,
-            max_win_width:          600.0,
-            min_win_height:         500.0,
-            win_height:             600.0,
-            max_win_height:         1000.0,
-            help_win_width:         600.0,
-            min_help_win_height:    500.0,
-            help_win_height:        700.0,
-            max_help_win_height:    1000.0,
-            gps_win_width:          600.0,
-            gps_win_height:         600.0,
+
+            min_win_width:          400.0,
+            win_width:              450.0,
+            max_win_width:          500.0,
+
+            min_win_height:         400.0,
+            win_height:             500.0,
+            max_win_height:         650.0,
+
+            help_win_width:         450.0,
+            
+            min_help_win_height:    400.0,
+            help_win_height:        450.0,
+            max_help_win_height:    500.0,
+
+            gps_win_width:          500.0,
+            gps_win_height:         500.0,
+
             time_series_win_width:  500.0,
             time_series_win_height: 700.0,
-            changelog_win_width:    400.0,
-            changelog_win_height:   600.0,
+
+            changelog_win_width:    450.0,
+            changelog_win_height:   450.0,
         };
         Mutex::new(details)
     };
@@ -161,7 +168,8 @@ fn set_up_logging() {
         // Log settings not found or invalid, so
         // create default log4rs.yml file.
         Err(_) => {
-            // Create default log4rs.yml content
+            // Create default log4rs.yml content.
+            // Formatting is important so don't mess with it.
             let default_log_config = "\
 appenders:
   log_file:

@@ -209,20 +209,30 @@ impl Scraper {
         info!("Searching file for controller serial number.");
     
         // Get the serial number of the controller.
-        let sn_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\.\d{3})?(?: [AP]M)?)[:, ]UNIT ([0-9]+)$")?;
+        // let sn_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\.\d{3})?(?: [AP]M)?)[:, ]UNIT ([0-9]+)$")?;
+        let sn_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\.\d{3})?(?: [AP]M)?)[:, ]UNIT ([0-9]+)(?: (.+))?$")?;
         let mut found_sn = false;
         
         // Process file line by line,
         for line_result in reader.lines() {
             let line = line_result?;
-            
-            // Check if we should stop processing.
-            if let Some(captures) = sn_pattern.captures(&line) {
+ 
+            if let Some(caps) = sn_pattern.captures(&line) {
+                let unit_number = &caps[3];
+                
+                // Combine unit number with optional suffix.
+                let unit = if let Some(suffix) = caps.get(4) {
+                    format!("{} {}", unit_number, suffix.as_str())
+                } else {
+                    unit_number.to_string()
+                };
+
                 found_sn = true;
-                // Group 3 contains the serial number.
-                let sn_str = captures.get(3).unwrap().as_str();
-                self.controller_id = sn_str.to_string();
-                info!("Found controller s/n: {:0>6}", sn_str); 
+
+                // Get combined string for controller id.
+                self.controller_id = unit;
+
+                info!("Found controller: {:?}", self.controller_id); 
             }
             if found_sn {
                 // Have found one instance of controller number.

@@ -8,7 +8,7 @@ pub fn plot_area_colour(dark_mode: bool) -> Color32 {
     if dark_mode {
         Color32::from_rgb(30, 30, 30)
     } else {
-        Color32::from_rgb(240, 240, 240)
+        Color32::from_rgb(250, 250, 250)
     }
 }
 
@@ -17,7 +17,7 @@ pub fn plot_bkgnd_colour(dark_mode: bool) -> Color32 {
     if dark_mode {
         Color32::from_rgb(40, 40, 40)
     } else {
-        Color32::from_rgb(230, 230, 230)
+        Color32::from_rgb(245, 245, 245)
     }
 }
 
@@ -129,7 +129,7 @@ pub fn border_colour(dark_mode: bool) -> Color32 {
     }
 }
 
-//Colours for time series plot notices.
+// Colours for time series plot notices.
 pub fn ts_notices_colour(dark_mode: bool) -> Color32 {
     if dark_mode {
         Color32::from_rgb(255, 255, 0)
@@ -151,8 +151,8 @@ pub fn ts_digital_colour(dark_mode: bool) -> Color32 {
 pub fn ts_digital_fill_colour(dark_mode: bool) -> Color32 {
     if dark_mode {
         Color32::from_rgba_unmultiplied(255, 153, 0, 50)
-    } else {
-        Color32::from_rgba_unmultiplied(255, 173, 51, 50)
+   } else {
+        Color32::from_rgba_unmultiplied(255, 173, 51, 170)
     }
 }
 
