@@ -11,6 +11,35 @@ use crate::ui;
 use crate::log_display::UiState;
 use crate::time_series_plot::PlotState;
 
+// Struct to track the plain plot view state.
+// Zoom factor (1.0 = fit to bounds, higher = more zoomed in).
+#[derive(Clone)]
+pub struct PlotViewState {
+    pub center_lat: f64,
+    pub center_lon: f64,
+    pub zoom: f64,
+    pub drag_start: Option<egui::Pos2>,
+    pub drag_offset: egui::Vec2,
+}
+
+impl PlotViewState {
+    pub fn new(center_lat: f64, center_lon: f64) -> Self {
+        Self {
+            center_lat,
+            center_lon,
+            zoom: 1.0,
+            drag_start: None,
+            drag_offset: egui::Vec2::ZERO,
+        }
+    }
+    pub fn reset(&mut self, center_lat: f64, center_lon: f64) {
+        self.center_lat = center_lat;
+        self.center_lon = center_lon;
+        self.zoom = 1.0;
+        self.drag_offset = egui::Vec2::ZERO;
+    }
+}
+
 // Make the MyApp struct public.
 pub struct MyApp {
     pub scraper: Scraper,
@@ -32,6 +61,8 @@ pub struct MyApp {
     pub use_simple_plot: bool,
     pub use_street_tiles: bool,
     pub use_satellite_tiles: bool,
+    pub plot_view_state: PlotViewState,
+    pub last_trip_id_plain: Option<String>,
     pub map_memory: MapMemory,
     pub last_trip_id: Option<String>,
     pub map_tiles: Option<walkers::HttpTiles>,
@@ -61,6 +92,7 @@ pub struct MyApp {
     pub help_image_19: Option<egui::TextureHandle>,
     pub help_image_20: Option<egui::TextureHandle>,
     pub help_image_21: Option<egui::TextureHandle>,
+    pub help_image_22: Option<egui::TextureHandle>,
 }
 
 impl Default for MyApp {
@@ -89,6 +121,8 @@ impl Default for MyApp {
             use_simple_plot: true,
             use_street_tiles: false,
             use_satellite_tiles: false,
+            plot_view_state:PlotViewState::new(0.0, 0.0),
+            last_trip_id_plain: None,
             map_memory: MapMemory::default(),
             last_trip_id: None,
             map_tiles: None,
@@ -118,6 +152,7 @@ impl Default for MyApp {
             help_image_19: None,
             help_image_20: None,
             help_image_21: None,
+            help_image_22: None,
         }
     }
 }
@@ -458,6 +493,20 @@ impl MyApp {
                     self.help_image_21 = Some(ctx.load_texture("help_image_21", color_image, Default::default()));
                 }
                 Err(e) => info!("Failed to load help image 21: {}", e),
+            }
+        }
+
+        // Help image 22 - logging configuration file.
+        if self.help_image_22.is_none() {
+            let icon_bytes = include_bytes!("../assets/help-22.png");
+            match image::load_from_memory(icon_bytes) {
+                Ok(img) => {
+                    let rgba = img.to_rgba8();
+                    let size = [img.width() as usize, img.height() as usize];
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    self.help_image_22 = Some(ctx.load_texture("help_image_22", color_image, Default::default()));
+                }
+                Err(e) => info!("Failed to load help image 22: {}", e),
             }
         }
     }

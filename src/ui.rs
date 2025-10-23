@@ -141,12 +141,12 @@ pub fn draw_bottom_panel(app: &mut MyApp, ctx: &egui::Context) {
                         // Add controller ID if available.
                         if !app.scraper.controller_id.is_empty() {
                             ui.separator();
-                            ui.label("Controller ID:");
+                            ui.label("Controller:");
                             ui.strong(format!("{:0>6}", app.scraper.controller_id));
                         }
                         else {
                             ui.separator();
-                            ui.label("Controller ID:");
+                            ui.label("Controller:");
                             ui.strong("Not defined.");
                         }
 
@@ -439,8 +439,8 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
                                         }
                                     }
                                     else {
-                                        // Simple plot with no background.
-                                        gps_plot::plot_gps_data(ui, &app.scraper, &app.selected_id);
+                                        // gps_plot::plot_gps_data(ui, &app.scraper, &app.selected_id);
+                                        gps_plot::plot_gps_data(ui, &app.scraper, &app.selected_id, &mut app.plot_view_state, &mut app.last_trip_id_plain );
                                     }
                                 }
                             );

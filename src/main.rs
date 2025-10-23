@@ -84,7 +84,7 @@ lazy_static! {
     static ref DETAILS: Mutex<Details> = {
         let details = Details {
             program_name:           "Scraper".to_string(),
-            program_ver:            "0.2.0".to_string(),
+            program_ver:            "0.3.0".to_string(),
             program_date:           "2025".to_string(),
             program_devs:           vec!["mdc".to_string()],
             program_web:            "galacticwingcommander".to_string(),
@@ -100,8 +100,8 @@ lazy_static! {
             help_win_width:         450.0,
             
             min_help_win_height:    400.0,
-            help_win_height:        450.0,
-            max_help_win_height:    500.0,
+            help_win_height:        500.0,
+            max_help_win_height:    600.0,
 
             gps_win_width:          500.0,
             gps_win_height:         500.0,

@@ -9,6 +9,7 @@ use walkers::Plugin;
 use walkers::sources::{TileSource, Attribution};
 
 use crate::scraper::{Scraper, ScrapedData};
+use crate::app::PlotViewState;
 
 // PlotPoint struct.
 #[derive(Debug, Clone)]
@@ -224,9 +225,14 @@ pub fn parse_datetime(date_str: &str) -> Result<DateTime<Utc>, ParseError> {
     Ok(naive.and_utc())
 }
 
-// Function to plot GPS data using custom drawing.
-pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<String>) {
-
+// Modified function with pan and zoom support
+pub fn plot_gps_data(
+    ui: &mut egui::Ui, 
+    scraper: &Scraper, 
+    selected_id: &Option<String>,
+    view_state: &mut PlotViewState,
+    last_trip_id: &mut Option<String>,
+) {
     // Get id of selected trip, or show prompt if no trip selected.
     let selected_trip = match selected_id.as_ref() {
         Some(id) if !id.is_empty() => id,
@@ -240,7 +246,6 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
     };
 
     // Get all the plotting points.
-    // Filter out bad gps points, i.e lat and lon = 0;
     let plot_points: Vec<PlotPoint> = scraper.scrapings.iter()
         .filter(|scraped| scraped.trip_num == *selected_trip)
         .filter(|scraped| scraped.gps_locn.lat != 0.0 && scraped.gps_locn.lon != 0.0)
@@ -252,32 +257,7 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
         return;
     }
 
-    // Create a custom plot area.
-    let plot_height = ui.available_height() - 95.0;
-    let plot_width = ui.available_width();
-    
-    let (rect, _response) = ui.allocate_exact_size(
-        egui::Vec2::new(plot_width, plot_height),
-        egui::Sense::click_and_drag()
-    );
-
-    // Draw the plot background.
-    ui.painter().rect_filled(
-        rect,
-        epaint::CornerRadius::same(5),
-        ui.visuals().extreme_bg_color,
-    );
-
-    // Draw border. Use StrokeKind::Inside
-    ui.painter().rect_stroke(
-        rect,
-        epaint::CornerRadius::same(5),
-        egui::Stroke::new(1.0, ui.visuals().widgets.noninteractive.bg_stroke.color),
-        egui::epaint::StrokeKind::Inside,
-    );
-
     // Calculate bounds of gps points.
-    // This is to fill the plot area initially.
     let mut min_lat = f64::MAX;
     let mut max_lat = f64::MIN;
     let mut min_lon = f64::MAX;
@@ -290,35 +270,121 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
         max_lon = max_lon.max(point.lon);
     }
 
-    // Calculate the centre point of plot.
-    let lat_centre = min_lat + (max_lat - min_lat);
-    let lon_centre = min_lon + (max_lon - min_lon);
-
     // Add some padding.
     let lat_range = max_lat - min_lat;
     let lon_range = max_lon - min_lon;
     let padding = 0.1;
     
-    min_lat -= lat_range * padding;
-    max_lat += lat_range * padding;
-    min_lon -= lon_range * padding;
-    max_lon += lon_range * padding;
+    let padded_min_lat = min_lat - lat_range * padding;
+    let padded_max_lat = max_lat + lat_range * padding;
+    let padded_min_lon = min_lon - lon_range * padding;
+    let padded_max_lon = max_lon + lon_range * padding;
 
-    // Draw the GPS points.
-    // Leave some margin around the sides.
+    // Reset view if trip changed.
+    let trip_changed = last_trip_id.as_ref() != Some(selected_trip);
+    if trip_changed {
+        let center_lat = (padded_min_lat + padded_max_lat) / 2.0;
+        let center_lon = (padded_min_lon + padded_max_lon) / 2.0;
+        view_state.reset(center_lat, center_lon);
+        *last_trip_id = Some(selected_trip.clone());
+    }
+
+    // Create a custom plot area with drag sensing.
+    let plot_height = ui.available_height() - 95.0;
+    let plot_width = ui.available_width();
+    
+    let (rect, response) = ui.allocate_exact_size(
+        egui::Vec2::new(plot_width, plot_height),
+        egui::Sense::click_and_drag()
+    );
+
+    // Handle dragging.
+    if response.dragged() {
+        if let Some(pointer_pos) = response.interact_pointer_pos() {
+            if let Some(drag_start) = view_state.drag_start {
+                view_state.drag_offset = pointer_pos - drag_start;
+            } else {
+                view_state.drag_start = Some(pointer_pos);
+            }
+        }
+    } else if response.drag_stopped() {
+        // Apply the drag offset to the centre position.
+        if view_state.drag_offset != egui::Vec2::ZERO {
+            let plot_rect = rect.shrink(20.0);
+            
+            // Convert drag pixels to lat/lon offset.
+            let lat_span = (padded_max_lat - padded_min_lat) / view_state.zoom * -1.0;
+            let lon_span = (padded_max_lon - padded_min_lon) / view_state.zoom * -1.0;
+            
+            let lat_offset = -(view_state.drag_offset.y as f64 / plot_rect.height() as f64) * lat_span;
+            let lon_offset = (view_state.drag_offset.x as f64 / plot_rect.width() as f64) * lon_span;
+            
+            view_state.center_lat += lat_offset;
+            view_state.center_lon += lon_offset;
+            view_state.drag_offset = egui::Vec2::ZERO;
+        }
+        view_state.drag_start = None;
+    }
+
+    // Handle zooming with scroll wheel.
+    if response.hovered() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::Grab);
+        
+        let scroll_delta = ui.input(|i| i.raw_scroll_delta.y);
+        if scroll_delta != 0.0 {
+            let zoom_factor = 1.0 + scroll_delta * 0.001;
+            view_state.zoom = (view_state.zoom as f64 * zoom_factor as f64).clamp(0.5, 20.0);
+        }
+    }
+
+    // Draw the plot background.
+    ui.painter().rect_filled(
+        rect,
+        epaint::CornerRadius::same(5),
+        ui.visuals().extreme_bg_color,
+    );
+
+    // Draw border.
+    ui.painter().rect_stroke(
+        rect,
+        epaint::CornerRadius::same(5),
+        egui::Stroke::new(1.0, ui.visuals().widgets.noninteractive.bg_stroke.color),
+        egui::epaint::StrokeKind::Inside,
+    );
+
+    // Calculate visible bounds based on centre and zoom.
+    let lat_span = (padded_max_lat - padded_min_lat) / view_state.zoom;
+    let lon_span = (padded_max_lon - padded_min_lon) / view_state.zoom;
+    
+    let visible_min_lat = view_state.center_lat - lat_span / 2.0;
+    let visible_max_lat = view_state.center_lat + lat_span / 2.0;
+    let visible_min_lon = view_state.center_lon - lon_span / 2.0;
+    let visible_max_lon = view_state.center_lon + lon_span / 2.0;
+
+    // Draw the GPS points with offset from dragging.
     let plot_rect = rect.shrink(20.0);
     
     // Iterate and plot points.
     for (i, point) in plot_points.iter().enumerate() {
         // Convert GPS coordinates to screen coordinates.
-        let x = plot_rect.left() as f64 + ((point.lon - min_lon) / (max_lon - min_lon)) * plot_rect.width() as f64;
-        let y = plot_rect.bottom() as f64 - ((point.lat - min_lat) / (max_lat - min_lat)) * plot_rect.height() as f64;
+        let x = plot_rect.left() as f64 + 
+            ((point.lon - visible_min_lon) / (visible_max_lon - visible_min_lon)) * plot_rect.width() as f64;
+        let y = plot_rect.bottom() as f64 - 
+            ((point.lat - visible_min_lat) / (visible_max_lat - visible_min_lat)) * plot_rect.height() as f64;
         
-        let screen_pos = egui::Pos2::new(x as f32, y as f32);
+        let mut screen_pos = egui::Pos2::new(x as f32, y as f32);
+        
+        // Apply drag offset if currently dragging.
+        if response.dragged() {
+            screen_pos += view_state.drag_offset;
+        }
+        
+        // Only draw if within bounds.
+        if !plot_rect.contains(screen_pos) {
+            continue;
+        }
         
         // Colour based on speed.
-        // Set arbitrary speed zones.
-        // Potentially include speed zones in settings.
         let color = if point.speed > 100 {
             egui::Color32::RED
         } else if point.speed > 80 {
@@ -335,9 +401,15 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
         // Draw lines connecting consecutive points.
         if i > 0 {
             let prev_point = &plot_points[i - 1];
-            let prev_x = plot_rect.left() as f64 + ((prev_point.lon - min_lon) / (max_lon - min_lon)) * plot_rect.width() as f64;
-            let prev_y = plot_rect.bottom() as f64 - ((prev_point.lat - min_lat) / (max_lat - min_lat)) * plot_rect.height() as f64;
-            let prev_screen_pos = egui::Pos2::new(prev_x as f32, prev_y as f32);
+            let prev_x = plot_rect.left() as f64 + 
+                ((prev_point.lon - visible_min_lon) / (visible_max_lon - visible_min_lon)) * plot_rect.width() as f64;
+            let prev_y = plot_rect.bottom() as f64 - 
+                ((prev_point.lat - visible_min_lat) / (visible_max_lat - visible_min_lat)) * plot_rect.height() as f64;
+            let mut prev_screen_pos = egui::Pos2::new(prev_x as f32, prev_y as f32);
+            
+            if response.dragged() {
+                prev_screen_pos += view_state.drag_offset;
+            }
             
             ui.painter().line_segment( 
                 [prev_screen_pos, screen_pos],
@@ -361,6 +433,9 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
     ui.horizontal(|ui| {
         ui.label("GPS points:");
         ui.strong(format!("{}", plot_points.len()));
+        ui.separator();
+        ui.label("Zoom:");
+        ui.strong(format!("{:.1}x", view_state.zoom));
     });
     
     if let (Some(first), Some(last)) = (plot_points.first(), plot_points.last()) {
@@ -370,10 +445,15 @@ pub fn plot_gps_data(ui: &mut egui::Ui, scraper: &Scraper, selected_id: &Option<
         });
     }
 
-    // Show centrepoint of plot.
+    // Show centre coordinates.
     ui.horizontal(|ui| {
         ui.label("Map centre:");
-        ui.strong(format!("{:.6}, {:.6}", lat_centre, lon_centre));
+        ui.strong(format!("{:.6}, {:.6}", view_state.center_lat, view_state.center_lon));
+        if ui.button("Reset View").clicked() {
+            let center_lat = (padded_min_lat + padded_max_lat) / 2.0;
+            let center_lon = (padded_min_lon + padded_max_lon) / 2.0;
+            view_state.reset(center_lat, center_lon);
+        }
     });
 }
 
@@ -440,9 +520,9 @@ pub fn plot_gps_data_with_tiles(
         max_lon += lon_range * padding;
 
         // Calculate centre.
-        let centre_lat = (min_lat + max_lat) / 2.0;
-        let centre_lon = (min_lon + max_lon) / 2.0;
-        let centre_position = walkers::Position::from(Point::new(centre_lon, centre_lat));
+        let center_lat = (min_lat + max_lat) / 2.0;
+        let center_lon = (min_lon + max_lon) / 2.0;
+        let center_position = walkers::Position::from(Point::new(center_lon, center_lat));
 
         // Calculate appropriate zoom level to fit all points.
         // This is a rough approximation - adjust the multiplier if necessary.
@@ -462,15 +542,15 @@ pub fn plot_gps_data_with_tiles(
         };
 
         // Set the centre and zoom for the plot.
-        map_memory.center_at(centre_position);
+        map_memory.center_at(center_position);
         let _ = map_memory.set_zoom(zoom);
         *last_trip_id = Some(selected_trip.clone());
     }
 
     // Calculate the centre for display purposes.
-    let centre_lat = plot_points.iter().map(|p| p.lat).sum::<f64>() / plot_points.len() as f64;
-    let centre_lon = plot_points.iter().map(|p| p.lon).sum::<f64>() / plot_points.len() as f64;
-    let centre_position = walkers::Position::from(Point::new(centre_lon, centre_lat));
+    let center_lat = plot_points.iter().map(|p| p.lat).sum::<f64>() / plot_points.len() as f64;
+    let center_lon = plot_points.iter().map(|p| p.lon).sum::<f64>() / plot_points.len() as f64;
+    let center_position = walkers::Position::from(Point::new(center_lon, center_lat));
 
     // Create the GPS plotting plugin.
     let gps_plugin = GpsPlotPlugin { 
@@ -481,7 +561,7 @@ pub fn plot_gps_data_with_tiles(
     let map_size = egui::Vec2::new(ui.available_width().min(800.0), ui.available_height() - 95.0);
     let map_response = ui.add_sized(
         map_size,
-        Map::new(Some(tiles), map_memory, centre_position)
+        Map::new(Some(tiles), map_memory, center_position)
             .with_plugin(gps_plugin)
     );
     
@@ -517,7 +597,7 @@ pub fn plot_gps_data_with_tiles(
     // Show centre coordinates.
     ui.horizontal(|ui| {
         ui.label("Map centre:");
-        ui.strong(format!("{:.6}, {:.6}", centre_lat, centre_lon));
+        ui.strong(format!("{:.6}, {:.6}", center_lat, center_lon));
     });
     
     // Force repaint to ensure tiles keep loading.

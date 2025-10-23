@@ -10,12 +10,19 @@ pub fn draw_changelog_content(ui: &mut egui::Ui, _app: &mut MyApp) {
     ui.heading("Scraper Changelog");
     ui.separator();
 
+    ui.collapsing("0.3.0 - update release", |ui| {
+        ui.label("Expanded list of events supported in processing.");
+        ui.label("Added pan and zoom too plain gps plots.");
+        ui.label("Create log config file on start-up if not existing.");
+        ui.label("Updates to help.");
+    });
+
     ui.collapsing("0.2.0 - update release", |ui| {
         ui.label("Bug fixes to window sizing.");
         ui.label("Added time series data plotting, for analog, digital, and impulse series.");
         ui.label("Added display of unsupported events; no elaboration of event attributes.");
         ui.label("Added pan/zoom and time cursor function to time series plots.");
-   });
+    });
 
     ui.collapsing("0.1.0 - Initial release", |ui| {
         ui.label("Log parsing for trips and most events.");

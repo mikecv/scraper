@@ -195,7 +195,7 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
         ui.add_space(10.0);
     }
 
-    // Sat view GPS plot (pan and zoom).
+    // Satellite view GPS plot (pan and zoom).
     if let Some(texture) = &app.help_image_14 {
         ui.add_space(10.0);
         ui.add(egui::Image::new(texture).max_width(400.0));
@@ -305,4 +305,18 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
         ui.label("If the range limits above are exceeded the default values shown above will be used.");
         ui.label("Note that the width of the main screen can be varied within limits, but using too large a font may result in longer strings being clipped.");
     });
+
+    ui.collapsing("5.3 Logging settings", |ui| {
+        ui.label("There is various logging, at different levels that can be performed by the application.");
+        ui.label("If there is no logging configuration file in the top level directory, a default one will be created on application start.");
+        ui.label("As illustrated in the following figure the default configuration level is 'debug'.");
+        ui.label("For logging at a different level change the level to 'info' or 'warn'.");
+    });
+
+    // Logging configuration file.
+    if let Some(texture) = &app.help_image_22 {
+        ui.add_space(10.0);
+        ui.add(egui::Image::new(texture).max_width(400.0));
+        ui.add_space(10.0);
+    }
 }
