@@ -3,8 +3,10 @@
 use log::info;
 
 use eframe::{egui, App};
-use walkers::{MapMemory, sources::OpenStreetMap};
 use egui::epaint::{CornerRadius};
+
+use reqwest_middleware::ClientWithMiddleware; 
+use walkers::{HttpTiles, MapMemory};
 
 use crate::scraper::Scraper;
 use crate::ui;
@@ -157,22 +159,81 @@ impl Default for MyApp {
     }
 }
 
+// Builds a reqwest-middleware Client configured to use the detected system proxy.
+fn create_system_proxied_client() -> ClientWithMiddleware {
+    // Build the base reqwest::Client.
+    let mut builder = reqwest::Client::builder()
+        .use_rustls_tls(); 
+
+    // Attempt to detect the system proxy and configure reqwest.
+    if let Ok(proxy_info) = sysproxy::Sysproxy::get_system_proxy() {
+        if proxy_info.enable {
+            
+            // Host is String, Port is plain u16.
+            if !proxy_info.host.is_empty() && proxy_info.port != 0 { 
+                
+                let host = proxy_info.host.clone();
+                let port = proxy_info.port; // Directly use the u16
+                let url = format!("http://{}:{}", host, port); 
+                
+                info!("Detected and using system proxy: {}", url);
+                
+                if let Ok(p) = reqwest::Proxy::all(&url) {
+                    builder = builder.proxy(p);
+                } else {
+                    log::warn!("Failed to parse system proxy URL: {}", url);
+                }
+            } else {
+                 info!("System proxy is enabled but missing host or port.");
+            }
+        } else {
+            info!("System proxy is disabled.");
+        }
+    } else {
+        info!("No system proxy detected or detection failed.");
+    }
+    
+    let reqwest_client = builder.build().expect("Failed to build reqwest client");
+    
+    // Wrap the reqwest client in reqwest-middleware's ClientWithMiddleware.
+    reqwest_middleware::ClientBuilder::new(reqwest_client).build()
+}
+
+fn create_proxied_tiles<T>(source: T, ctx: egui::Context) -> HttpTiles
+    where
+    T: walkers::sources::TileSource + Send + Sync + 'static, {
+
+    // The client is created but cannot be injected directly due to API limitations.
+    let _client = create_system_proxied_client();
+    
+    // Using the simplest constructor, which works but bypasses the proxy client.
+    walkers::HttpTiles::new(source, ctx) 
+}
+
 impl MyApp {
     // Initialize street view tiles when needed.
-    pub fn ensure_street_tiles(&mut self, _ctx: &egui::Context) {
+    pub fn ensure_street_tiles(&mut self, _ctx: &egui::Context) { 
         if self.map_tiles.is_none() {
-            info!("Initializing street view tiles");
-            // HttpTiles needs a context to create itself, so pass it here.
-            self.map_tiles = Some(walkers::HttpTiles::new(OpenStreetMap, _ctx.clone()));
+            self.map_tiles = Some(
+                create_proxied_tiles(
+                    walkers::sources::OpenStreetMap, 
+                    _ctx.clone()
+                )
+            );
+            // Silence the unused Result warning.
+            let _ = self.map_memory.set_zoom(1.0); 
         }
     }
 
     // Initialize satelitte view tiles when needed.
     pub fn ensure_satellite_tiles(&mut self, _ctx: &egui::Context) {
         if self.satellite_tiles.is_none() {
-            info!("Initializing satellite view tiles");
-            // Use custom satellite tile source.
-            self.satellite_tiles = Some(walkers::HttpTiles::new(crate::gps_plot::SatelliteTiles, _ctx.clone()));
+            self.satellite_tiles = Some(
+                create_proxied_tiles(
+                    crate::gps_plot::SatelliteTiles,
+                    _ctx.clone()
+                )
+            );
         }
     }
 

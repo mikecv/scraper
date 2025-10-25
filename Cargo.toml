@@ -30,11 +30,24 @@ chrono = { version = "0.4", features = ["serde"] }
 eframe = "0.31.1"
 egui = "0.31.1"
 egui_plot = "0.31"
-walkers = "0.42.0"
 epaint = "0.31.1"
 geo-types = "0.7.16"
 image = "0.24"
 tokio = { version = "1.0", features = ["full"] }
+
+
+
+
+# Use sysproxy for OS-level proxy detection
+sysproxy = "0.3.0"
+
+# Configure reqwest to use rustls-tls instead of the default native-tls/openssl.
+# This solves the 'openssl-sys' linking error and improves portability.
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] } 
+reqwest-middleware = "0.4.2"
+
+# Walkers dependency
+walkers = "0.42.0" 
 
 # Scraper related.
 regex = "1.10"
