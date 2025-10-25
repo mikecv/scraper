@@ -208,9 +208,10 @@ impl Scraper {
         
         info!("Searching file for controller serial number.");
     
-        // Get the serial number of the controller.
-        // let sn_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\.\d{3})?(?: [AP]M)?)[:, ]UNIT ([0-9]+)(?: (.+))?$")?;
-        let sn_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\.\d+)?(?: [AP]M)?)[:, ]UNIT ([0-9]+)(?: (.+))?$")?;
+        // Get the serial number of the controller (microseconds on time).
+        // let sn_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\.\d+)?(?: [AP]M)?)[:, ]UNIT ([0-9]+)(?: (.+))?$")?;
+        // Additional string before UNIT,
+        let sn_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\.\d+)?(?: [AP]M)?) (?:\S+ )?UNIT ([0-9]+)(?: (.+))?$")?;
         let mut found_sn = false;
         
         // Process file line by line,
@@ -219,7 +220,7 @@ impl Scraper {
  
             if let Some(caps) = sn_pattern.captures(&line) {
                 let unit_number = &caps[3];
-                
+
                 // Combine unit number with optional suffix.
                 let unit = if let Some(suffix) = caps.get(4) {
                     format!("{} {}", unit_number, suffix.as_str())
@@ -284,8 +285,10 @@ impl Scraper {
         let reader = BufReader::new(file);
         info!("Searching file for controller events.");
 
-        // Get the controller events.
-        let ev_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2})(?:\.[0-9]{3})? EVENT ([0-9]+) ([0-9]+) ([-0-9]+)/([0-9]+)/([0-9]+)/([0-9]+)/([0-9]+) ([A-Z_]+) (.+)$")?;
+        // Get the controller events
+        // let ev_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2})(?:\.[0-9]{3})? EVENT ([0-9]+) ([0-9]+) ([-0-9]+)/([0-9]+)/([0-9]+)/([0-9]+)/([0-9]+) ([A-Z_]+) (.+)$")?;
+        // Extra string before EVENT.
+        let ev_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2})(?:\.[0-9]{3})? (?:\S+ )?EVENT ([0-9]+) ([0-9]+) ([-0-9]+)/([0-9]+)/([0-9]+)/([0-9]+)/([0-9]+) ([A-Z_]+) (.+)$")?;
 
         // Trip number for SIGNON event so that it can
         // be copied to the other events in the trip.
