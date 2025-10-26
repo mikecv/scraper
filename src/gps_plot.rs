@@ -430,6 +430,8 @@ pub fn plot_gps_data(
 
     // Show some statistics.
     ui.separator();
+    
+    // the statistics of gps points and zoom level.
     ui.horizontal(|ui| {
         ui.label("GPS points:");
         ui.strong(format!("{}", plot_points.len()));
@@ -439,9 +441,20 @@ pub fn plot_gps_data(
     });
     
     if let (Some(first), Some(last)) = (plot_points.first(), plot_points.last()) {
+        // Add the trip time details.
         ui.horizontal(|ui| {
             ui.label("Trip time:");
             ui.strong(format!("{} to {}", first._timestamp.format("%H:%M:%S"), last._timestamp.format("%H:%M:%S")));
+
+            // Add the reset button right-justified.
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui.button("Reset View").clicked() {
+                    let center_lat = (padded_min_lat + padded_max_lat) / 2.0;
+                    let center_lon = (padded_min_lon + padded_max_lon) / 2.0;
+                    view_state.reset(center_lat, center_lon);
+                }
+            });
+
         });
     }
 
@@ -449,11 +462,6 @@ pub fn plot_gps_data(
     ui.horizontal(|ui| {
         ui.label("Map centre:");
         ui.strong(format!("{:.6}, {:.6}", view_state.center_lat, view_state.center_lon));
-        if ui.button("Reset View").clicked() {
-            let center_lat = (padded_min_lat + padded_max_lat) / 2.0;
-            let center_lon = (padded_min_lon + padded_max_lon) / 2.0;
-            view_state.reset(center_lat, center_lon);
-        }
     });
 }
 
