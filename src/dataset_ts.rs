@@ -57,6 +57,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
             levels: Vec::new(),
             time_series_points: battery_points,
             multi_traces: Vec::new(),
+            tall_chart: false,
         });
     }
 
@@ -77,6 +78,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
             levels: Vec::new(),
             time_series_points: speed_points,
             multi_traces: Vec::new(),
+            tall_chart: false,
         });
     }
 
@@ -145,8 +147,8 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
             units: "Active".to_string(),
             levels: vec!["Start".to_string(), "Active".to_string()],
             time_series_points: Vec::new(),
-            // multi_traces: vec![xsidlestart_points, xsidle_trace_points],
             multi_traces: vec![xsidle_trace_points, xsidlestart_points],
+            tall_chart: false,
         });
     }
 
@@ -190,6 +192,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         levels: Vec::new(),
                         time_series_points: pulse_points,
                         multi_traces: Vec::new(),
+                        tall_chart: false,
                     });
                 }
             }
@@ -225,6 +228,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         levels: Vec::new(),
                         time_series_points: pulse_points,
                         multi_traces: Vec::new(),
+                        tall_chart: false,
                     });
                 }
             }
@@ -260,6 +264,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         levels: Vec::new(),
                         time_series_points: pulse_points,
                         multi_traces: Vec::new(),
+                        tall_chart: false,
                     });
                 }
             }
@@ -295,6 +300,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         levels: Vec::new(),
                         time_series_points: pulse_points,
                         multi_traces: Vec::new(),
+                        tall_chart: false,
                     });
                 }
             }
@@ -330,6 +336,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         levels: Vec::new(),
                         time_series_points: pulse_points,
                         multi_traces: Vec::new(),
+                        tall_chart: false,
                     });
                 }
             }
@@ -345,10 +352,15 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                             .and_then(|(_, value)| {
                                 // Translate severity strings to numeric levels.
                                 let numeric_level = match value.as_str() {
-                                    "-" => 1.0,  // Low
-                                    "W" => 2.0,  // Warning
-                                    "C" => 3.0,  // Critical
-                                    _ => {
+                                    "1" => 1.0,
+                                    "2" => 2.0,
+                                    "3" => 3.0,
+                                    "4" => 4.0,
+                                    "5" => 5.0,
+                                    "6" => 6.0,
+                                    "7" => 7.0,
+                                    "8" => 8.0,
+                                   _ => {
                                         // Try to parse as number (fallback).
                                         value.parse::<f32>().unwrap_or(1.0)
                                     }
@@ -374,6 +386,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         levels: vec!["Low".to_string(), "Warning".to_string(), "Critical".to_string()],
                         time_series_points: ev_points,
                         multi_traces: Vec::new(),
+                        tall_chart: false,
                     });
                 }
             } 
@@ -413,6 +426,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         levels: vec!["No Zone".to_string(), "1".to_string(), "2".to_string(), "3".to_string(), "4".to_string()],
                         time_series_points: ev_points,
                         multi_traces: Vec::new(),
+                        tall_chart: false,
                     });
                 }
             }
@@ -452,6 +466,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         levels: vec!["No Zone".to_string(), "1".to_string(), "2".to_string(), "3".to_string(), "4".to_string()],
                         time_series_points: ev_points,
                         multi_traces: Vec::new(),
+                        tall_chart: false,
                     });
                 }
             }
@@ -487,6 +502,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         levels: Vec::new(),
                         time_series_points: pulse_points,
                         multi_traces: Vec::new(),
+                        tall_chart: false,
                     });
                 }
             }
@@ -522,6 +538,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         levels: Vec::new(),
                         time_series_points: pulse_points,
                         multi_traces: Vec::new(),
+                        tall_chart: false,
                     });
                 }
             }
@@ -631,12 +648,99 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                 // Using "Crew" instead of Passenger as it fits on the plot better.
                 if driver_points.len() > 2 || passenger_points.len() > 2 {
                     datasets.push(TimeSeriesData {
-                        data_type: "DualDigital".to_string(),
+                        data_type: "MultiDigital".to_string(),
                         series_name: "UNBUCKLED".to_string(),
                         units: "Active".to_string(),
                         levels: vec!["Crew".to_string(), "Driver".to_string()],
                         time_series_points: Vec::new(),
                         multi_traces: vec![passenger_points, driver_points],
+                        tall_chart: false,
+                    });
+                }
+            }
+            "INPUT" => {
+                let mut input_traces: Vec<Vec<SinglePoint>> = vec![Vec::new(); 8];
+                
+                // Add trip start baseline for all input traces.
+                for trace in &mut input_traces {
+                    trace.push(SinglePoint {
+                        unix_time: trip_start_time,
+                        point_value: 0.0,
+                    });
+                }
+                
+                // Process all INPUT events.
+                for data in trip_data.iter().filter(|d| d.event_type == event_type) {
+                    // Get which input this is (1-8)
+                    if let Some(input_num) = data.ev_detail.iter()
+                        .find(|(tag, _)| tag == "Input")
+                        .and_then(|(_, value)| value.parse::<usize>().ok())
+                    {
+                        // Only process valid input numbers (1-8).
+                        if input_num >= 1 && input_num <= 8 {
+                            // Use a base 0 index.
+                            let trace_index = input_num - 1;
+                            // let pulse_height = input_num as f32;
+                            // Divide by the 8 levels as plot y axis is 0 to 8.
+                            let pulse_height = input_num as f32 / 8.0;
+
+                            // Get the duration of the pulse.
+                            if let Some(duration) = data.ev_detail.iter()
+                                .find(|(tag, _)| tag == "Duration")
+                                .and_then(|(_, value)| value.parse::<u64>().ok())
+                            {
+                                let event_end_time = data.unix_time;
+                                let event_start_time = if event_end_time >= duration {
+                                    event_end_time - duration
+                                } else {
+                                    trip_start_time
+                                };
+                                
+                                // Create pulse at the input number level (1-8).
+                                input_traces[trace_index].push(SinglePoint {
+                                    unix_time: event_start_time,
+                                    point_value: 0.0,
+                                });
+                                input_traces[trace_index].push(SinglePoint {
+                                    unix_time: event_start_time,
+                                    point_value: pulse_height,
+                                });
+                                input_traces[trace_index].push(SinglePoint {
+                                    unix_time: event_end_time,
+                                    point_value: pulse_height,
+                                });
+                                input_traces[trace_index].push(SinglePoint {
+                                    unix_time: event_end_time,
+                                    point_value: 0.0,
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                // Add trip end baseline for all input traces.
+                for trace in &mut input_traces {
+                    trace.push(SinglePoint {
+                        unix_time: trip_end_time,
+                        point_value: 0.0,
+                    });
+                }
+
+                // Only create dataset if there's at least one trace with events.
+                let has_events = input_traces.iter().any(|trace| trace.len() > 2);
+                
+                if has_events {
+                    datasets.push(TimeSeriesData {
+                        data_type: "MultiDigital".to_string(),
+                        series_name: "INPUT".to_string(),
+                        units: "Active".to_string(),
+                        levels: vec![
+                            "1".to_string(), "2".to_string(), "3".to_string(), "4".to_string(),
+                            "5".to_string(), "6".to_string(), "7".to_string(), "8".to_string()
+                        ],
+                        time_series_points: Vec::new(),
+                        multi_traces: input_traces,
+                        tall_chart: true,
                     });
                 }
             } _ => {}

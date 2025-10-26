@@ -23,6 +23,7 @@ pub struct TimeSeriesData {
     pub levels: Vec<String>,
     pub time_series_points: Vec<SinglePoint>,
     pub multi_traces: Vec<Vec<SinglePoint>>,
+    pub tall_chart: bool,
 }
 
 // Plot state to maintain synchronized pan/zoom across multiple plots.
@@ -58,6 +59,7 @@ impl Default for PlotState {
 // Constants for plot dimensions,
 // as well as format and spacing between plots.
 const PLOT_HEIGHT: f32 = 140.0;
+const PLOT_HEIGHT_TALL: f32 = 250.0;
 const SPACE_BETWEEN_PLOTS: f32 = 5.0;
 const MARGIN_LEFT: f32 = 55.0;
 const MARGIN_RIGHT: f32 = 35.0;
@@ -212,7 +214,12 @@ pub fn plot_time_series_data(
 
                     for dataset in datasets {
                         // Here's the space allocation for a single plot.
-                        let plot_size = egui::vec2(ui.available_width(), PLOT_HEIGHT);
+                        // There are 2 sizes for plots - normal and tall.
+                        // The dataset attribute 'tall_chart' signigies which hight to use.
+                        let mut plot_size = egui::vec2(ui.available_width(), PLOT_HEIGHT);
+                        if dataset.tall_chart == true {
+                            plot_size = egui::vec2(ui.available_width(), PLOT_HEIGHT_TALL);
+                        }
                         let (plot_response, painter) = ui.allocate_painter(plot_size, egui::Sense::click_and_drag());
 
                         // Handle cursor interaction (takes priority when enabled).
@@ -449,7 +456,7 @@ fn draw_plot_with_axes(
             );
         }
 
-    } else if dataset.data_type == "DualDigital" || dataset.data_type == "ImpulseDigitalCombo" {
+    } else if dataset.data_type == "MultiDigital" || dataset.data_type == "ImpulseDigitalCombo" {
         // For dual digital signals, show each level with its label.
         if !dataset.levels.is_empty() {
             let total_levels = dataset.levels.len();
@@ -587,7 +594,7 @@ fn draw_plot_with_axes(
                 grid_stroke,
             );
         }
-    } else if dataset.data_type == "DualDigital" || dataset.data_type == "ImpulseDigitalCombo" {
+    } else if dataset.data_type == "MultiDigital" || dataset.data_type == "ImpulseDigitalCombo" {
         // Grid lines for each level.
         if !dataset.levels.is_empty() {
             let total_levels = dataset.levels.len();
@@ -720,8 +727,8 @@ fn plot_data_points(
         return;
     }
 
-    // Special handling for DualDigital - plot each trace separately.
-    if dataset.data_type == "DualDigital" {
+    // Special handling for MultiDigital - plot each trace separately.
+    if dataset.data_type == "MultiDigital" {
         let line_colour = colours::ts_digital_colour(dark_mode);
         let line_stroke = egui::Stroke::new(LINE_THICKNESS, line_colour);
         

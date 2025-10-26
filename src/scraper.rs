@@ -260,7 +260,7 @@ impl Scraper {
         for line_result in reader.lines() {
             let line = line_result?;
             
-            // Check if we should stop uprocessing.
+            // Check if we should stop processing.
             if let Some(captures) = fw_pattern.captures(&line) {
                 found_fw = true;
                 // Group 11 contains the firmware versin.
@@ -665,13 +665,13 @@ fn ungroup_event_data(event_type: String, sub_data: &str, on_trip: &mut bool, ev
 
             if let Some(captures) = sub_input_pattern.captures(sub_data) {
                 if let Some(input_num) = captures.get(1) {
-                    result.push(("Input number".to_string(), input_num.as_str().to_string()));
+                    result.push(("Input".to_string(), input_num.as_str().to_string()));
                 }
                 if let Some(input_state) = captures.get(2) {
-                    result.push(("Active state".to_string(), input_state.as_str().to_string()));
+                    result.push(("State".to_string(), input_state.as_str().to_string()));
                 }
                 if let Some(active_time) = captures.get(3) {
-                    result.push(("Time active".to_string(), active_time.as_str().to_string()));
+                    result.push(("Duration".to_string(), active_time.as_str().to_string()));
                 }
                 if let Some(battery) = captures.get(4) {
                     if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
