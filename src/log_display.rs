@@ -9,8 +9,8 @@ use crate::egui::{ScrollArea, Ui};
 
 use crate::colours;
 use crate::scraper::ScrapedData;
-use crate::DETAILS;
-use crate::SETTINGS;
+use crate::setting_up::DETAILS;
+use crate::setting_up::SETTINGS;
 use crate::settings::Settings;
 
 // Simple UI state to hold processed display data.

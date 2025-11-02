@@ -801,18 +801,21 @@ fn plot_data_points(
 
         // Draw each level.
         for (index, level_name) in dataset.levels.iter().enumerate() {
-            let level_value = (index + 1) as f32;
-            let y_ratio = level_value / total_levels as f32;
-            let pos_y = plot_rect.max.y - (y_ratio * plot_rect.height());
-
-            // Draw tick mark.
+            // Calculate the center Y position of this trace's band
+            let band_bottom = index as f32 / total_levels as f32;
+            let band_top = (index + 1) as f32 / total_levels as f32;
+            let band_center = (band_bottom + band_top) / 2.0;
+            
+            let pos_y = plot_rect.max.y - (band_center * plot_rect.height());
+            
+            // Draw tick mark at the centered position
             painter.line_segment(
                 [egui::pos2(plot_rect.min.x - 5.0, pos_y), 
                 egui::pos2(plot_rect.min.x, pos_y)],
                 egui::Stroke::new(1.0, axis_colour),
             );
             
-            // Draw level name.
+            // Draw level name at the centered position
             painter.text(
                 egui::pos2(plot_rect.min.x - 10.0, pos_y),
                 egui::Align2::RIGHT_CENTER,

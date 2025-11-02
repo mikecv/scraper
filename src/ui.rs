@@ -11,7 +11,7 @@ use crate::colours;
 use crate::app::MyApp;
 use crate::help_content;
 use crate::changelog_content;
-use crate::DETAILS;
+use crate::setting_up::DETAILS;
 
 // Function to draw the menu bar.
 pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
