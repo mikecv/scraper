@@ -875,8 +875,12 @@ fn plot_data_points(
             
             let line_stroke = egui::Stroke::new(LINE_THICKNESS, impulse_colour);
 
-            // Convert SinglePoints to screen coordinates using inline mapping.
+            // Convert SinglePoints to screen coordinates with time range filtering.
             let screen_points: Vec<egui::Pos2> = trace.iter()
+                .filter(|p| {
+                    // Only include points within the visible time range
+                    p.unix_time >= time_min && p.unix_time <= time_max
+                })
                 .map(|p| {
                     // Inline X mapping: Scales data to normalized plot width, then offsets by plot start.
                     let x_normalized = (p.unix_time as f64 - time_min as f64) / time_range;
