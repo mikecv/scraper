@@ -727,7 +727,7 @@ fn plot_data_points(
         return;
     }
 
-    // Special handling for MultiDigital - plot each trace separately.
+    // Special handling for multi-plot each trace separately.
     if dataset.data_type == "MultiDigital" {
         let line_colour = colours::ts_digital_colour(dark_mode);
         let line_stroke = egui::Stroke::new(LINE_THICKNESS, line_colour);
@@ -788,7 +788,116 @@ fn plot_data_points(
         
         return;
     }
-   
+
+    // Special handling for stacked pulses (as used for INPUT events).
+    else if dataset.data_type == "StackedPulses" {
+        
+        // Levels for y-ticks.
+        let total_levels = dataset.levels.len();
+
+        // Set colours for plot axes, and text.
+        let axis_colour = colours::plot_axis_colour(dark_mode);
+        let text_colour = colours::plot_text_colour(dark_mode);
+
+        // Draw each level.
+        for (index, level_name) in dataset.levels.iter().enumerate() {
+            let level_value = (index + 1) as f32;
+            let y_ratio = level_value / total_levels as f32;
+            let pos_y = plot_rect.max.y - (y_ratio * plot_rect.height());
+
+            // Draw tick mark.
+            painter.line_segment(
+                [egui::pos2(plot_rect.min.x - 5.0, pos_y), 
+                egui::pos2(plot_rect.min.x, pos_y)],
+                egui::Stroke::new(1.0, axis_colour),
+            );
+            
+            // Draw level name.
+            painter.text(
+                egui::pos2(plot_rect.min.x - 10.0, pos_y),
+                egui::Align2::RIGHT_CENTER,
+                level_name.clone(),
+                egui::FontId::proportional(10.0),
+                text_colour,
+            );
+        }
+
+        // Draw grid lines.
+        let grid_colour = colours::ts_grid_lines_colour(dark_mode);
+        let grid_stroke = egui::Stroke::new(0.5, grid_colour);
+
+
+        // Grid lines for each stacked level.
+        let total_levels = dataset.levels.len();
+        let mut y_positions = Vec::new();
+        
+        // Add baseline at bottom.
+        y_positions.push(plot_rect.max.y);
+        
+        // Add positions for each level.
+        for level_index in 1..=total_levels {
+            let level_value = level_index as f32;
+            let y_ratio = level_value / total_levels as f32;
+            let y_pos = plot_rect.max.y - (y_ratio * plot_rect.height());
+            y_positions.push(y_pos);
+        }
+        
+        // Draw grid line for each position.
+        for y_pos in y_positions {
+            painter.line_segment(
+                [egui::pos2(plot_rect.min.x, y_pos), 
+                egui::pos2(plot_rect.max.x, y_pos)],
+                grid_stroke,
+            );
+        }
+
+        let time_range = (time_max - time_min) as f64;
+        let y_range = (y_max - y_min) as f64;
+        
+        // This function must be called only if time_range and y_range are non-zero.
+        if time_range == 0.0 || y_range == 0.0 {
+            return;
+        }
+
+        for trace in &dataset.multi_traces {
+            
+            if trace.is_empty() { 
+                continue; 
+            }
+
+            // Determine Polarity for Colour based on logic mode.
+            // The trace points are always structured: [TripStart, BaselineBefore, PulseActive, ...].
+            let impulse_colour = if trace.len() >= 3 && trace[2].point_value > trace[1].point_value {
+                colours::stacked_digital_hi_colour(dark_mode)
+            } else {
+                colours::stacked_digital_lo_colour(dark_mode)
+            };
+            
+            let line_stroke = egui::Stroke::new(LINE_THICKNESS, impulse_colour);
+
+            // Convert SinglePoints to screen coordinates using inline mapping.
+            let screen_points: Vec<egui::Pos2> = trace.iter()
+                .map(|p| {
+                    // Inline X mapping: Scales data to normalized plot width, then offsets by plot start.
+                    let x_normalized = (p.unix_time as f64 - time_min as f64) / time_range;
+                    let x_pos = plot_rect.left() + (plot_rect.width() * x_normalized as f32);
+
+                    // Inline Y mapping: Scales data to normalized plot height, then maps to inverted screen space.
+                    let y_normalized = (p.point_value as f64 - y_min as f64) / y_range;
+                    let y_pos = plot_rect.bottom() - (plot_rect.height() * y_normalized as f32);
+                    
+                    egui::pos2(x_pos, y_pos)
+                })
+                .collect();
+            
+            // Draw lines connecting the points (the actual pulse shape).
+            // This draws the outline of the digital signal.
+            for i in 1..screen_points.len() {
+                painter.line_segment([screen_points[i-1], screen_points[i]], line_stroke);
+            }
+        }
+    }
+
     // Special handling for ImpulseDigitalCombo - plot each trace separately.
     if dataset.data_type == "ImpulseDigitalCombo" {
         let line_colour_digital = colours::ts_digital_colour(dark_mode);
@@ -845,11 +954,11 @@ fn plot_data_points(
             }
         }
 
-        // XSIDLESTART Impulse (Index 0 in multi_traces)
+        // XSIDLESTART Impulse (Index 0 in multi_traces).
         // So that XSIDLESTART pulses stand out have them at the front.
         let impulse_trace = &dataset.multi_traces[1];
 
-        // The Y-max is 2.0 (from helpers_ts::calculate_y_range)
+        // The Y-max is 2.0 (from helpers_ts::calculate_y_range).
         let total_levels = 2.0; 
 
         for point in impulse_trace {

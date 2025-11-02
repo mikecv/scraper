@@ -10,6 +10,11 @@ pub fn draw_changelog_content(ui: &mut egui::Ui, _app: &mut MyApp) {
     ui.heading("Scraper Changelog");
     ui.separator();
 
+    ui.collapsing("0.4.0 - update release", |ui| {
+        ui.label("Added INPUT events to time series plots.");
+        ui.label("Automatically accept certificates for tiles links.");
+    });
+
     ui.collapsing("0.3.0 - update release", |ui| {
         ui.label("Expanded list of events supported in processing.");
         ui.label("Added pan and zoom too plain gps plots.");

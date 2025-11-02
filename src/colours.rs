@@ -26,7 +26,7 @@ pub fn plot_axis_colour(dark_mode: bool) -> Color32 {
     if dark_mode {
         Color32::from_rgb(169, 169, 169)
     } else {
-        Color32::from_rgb(211, 211, 211)
+        Color32::from_rgb(130, 130, 130)
     }
 }
 
@@ -207,6 +207,24 @@ pub fn ts_impact_low_colour(dark_mode: bool) -> egui::Color32 {
         egui::Color32::from_rgb(238, 245, 78)
     } else {
         egui::Color32::from_rgb(236, 245, 7)
+    }
+}
+
+// Colours for time series stacked digitsls plot line (active high).
+pub fn stacked_digital_hi_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgb(77, 77, 255)
+    } else {
+        Color32::from_rgb(128, 128, 255)
+    }
+}
+
+// Colours for time series stacked digitsls plot line (active low).
+pub fn stacked_digital_lo_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgb(255, 26, 198)
+    } else {
+        Color32::from_rgb(255, 128, 223)
     }
 }
 

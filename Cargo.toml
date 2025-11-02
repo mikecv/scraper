@@ -1,6 +1,6 @@
 [package]
 name = "scraper"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 
 # Windows build doesn't build becaure tinyfiledialogs tries to compile
@@ -35,16 +35,22 @@ geo-types = "0.7.16"
 image = "0.24"
 tokio = { version = "1.0", features = ["full"] }
 
-
-
-
 # Use sysproxy for OS-level proxy detection
 sysproxy = "0.3.0"
 
 # Configure reqwest to use rustls-tls instead of the default native-tls/openssl.
 # This solves the 'openssl-sys' linking error and improves portability.
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] } 
-reqwest-middleware = "0.4.2"
+# IMPORTANT: rustls-native-certs enables loading system certificate store.
+reqwest-middleware = "0.2.2"
+reqwest-retry = "0.2.1"
+reqwest = { version = "0.11", features = ["rustls-tls", "serde_json", "gzip", "stream", "rustls-native-certs"] }
+
+# Mozilla's root certificates for use with the webpki or rustls crates.
+webpki-roots = "1.0.3"
+
+# Add rustls and rustls-native-certs to load system certificates.
+rustls = "0.21"
+rustls-native-certs = "0.6"
 
 # Walkers dependency
 walkers = "0.42.0" 

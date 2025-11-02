@@ -84,7 +84,7 @@ lazy_static! {
     static ref DETAILS: Mutex<Details> = {
         let details = Details {
             program_name:           "Scraper".to_string(),
-            program_ver:            "0.3.0".to_string(),
+            program_ver:            "0.4.0".to_string(),
             program_date:           "2025".to_string(),
             program_devs:           vec!["mdc".to_string()],
             program_web:            "galacticwingcommander".to_string(),

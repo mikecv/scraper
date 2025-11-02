@@ -4,8 +4,6 @@ use log::info;
 
 use eframe::{egui, App};
 use egui::epaint::{CornerRadius};
-
-use reqwest_middleware::ClientWithMiddleware; 
 use walkers::{HttpTiles, MapMemory};
 
 use crate::scraper::Scraper;
@@ -159,55 +157,12 @@ impl Default for MyApp {
     }
 }
 
-// Builds a reqwest-middleware Client configured to use the detected system proxy.
-fn create_system_proxied_client() -> ClientWithMiddleware {
-    // Build the base reqwest::Client.
-    let mut builder = reqwest::Client::builder()
-        .use_rustls_tls(); 
-
-    // Attempt to detect the system proxy and configure reqwest.
-    if let Ok(proxy_info) = sysproxy::Sysproxy::get_system_proxy() {
-        if proxy_info.enable {
-            
-            // Host is String, Port is plain u16.
-            if !proxy_info.host.is_empty() && proxy_info.port != 0 { 
-                
-                let host = proxy_info.host.clone();
-                let port = proxy_info.port; // Directly use the u16
-                let url = format!("http://{}:{}", host, port); 
-                
-                info!("Detected and using system proxy: {}", url);
-                
-                if let Ok(p) = reqwest::Proxy::all(&url) {
-                    builder = builder.proxy(p);
-                } else {
-                    log::warn!("Failed to parse system proxy URL: {}", url);
-                }
-            } else {
-                 info!("System proxy is enabled but missing host or port.");
-            }
-        } else {
-            info!("System proxy is disabled.");
-        }
-    } else {
-        info!("No system proxy detected or detection failed.");
-    }
-    
-    let reqwest_client = builder.build().expect("Failed to build reqwest client");
-    
-    // Wrap the reqwest client in reqwest-middleware's ClientWithMiddleware.
-    reqwest_middleware::ClientBuilder::new(reqwest_client).build()
-}
-
 fn create_proxied_tiles<T>(source: T, ctx: egui::Context) -> HttpTiles
     where
     T: walkers::sources::TileSource + Send + Sync + 'static, {
-
-    // The client is created but cannot be injected directly due to API limitations.
-    let _client = create_system_proxied_client();
-    
-    // Using the simplest constructor, which works but bypasses the proxy client.
-    walkers::HttpTiles::new(source, ctx) 
+        // Now we rely on the internal reqwest client to automatically use
+        // the system proxy and native certificates (via Cargo.toml features).
+        walkers::HttpTiles::new(source, ctx) 
 }
 
 impl MyApp {
