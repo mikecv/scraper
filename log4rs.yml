@@ -17,6 +17,6 @@ appenders:
         pattern: "logs/scraper{}.log"
 
 root:
-  level: debug
+  level: info
   appenders:
     - log_file

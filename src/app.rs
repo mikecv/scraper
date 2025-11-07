@@ -4,8 +4,10 @@ use log::info;
 
 use eframe::{egui, App};
 use egui::epaint::{CornerRadius};
-use walkers::{HttpTiles, MapMemory};
+use walkers::{MapMemory};
+use walkers::sources::OpenStreetMap;
 
+use crate::gps_plot::{create_http_client, SatelliteTiles};
 use crate::scraper::Scraper;
 use crate::ui;
 use crate::log_display::UiState;
@@ -157,25 +159,19 @@ impl Default for MyApp {
     }
 }
 
-fn create_proxied_tiles<T>(source: T, ctx: egui::Context) -> HttpTiles
-    where
-    T: walkers::sources::TileSource + Send + Sync + 'static, {
-        // Now we rely on the internal reqwest client to automatically use
-        // the system proxy and native certificates (via Cargo.toml features).
-        walkers::HttpTiles::new(source, ctx) 
-}
-
 impl MyApp {
     // Initialize street view tiles when needed.
     pub fn ensure_street_tiles(&mut self, _ctx: &egui::Context) { 
         if self.map_tiles.is_none() {
+            let _http_client = create_http_client();
+            let http_options = walkers::HttpOptions::default();
             self.map_tiles = Some(
-                create_proxied_tiles(
-                    walkers::sources::OpenStreetMap, 
-                    _ctx.clone()
+                walkers::HttpTiles::with_options(
+                    OpenStreetMap,
+                    http_options,
+                    _ctx.clone(),
                 )
             );
-            // Silence the unused Result warning.
             let _ = self.map_memory.set_zoom(1.0); 
         }
     }
@@ -183,10 +179,13 @@ impl MyApp {
     // Initialize satelitte view tiles when needed.
     pub fn ensure_satellite_tiles(&mut self, _ctx: &egui::Context) {
         if self.satellite_tiles.is_none() {
+            let _http_client = create_http_client();
+            let http_options = walkers::HttpOptions::default();
             self.satellite_tiles = Some(
-                create_proxied_tiles(
-                    crate::gps_plot::SatelliteTiles,
-                    _ctx.clone()
+                walkers::HttpTiles::with_options(
+                    SatelliteTiles,
+                    http_options,
+                    _ctx.clone(),
                 )
             );
         }

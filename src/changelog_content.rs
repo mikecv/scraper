@@ -5,12 +5,13 @@ use eframe::egui;
 
 use crate::app::MyApp;
 
-// Render changelog entriest using eframe calls.
+// Render changelog entries using eframe calls.
 pub fn draw_changelog_content(ui: &mut egui::Ui, _app: &mut MyApp) {
     ui.heading("Scraper Changelog");
     ui.separator();
 
         ui.collapsing("0.5.0 - update release", |ui| {
+        ui.label("Changed gps tiles to accept client certificates.");
         ui.label("Reorganisation of setting setup into separate file.");
         ui.label("Reorganisation of logging function.");
     });

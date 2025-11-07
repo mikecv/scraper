@@ -29,7 +29,6 @@ impl Default for Settings {
 }
 
 // Program settings, not settable by user.
-
 #[derive(Debug, Clone)]
 pub struct Details {
     pub program_name:           String,

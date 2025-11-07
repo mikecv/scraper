@@ -82,19 +82,19 @@ fn create_details() -> Details {
         win_height:             500.0,
         max_win_height:         650.0,
 
-        help_win_width:         450.0,
+        help_win_width:         500.0,
         
-        min_help_win_height:    400.0,
-        help_win_height:        500.0,
+        min_help_win_height:    500.0,
+        help_win_height:        550.0,
         max_help_win_height:    600.0,
 
-        gps_win_width:          500.0,
-        gps_win_height:         500.0,
+        gps_win_width:          600.0,
+        gps_win_height:         600.0,
 
         time_series_win_width:  500.0,
-        time_series_win_height: 700.0,
+        time_series_win_height: 650.0,
 
-        changelog_win_width:    450.0,
-        changelog_win_height:   450.0,
+        changelog_win_width:    300.0,
+        changelog_win_height:   350.0,
     }
 }

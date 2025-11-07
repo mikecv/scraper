@@ -7,6 +7,7 @@ use chrono::{DateTime, NaiveDateTime, Utc, ParseError};
 use walkers::{Map, MapMemory, HttpTiles};
 use walkers::Plugin;
 use walkers::sources::{TileSource, Attribution};
+use reqwest::Client;
 
 use crate::scraper::{Scraper, ScrapedData};
 use crate::app::PlotViewState;
@@ -610,4 +611,21 @@ pub fn plot_gps_data_with_tiles(
     
     // Force repaint to ensure tiles keep loading.
     ui.ctx().request_repaint();
+}
+
+// Create a reqwest::Client configured with the Cargo.toml features.
+// Ensures that the application uses the system's root certificates for TLS validation.
+pub fn create_http_client() -> Client {
+    // Client::builder().build() ensures that the client is built using the features.
+    match Client::builder().build() {
+        Ok(client) => {
+            log::info!("Successfully created reqwest::Client with rustls-tls-native-certs configuration.");
+            client
+        },
+        Err(e) => {
+            // Log the error and fall back to a default client.
+            log::error!("Failed to build reqwest::Client with custom TLS features: {}. Falling back to a default client.", e);
+            Client::new()
+        }
+    }
 }
