@@ -660,6 +660,8 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
             }
             "INPUT" => {
                 let mut input_traces: Vec<Vec<SinglePoint>> = vec![Vec::new(); 8];
+                // Track the polarity (state) for each input trace.
+                let mut input_polarities: Vec<Option<i32>> = vec![None; 8];
                 const NUM_TRACES: f32 = 8.0;
 
                 // Process all events and add pulses.
@@ -673,7 +675,10 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                             let state_tag = data.ev_detail.iter()
                                 .find(|(tag, _)| tag == "State")
                                 .and_then(|(_, value)| value.parse::<i32>().ok())
-                                .unwrap_or(1); 
+                                .unwrap_or(1);
+                            
+                            // Store the polarity for this trace.
+                            input_polarities[trace_index] = Some(state_tag);
                             
                             // Vertical Stacking Calculation.
                             let i = trace_index as f32;
@@ -697,22 +702,33 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                                 .and_then(|(_, value)| value.parse::<u64>().ok())
                             {
                                 let event_end_time = data.unix_time;
-                                let event_start_time = if event_end_time >= duration {
+                                let calculated_start_time = if event_end_time >= duration {
                                     event_end_time - duration
                                 } else {
+                                    0
+                                };
+                                
+                                // If the event started before the trip, clamp it to trip start.
+                                let event_start_time = if calculated_start_time < trip_start_time {
                                     trip_start_time
+                                } else {
+                                    calculated_start_time
                                 };
                                 
                                 let current_trace = &mut input_traces[trace_index];
-                                let last_point_is_baseline_at_same_time = current_trace.last()
-                                    .map_or(false, |last| last.unix_time == event_start_time && (last.point_value - y_baseline).abs() < f32::EPSILON);
                                 
-                                // Baseline before pulse (conditional insertion).
-                                if !last_point_is_baseline_at_same_time {
-                                    current_trace.push(SinglePoint {
-                                        unix_time: event_start_time,
-                                        point_value: y_baseline, 
-                                    });
+                                // Only add baseline before pulse if event didn't start before trip.
+                                if calculated_start_time >= trip_start_time {
+                                    let last_point_is_baseline_at_same_time = current_trace.last()
+                                        .map_or(false, |last| last.unix_time == event_start_time && (last.point_value - y_baseline).abs() < f32::EPSILON);
+                                    
+                                    // Baseline before pulse (conditional insertion).
+                                    if !last_point_is_baseline_at_same_time {
+                                        current_trace.push(SinglePoint {
+                                            unix_time: event_start_time,
+                                            point_value: y_baseline, 
+                                        });
+                                    }
                                 }
 
                                 // The pulse rectangle.
@@ -725,7 +741,6 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                 }
                 
                 // Conditional addition of trip start and end baselines.
-                // This replaces any old unconditional loops and ensures inactive traces remain empty.
                 for (i, trace) in input_traces.iter_mut().enumerate() {
                     if !trace.is_empty() { 
                         let i_f32 = i as f32;
@@ -734,10 +749,9 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         let y_base = i_f32 * h_trace + h_trace * 0.10;
                         let h_sig = h_trace * 0.80;
                         
-                        // Determine the baseline based on the signal polarity
-                        let y_start_end_baseline = if trace.len() >= 2 {
-                            // Compare the second point (pulse level) with the first point (baseline before pulse)
-                            if trace[1].point_value > trace[0].point_value {
+                        // Determine the baseline using the stored polarity.
+                        let y_start_end_baseline = if let Some(state_tag) = input_polarities[i] {
+                            if state_tag == 1 {
                                 // Active HIGH: baseline is LOW.
                                 y_base
                             } else {
@@ -745,7 +759,7 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                                 y_base + h_sig
                             }
                         } else {
-                            // Fallback to low baseline if we can't determine polarity.
+                            // Fallback to low baseline if we somehow don't have polarity info.
                             y_base
                         };
                         
