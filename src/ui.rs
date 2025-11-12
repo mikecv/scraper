@@ -426,14 +426,14 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
                                         // Pass the Option<HttpTiles> directly, and unwrap it safely within the function.
                                         // Ensure app.map_tiles is Some(HttpTiles) when this path is taken.
                                         if let Some(map_tiles) = &mut app.map_tiles {
-                                            gps_plot::plot_gps_data_with_tiles(ui, &app.scraper, &app.selected_id, &mut app.map_memory, map_tiles, &mut app.last_trip_id);
+                                            gps_plot::plot_gps_data_with_tiles(ui, &app.scraper, &app.selected_id, &mut app.map_memory, map_tiles, &mut app.last_trip_id, &mut app.map_state);
                                         } else {
                                             ui.label("Error: Street tiles not initialized.");
                                         }
                                     }
                                     else if app.use_satellite_tiles {
                                         if let Some(map_tiles) = &mut app.satellite_tiles {
-                                            gps_plot::plot_gps_data_with_tiles(ui, &app.scraper, &app.selected_id, &mut app.map_memory, map_tiles, &mut app.last_trip_id);
+                                            gps_plot::plot_gps_data_with_tiles(ui, &app.scraper, &app.selected_id, &mut app.map_memory, map_tiles, &mut app.last_trip_id, &mut app.map_state);
                                         } else {
                                             ui.label("Error: Satellite tiles not initialized.");
                                         }

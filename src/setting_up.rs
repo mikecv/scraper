@@ -80,7 +80,7 @@ fn create_details() -> Details {
 
         min_win_height:         400.0,
         win_height:             500.0,
-        max_win_height:         650.0,
+        max_win_height:         750.0,
 
         help_win_width:         500.0,
         

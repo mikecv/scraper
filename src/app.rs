@@ -7,7 +7,7 @@ use egui::epaint::{CornerRadius};
 use walkers::{MapMemory};
 use walkers::sources::OpenStreetMap;
 
-use crate::gps_plot::{create_http_client, SatelliteTiles};
+use crate::gps_plot::{create_http_client, SatelliteTiles, MapState};
 use crate::scraper::Scraper;
 use crate::ui;
 use crate::log_display::UiState;
@@ -69,6 +69,7 @@ pub struct MyApp {
     pub last_trip_id: Option<String>,
     pub map_tiles: Option<walkers::HttpTiles>,
     pub satellite_tiles: Option<walkers::HttpTiles>,
+    pub map_state: Option<MapState>,  // ADD THIS LINE
     pub plot_state: PlotState,
     _runtime: tokio::runtime::Runtime,
     
@@ -129,6 +130,7 @@ impl Default for MyApp {
             last_trip_id: None,
             map_tiles: None,
             satellite_tiles: None,
+            map_state: None,  // ADD THIS LINE
             plot_state: PlotState::default(),
             _runtime: runtime,
 

@@ -23,6 +23,23 @@ pub struct PlotPoint {
     pub _rssi: u32,
 }
 
+#[derive(Debug, Clone)]
+pub struct MapState {
+    pub center_lat: f64,
+    pub center_lon: f64,
+    pub zoom: f64,
+}
+
+impl MapState {
+    pub fn new(lat: f64, lon: f64, zoom: f64) -> Self {
+        Self {
+            center_lat: lat,
+            center_lon: lon,
+            zoom,
+        }
+    }
+}
+
 // PlotPoint struct instantiated from scraped data.
 impl From<&ScrapedData> for PlotPoint {
     fn from(data: &ScrapedData) -> Self {
@@ -442,20 +459,25 @@ pub fn plot_gps_data(
     });
     
     if let (Some(first), Some(last)) = (plot_points.first(), plot_points.last()) {
-        // Add the trip time details.
         ui.horizontal(|ui| {
+            let trip_dur = last._timestamp - first._timestamp;
+            
+            // Extract hours, minutes, seconds from the duration.
+            let total_seconds = trip_dur.num_seconds();
+            let hours = total_seconds / 3600;
+            let minutes = (total_seconds % 3600) / 60;
+            let seconds = total_seconds % 60;
+
+            // Show start and end trip times, and also duration.
             ui.label("Trip time:");
-            ui.strong(format!("{} to {}", first._timestamp.format("%H:%M:%S"), last._timestamp.format("%H:%M:%S")));
-
-            // Add the reset button right-justified.
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.button("Reset View").clicked() {
-                    let center_lat = (padded_min_lat + padded_max_lat) / 2.0;
-                    let center_lon = (padded_min_lon + padded_max_lon) / 2.0;
-                    view_state.reset(center_lat, center_lon);
-                }
-            });
-
+            ui.strong(format!(
+                "{} to {}  ({:02}:{:02}:{:02})", 
+                first._timestamp.format("%H:%M:%S"), 
+                last._timestamp.format("%H:%M:%S"),
+                hours, 
+                minutes, 
+                seconds
+            ));
         });
     }
 
@@ -466,7 +488,7 @@ pub fn plot_gps_data(
     });
 }
 
-// Plot gps points with tiles.
+// Replace the plot_gps_data_with_tiles function with this updated version:
 pub fn plot_gps_data_with_tiles(
     ui: &mut egui::Ui, 
     scraper: &Scraper, 
@@ -474,6 +496,7 @@ pub fn plot_gps_data_with_tiles(
     map_memory: &mut MapMemory,
     tiles: &mut HttpTiles,
     last_trip_id: &mut Option<String>,
+    map_state: &mut Option<MapState>, // Add this parameter
 ) {
 
     // Get id of selected trip, or show prompt if no trip selected.
@@ -500,8 +523,10 @@ pub fn plot_gps_data_with_tiles(
         return;
     }
 
+    // Store the previous map state to detect changes.
+    let prev_zoom = map_state.as_ref().map(|s| s.zoom);
+
     // Only centre the map if the trip has changed.
-    // This allows user panning and zooming to work properly.
     let trip_changed = last_trip_id.as_ref() != Some(selected_trip);
     if trip_changed {
 
@@ -534,7 +559,6 @@ pub fn plot_gps_data_with_tiles(
         let center_position = walkers::Position::from(Point::new(center_lon, center_lat));
 
         // Calculate appropriate zoom level to fit all points.
-        // This is a rough approximation - adjust the multiplier if necessary.
         let lat_span = max_lat - min_lat;
         let lon_span = max_lon - min_lon;
         let max_span = lat_span.max(lon_span);
@@ -553,13 +577,20 @@ pub fn plot_gps_data_with_tiles(
         // Set the centre and zoom for the plot.
         map_memory.center_at(center_position);
         let _ = map_memory.set_zoom(zoom);
+        
+        // Update our tracked state.
+        *map_state = Some(MapState::new(center_lat, center_lon, zoom));
         *last_trip_id = Some(selected_trip.clone());
     }
 
-    // Calculate the centre for display purposes.
-    let center_lat = plot_points.iter().map(|p| p.lat).sum::<f64>() / plot_points.len() as f64;
-    let center_lon = plot_points.iter().map(|p| p.lon).sum::<f64>() / plot_points.len() as f64;
-    let center_position = walkers::Position::from(Point::new(center_lon, center_lat));
+    // Get current state or use default.
+    let current_state = map_state.as_ref().map(|s| s.clone()).unwrap_or_else(|| {
+        let center_lat = plot_points.iter().map(|p| p.lat).sum::<f64>() / plot_points.len() as f64;
+        let center_lon = plot_points.iter().map(|p| p.lon).sum::<f64>() / plot_points.len() as f64;
+        MapState::new(center_lat, center_lon, 14.0)
+    });
+
+    let center_position = walkers::Position::from(Point::new(current_state.center_lon, current_state.center_lat));
 
     // Create the GPS plotting plugin.
     let gps_plugin = GpsPlotPlugin { 
@@ -579,6 +610,37 @@ pub fn plot_gps_data_with_tiles(
         ui.ctx().set_cursor_icon(egui::CursorIcon::Grab);
     }
     
+    // Get the current zoom from map_memory.
+    let current_zoom = map_memory.zoom();
+    
+    // Detect if the map was panned or zoomed by checking response.
+    let map_moved = map_response.dragged() || 
+                    prev_zoom.map(|z| (z - current_zoom).abs() > 0.01).unwrap_or(false);
+    
+    // If the map moved, we need to approximate the new center.
+    // Since we can't directly read the center, we'll estimate based on drag delta.
+    let (display_lat, display_lon) = if map_moved {
+        let drag_delta = map_response.drag_delta();
+        if drag_delta.length() > 0.1 {
+            // Calculate approximate lat/lon change based on drag.
+            // This is an approximation - adjust the scale factor as needed.
+            let scale_factor = 0.00001 * (20.0 / current_zoom);
+            let new_lat = current_state.center_lat - (drag_delta.y as f64 * scale_factor);
+            let new_lon = current_state.center_lon + (drag_delta.x as f64 * scale_factor);
+            
+            // Update our tracked state.
+            *map_state = Some(MapState::new(new_lat, new_lon, current_zoom));
+            
+            (new_lat, new_lon)
+        } else {
+            // Update zoom only.
+            *map_state = Some(MapState::new(current_state.center_lat, current_state.center_lon, current_zoom));
+            (current_state.center_lat, current_state.center_lon)
+        }
+    } else {
+        (current_state.center_lat, current_state.center_lon)
+    };
+    
     // Show legend.
     ui.separator();
     ui.horizontal(|ui| {
@@ -594,22 +656,41 @@ pub fn plot_gps_data_with_tiles(
     ui.horizontal(|ui| {
         ui.label("GPS points:");
         ui.strong(format!("{}", plot_points.len()));
+        ui.separator();
+        ui.label("Zoom:");
+        ui.strong(format!("{:.1}", current_zoom));
     });
     
     if let (Some(first), Some(last)) = (plot_points.first(), plot_points.last()) {
         ui.horizontal(|ui| {
+            let trip_dur = last._timestamp - first._timestamp;
+            
+            // Extract hours, minutes, seconds from the duration
+            let total_seconds = trip_dur.num_seconds();
+            let hours = total_seconds / 3600;
+            let minutes = (total_seconds % 3600) / 60;
+            let seconds = total_seconds % 60;
+            
+            // Show start and end trip times, and also duration.
             ui.label("Trip time:");
-            ui.strong(format!("{} to {}", first._timestamp.format("%H:%M:%S"), last._timestamp.format("%H:%M:%S")));
+            ui.strong(format!(
+                "{} to {}  ({:02}:{:02}:{:02})", 
+                first._timestamp.format("%H:%M:%S"), 
+                last._timestamp.format("%H:%M:%S"),
+                hours, 
+                minutes, 
+                seconds
+            ));
         });
     }
-    
-    // Show centre coordinates.
+
+    // Show centre coordinates (now updating with map state).
     ui.horizontal(|ui| {
         ui.label("Map centre:");
-        ui.strong(format!("{:.6}, {:.6}", center_lat, center_lon));
+        ui.strong(format!("{:.6}, {:.6}", display_lat, display_lon));
     });
     
-    // Force repaint to ensure tiles keep loading.
+    // Force repaint to ensure tiles keep loading and stats update.
     ui.ctx().request_repaint();
 }
 
