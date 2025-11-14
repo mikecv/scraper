@@ -228,6 +228,24 @@ pub fn stacked_digital_lo_colour(dark_mode: bool) -> Color32 {
     }
 }
 
+// Colours for filling stacked digitals (INPUT events).
+pub fn stacked_digital_hi_fill_colour(dark_mode: bool) -> egui::Color32 {
+    if dark_mode {
+        egui::Color32::from_rgba_unmultiplied(100, 200, 100, 60)
+    } else {
+        egui::Color32::from_rgba_unmultiplied(100, 200, 100, 80)
+    }
+}
+
+// Colours for filling stacked difital inputs.
+pub fn stacked_digital_lo_fill_colour(dark_mode: bool) -> egui::Color32 {
+    if dark_mode {
+        egui::Color32::from_rgba_unmultiplied(200, 100, 100, 60)
+    } else {
+        egui::Color32::from_rgba_unmultiplied(200, 100, 100, 80)
+    }
+}
+
 // Time series fallback colour.
 pub fn ts_fallback_colour(dark_mode: bool) -> egui::Color32 {
     if dark_mode {

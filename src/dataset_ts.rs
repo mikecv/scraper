@@ -672,6 +672,8 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                     {
                         if input_num >= 1 && input_num <= 8 {
                             let trace_index = input_num - 1; 
+                            
+                            // Get the state: 0 = active LOW, 1 = active HIGH
                             let state_tag = data.ev_detail.iter()
                                 .find(|(tag, _)| tag == "State")
                                 .and_then(|(_, value)| value.parse::<i32>().ok())
@@ -688,59 +690,64 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                             // 80% signal height.
                             let h_sig = h_trace * 0.80;
 
-                            // Polarity Calculation.
-                            let (y_pulse, y_baseline) = if state_tag == 1 { 
-                                // State 1: Active HIGH (Pulse is high, Baseline is low).
-                                (y_base + h_sig, y_base)
-                            } else {
-                                // State 0: Active LOW (Pulse is low, Baseline is high).
+                            // Polarity Calculation:
+                            // state_tag == 0: Active LOW  -> pulse is LOW (y_base), baseline is HIGH (y_base + h_sig)
+                            // state_tag == 1: Active HIGH -> pulse is HIGH (y_base + h_sig), baseline is LOW (y_base)
+                            let (y_pulse, y_baseline) = if state_tag == 0 { 
+                                // State 0: Active LOW (Pulse is low, Baseline is high)
                                 (y_base, y_base + h_sig)
+                            } else {
+                                // State 1: Active HIGH (Pulse is high, Baseline is low)
+                                (y_base + h_sig, y_base)
                             };
                             
                             if let Some(duration) = data.ev_detail.iter()
                                 .find(|(tag, _)| tag == "Duration")
                                 .and_then(|(_, value)| value.parse::<u64>().ok())
                             {
-                                let event_end_time = data.unix_time;
-                                let calculated_start_time = if event_end_time >= duration {
-                                    event_end_time - duration
-                                } else {
-                                    0
-                                };
-                                
-                                // If the event started before the trip, clamp it to trip start.
-                                let event_start_time = if calculated_start_time < trip_start_time {
-                                    trip_start_time
-                                } else {
-                                    calculated_start_time
-                                };
-                                
-                                let current_trace = &mut input_traces[trace_index];
-                                
-                                // Only add baseline before pulse if event didn't start before trip.
-                                if calculated_start_time >= trip_start_time {
-                                    let last_point_is_baseline_at_same_time = current_trace.last()
-                                        .map_or(false, |last| last.unix_time == event_start_time && (last.point_value - y_baseline).abs() < f32::EPSILON);
+                                // Only process events with duration > 0
+                                if duration > 0 {
+                                    let event_end_time = data.unix_time;
+                                    let calculated_start_time = if event_end_time >= duration {
+                                        event_end_time - duration
+                                    } else {
+                                        0
+                                    };
                                     
-                                    // Baseline before pulse (conditional insertion).
-                                    if !last_point_is_baseline_at_same_time {
-                                        current_trace.push(SinglePoint {
-                                            unix_time: event_start_time,
-                                            point_value: y_baseline, 
-                                        });
+                                    // If the event started before the trip, clamp it to trip start.
+                                    let event_start_time = if calculated_start_time < trip_start_time {
+                                        trip_start_time
+                                    } else {
+                                        calculated_start_time
+                                    };
+                                    
+                                    let current_trace = &mut input_traces[trace_index];
+                                    
+                                    // Only add baseline before pulse if event didn't start before trip.
+                                    if calculated_start_time >= trip_start_time {
+                                        let last_point_is_baseline_at_same_time = current_trace.last()
+                                            .map_or(false, |last| last.unix_time == event_start_time && (last.point_value - y_baseline).abs() < f32::EPSILON);
+                                        
+                                        // Baseline before pulse (conditional insertion).
+                                        if !last_point_is_baseline_at_same_time {
+                                            current_trace.push(SinglePoint {
+                                                unix_time: event_start_time,
+                                                point_value: y_baseline, 
+                                            });
+                                        }
                                     }
-                                }
 
-                                // The pulse rectangle.
-                                current_trace.push(SinglePoint { unix_time: event_start_time, point_value: y_pulse });
-                                current_trace.push(SinglePoint { unix_time: event_end_time, point_value: y_pulse });
-                                current_trace.push(SinglePoint { unix_time: event_end_time, point_value: y_baseline });
+                                    // The pulse rectangle.
+                                    current_trace.push(SinglePoint { unix_time: event_start_time, point_value: y_pulse });
+                                    current_trace.push(SinglePoint { unix_time: event_end_time, point_value: y_pulse });
+                                    current_trace.push(SinglePoint { unix_time: event_end_time, point_value: y_baseline });
+                                }
                             }
                         }
                     }
                 }
                 
-                // Conditional addition of trip start and end baselines.
+                // Add trip start and end baselines for each trace that has events.
                 for (i, trace) in input_traces.iter_mut().enumerate() {
                     if !trace.is_empty() { 
                         let i_f32 = i as f32;
@@ -751,12 +758,12 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
                         
                         // Determine the baseline using the stored polarity.
                         let y_start_end_baseline = if let Some(state_tag) = input_polarities[i] {
-                            if state_tag == 1 {
-                                // Active HIGH: baseline is LOW.
-                                y_base
-                            } else {
-                                // Active LOW: baseline is HIGH.
+                            if state_tag == 0 {
+                                // Active LOW: baseline is HIGH
                                 y_base + h_sig
+                            } else {
+                                // Active HIGH: baseline is LOW
+                                y_base
                             }
                         } else {
                             // Fallback to low baseline if we somehow don't have polarity info.

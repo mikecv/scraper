@@ -829,7 +829,6 @@ fn plot_data_points(
         let grid_colour = colours::ts_grid_lines_colour(dark_mode);
         let grid_stroke = egui::Stroke::new(0.5, grid_colour);
 
-
         // Grid lines for each stacked level.
         let total_levels = dataset.levels.len();
         let mut y_positions = Vec::new();
@@ -870,7 +869,9 @@ fn plot_data_points(
 
             // Determine Polarity for Colour based on logic mode.
             // The trace points are always structured: [TripStart, BaselineBefore, PulseActive, ...].
-            let impulse_colour = if trace.len() >= 3 && trace[2].point_value > trace[1].point_value {
+            let is_active_high = trace.len() >= 3 && trace[2].point_value > trace[1].point_value;
+            
+            let impulse_colour = if is_active_high {
                 colours::stacked_digital_hi_colour(dark_mode)
             } else {
                 colours::stacked_digital_lo_colour(dark_mode)
@@ -879,7 +880,9 @@ fn plot_data_points(
             let line_stroke = egui::Stroke::new(LINE_THICKNESS, impulse_colour);
 
             // Convert SinglePoints to screen coordinates with time range filtering.
-            let screen_points: Vec<egui::Pos2> = trace.iter()
+            // Store both position AND original value for shading logic.
+            // Using a different name to avoid conflicts with other plot types.
+            let stacked_points: Vec<(egui::Pos2, f32)> = trace.iter()
                 .filter(|p| {
                     // Only include points within the visible time range
                     p.unix_time >= time_min && p.unix_time <= time_max
@@ -893,14 +896,61 @@ fn plot_data_points(
                     let y_normalized = (p.point_value as f64 - y_min as f64) / y_range;
                     let y_pos = plot_rect.bottom() - (plot_rect.height() * y_normalized as f32);
                     
-                    egui::pos2(x_pos, y_pos)
+                    (egui::pos2(x_pos, y_pos), p.point_value)
                 })
                 .collect();
             
+            // Add shading for active pulses.
+            // For active HIGH: shade when point_value is at the high level.
+            // For active LOW: shade when point_value is at the low level.
+            if stacked_points.len() > 1 {
+                // Determine baseline Y position for this trace.
+                let baseline_value = if is_active_high {
+                    // For active HIGH, baseline is the low value (first point after trip start).
+                    trace.get(0).map(|p| p.point_value).unwrap_or(0.0)
+                } else {
+                    // For active LOW, baseline is the high value (first point after trip start).
+                    trace.get(0).map(|p| p.point_value).unwrap_or(0.0)
+                };
+                
+                let baseline_y_normalized = (baseline_value as f64 - y_min as f64) / y_range;
+                let baseline_y_pos = plot_rect.bottom() - (plot_rect.height() * baseline_y_normalized as f32);
+                
+                for i in 0..stacked_points.len() - 1 {
+                    let (curr_pos, curr_value) = stacked_points[i];
+                    let (next_pos, _) = stacked_points[i + 1];
+                    
+                    // Determine if this segment should be shaded.
+                    let should_shade = if is_active_high {
+                        // For active HIGH: shade when value is above baseline.
+                        curr_value > baseline_value
+                    } else {
+                        // For active LOW: shade when value is below baseline.
+                        curr_value < baseline_value
+                    };
+                    
+                    if should_shade {
+                        let rect = egui::Rect::from_two_pos(
+                            egui::pos2(curr_pos.x, curr_pos.y),
+                            egui::pos2(next_pos.x, baseline_y_pos)
+                        );
+                        
+                        // Use appropriate fill colour based on polarity.
+                        let fill_colour = if is_active_high {
+                            colours::stacked_digital_hi_fill_colour(dark_mode)
+                        } else {
+                            colours::stacked_digital_lo_fill_colour(dark_mode)
+                        };
+                        
+                        painter.rect_filled(rect, 0.0, fill_colour);
+                    }
+                }
+            }
+            
             // Draw lines connecting the points (the actual pulse shape).
             // This draws the outline of the digital signal.
-            for i in 1..screen_points.len() {
-                painter.line_segment([screen_points[i-1], screen_points[i]], line_stroke);
+            for i in 1..stacked_points.len() {
+                painter.line_segment([stacked_points[i-1].0, stacked_points[i].0], line_stroke);
             }
         }
     }
