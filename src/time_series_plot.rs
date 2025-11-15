@@ -867,16 +867,24 @@ fn plot_data_points(
                 continue; 
             }
 
-            // Determine Polarity for Colour based on logic mode.
-            // The trace points are always structured: [TripStart, BaselineBefore, PulseActive, ...].
-            let is_active_high = trace.len() >= 3 && trace[2].point_value > trace[1].point_value;
-            
+            // Determine polarity by comparing pulse value to baseline value.
+            // The first point is always the trip_start baseline.
+            // Find the first pulse point (different from baseline).
+            let baseline_value = trace.first().map(|p| p.point_value).unwrap_or(0.0);
+            let pulse_value = trace.iter()
+                .find(|p| (p.point_value - baseline_value).abs() > 0.001)
+                .map(|p| p.point_value)
+                .unwrap_or(baseline_value);
+
+            let is_active_high = pulse_value > baseline_value;
+
+            // Need to check for stacked pulses and change colours instead of stacked digitals colour.
             let impulse_colour = if is_active_high {
-                colours::stacked_digital_hi_colour(dark_mode)
+                colours::stacked_pulse_hi_colour(dark_mode)
             } else {
-                colours::stacked_digital_lo_colour(dark_mode)
+                colours::stacked_pulse_lo_colour(dark_mode)
             };
-            
+
             let line_stroke = egui::Stroke::new(LINE_THICKNESS, impulse_colour);
 
             // Convert SinglePoints to screen coordinates with time range filtering.
@@ -937,11 +945,10 @@ fn plot_data_points(
                         
                         // Use appropriate fill colour based on polarity.
                         let fill_colour = if is_active_high {
-                            colours::stacked_digital_hi_fill_colour(dark_mode)
+                            colours::stacked_pulse_hi_fill_colour(dark_mode)
                         } else {
-                            colours::stacked_digital_lo_fill_colour(dark_mode)
+                            colours::stacked_pulse_lo_fill_colour(dark_mode)
                         };
-                        
                         painter.rect_filled(rect, 0.0, fill_colour);
                     }
                 }

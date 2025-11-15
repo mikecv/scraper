@@ -210,39 +210,77 @@ pub fn ts_impact_low_colour(dark_mode: bool) -> egui::Color32 {
     }
 }
 
-// Colours for time series stacked digitsls plot line (active high).
-pub fn stacked_digital_hi_colour(dark_mode: bool) -> Color32 {
+// // Colours for time series stacked digitals plot line (active high).
+// pub fn stacked_digital_hi_colour(dark_mode: bool) -> Color32 {
+//     if dark_mode {
+//         Color32::from_rgb(77, 77, 255)
+//     } else {
+//         Color32::from_rgb(128, 128, 255)
+//     }
+// }
+
+// // Colours for time series stacked digitals plot line (active low).
+// pub fn stacked_digital_lo_colour(dark_mode: bool) -> Color32 {
+//     if dark_mode {
+//         Color32::from_rgb(255, 26, 198)
+//     } else {
+//         Color32::from_rgb(255, 128, 223)
+//     }
+// }
+
+// // Colours for filling stacked digital inputs.
+// pub fn stacked_digital_hi_fill_colour(dark_mode: bool) -> egui::Color32 {
+//     if dark_mode {
+//         egui::Color32::from_rgba_unmultiplied(100, 200, 100, 60)
+//     } else {
+//         egui::Color32::from_rgba_unmultiplied(100, 200, 100, 80)
+//     }
+// }
+
+// // Colours for filling stacked digital inputs.
+// pub fn stacked_digital_lo_fill_colour(dark_mode: bool) -> egui::Color32 {
+//     if dark_mode {
+//         egui::Color32::from_rgba_unmultiplied(200, 100, 100, 60)
+//     } else {
+//         egui::Color32::from_rgba_unmultiplied(200, 100, 100, 80)
+//     }
+// }
+
+// Colours for time series stacked pulses plot line (active high).
+// These are INPUT signal pulses.
+pub fn stacked_pulse_hi_colour(dark_mode: bool) -> Color32 {
     if dark_mode {
-        Color32::from_rgb(77, 77, 255)
+        Color32::from_rgb(255, 128, 255)
     } else {
-        Color32::from_rgb(128, 128, 255)
+        Color32::from_rgb(204, 0, 204)
     }
 }
 
-// Colours for time series stacked digitsls plot line (active low).
-pub fn stacked_digital_lo_colour(dark_mode: bool) -> Color32 {
+// Colours for time series stacked pulses plot line (active low).
+// These are INPUT signal pulses.
+pub fn stacked_pulse_lo_colour(dark_mode: bool) -> Color32 {
     if dark_mode {
-        Color32::from_rgb(255, 26, 198)
+        Color32::from_rgb(102, 194, 255)
     } else {
-        Color32::from_rgb(255, 128, 223)
+        Color32::from_rgb(0, 122, 204)
     }
 }
 
-// Colours for filling stacked digitals (INPUT events).
-pub fn stacked_digital_hi_fill_colour(dark_mode: bool) -> egui::Color32 {
+// Colours for filling stacked stacked pulse inputs.
+pub fn stacked_pulse_hi_fill_colour(dark_mode: bool) -> egui::Color32 {
     if dark_mode {
-        egui::Color32::from_rgba_unmultiplied(100, 200, 100, 60)
+        egui::Color32::from_rgba_unmultiplied(255, 128, 255, 60)
     } else {
-        egui::Color32::from_rgba_unmultiplied(100, 200, 100, 80)
+        egui::Color32::from_rgba_unmultiplied(204, 0, 204, 80)
     }
 }
 
-// Colours for filling stacked difital inputs.
-pub fn stacked_digital_lo_fill_colour(dark_mode: bool) -> egui::Color32 {
+// Colours for filling stacked stacked pulse inputs.
+pub fn stacked_pulse_lo_fill_colour(dark_mode: bool) -> egui::Color32 {
     if dark_mode {
-        egui::Color32::from_rgba_unmultiplied(200, 100, 100, 60)
+        egui::Color32::from_rgba_unmultiplied(102, 194, 255, 60)
     } else {
-        egui::Color32::from_rgba_unmultiplied(200, 100, 100, 80)
+        egui::Color32::from_rgba_unmultiplied(0, 122, 204, 80)
     }
 }
 
