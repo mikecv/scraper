@@ -369,8 +369,10 @@ pub fn draw_gps_plot_window(app: &mut MyApp, ctx: &egui::Context) {
             egui::ViewportId::from_hash_of("gps_plot_window"),
             egui::ViewportBuilder::default()
                 .with_title("GPS Data Plot")
+                .with_min_inner_size([details.gps_win_min_width, details.gps_win_min_height])
                 .with_inner_size([details.gps_win_width, details.gps_win_height])
-                .with_resizable(false),
+                .with_max_inner_size([details.gps_win_max_width, details.gps_win_max_height])
+                .with_resizable(true),
             |ctx, class| {
                 assert!(class == egui::ViewportClass::Immediate);
 
@@ -462,8 +464,10 @@ pub fn draw_time_series_window(app: &mut MyApp, ctx: &egui::Context) {
             egui::ViewportId::from_hash_of("time_series_data_window"),
             egui::ViewportBuilder::default()
                 .with_title("Time Series Data Plot")
+                .with_min_inner_size([details.time_series_win_min_width, details.time_series_win_min_height])
                 .with_inner_size([details.time_series_win_width, details.time_series_win_height])
-                .with_resizable(false),
+                .with_max_inner_size([details.time_series_win_max_width, details.time_series_win_max_height])
+                .with_resizable(true),
             |ctx, class| {
                 assert!(class == egui::ViewportClass::Immediate);
 
