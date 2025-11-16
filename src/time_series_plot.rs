@@ -38,6 +38,8 @@ pub struct PlotState {
     pub cursor_enabled: bool,
     pub cursor_time: Option<u64>,
     pub current_trip: Option<String>,
+    pub num_tick_intervals: u64,
+    pub last_tick_change_width: f32,
 }
 
 // Default plot effect states.
@@ -52,6 +54,8 @@ impl Default for PlotState {
             cursor_enabled: false,
             cursor_time: None,
             current_trip: None,
+            num_tick_intervals: 4,
+            last_tick_change_width: 0.0,
         }
     }
 }
@@ -67,6 +71,11 @@ const MARGIN_TOP: f32 = 30.0;
 const MARGIN_BOTTOM: f32 = 40.0;
 const SHOW_MARKERS: bool = false;
 const LINE_THICKNESS: f32 = 1.5;
+ 
+// Dynamic x (time) tick mark spacing.
+const MIN_TICK_SPACING: f32 = 80.0;     // Minimum pixels between ticks.
+const MAX_TICK_SPACING: f32 = 100.0;    // Maximum pixels between ticks.
+const TICK_HYSTERESIS: f32 = 20.0;      // Width change needed to add/remove a tick.
 
 // Function to plot time series data.
 // This is called from the ui.rs file where the UI panel is defined and created.
@@ -215,7 +224,7 @@ pub fn plot_time_series_data(
                     for dataset in datasets {
                         // Here's the space allocation for a single plot.
                         // There are 2 sizes for plots - normal and tall.
-                        // The dataset attribute 'tall_chart' signigies which hight to use.
+                        // The dataset attribute 'tall_chart' signifies which height to use.
                         let mut plot_size = egui::vec2(ui.available_width(), PLOT_HEIGHT);
                         if dataset.tall_chart == true {
                             plot_size = egui::vec2(ui.available_width(), PLOT_HEIGHT_TALL);
@@ -329,7 +338,7 @@ fn draw_plot_with_axes(
     dataset: &TimeSeriesData,
     time_min: u64,
     time_max: u64,
-    plot_state: &PlotState,
+    plot_state: &mut PlotState,
     dark_mode: bool,
 ) {
     // Calculate the actual plotting area.
@@ -401,21 +410,63 @@ fn draw_plot_with_axes(
         egui::FontId::proportional(14.0),
         text_colour,
     );
-    
-    // Draw X-axis tick marks and time labels (4 marks total).
+
+    // Calculate adaptive number of ticks based on plot width with hysteresis.
+    let plot_width = plot_rect.width();
+
+    // Initialize last_tick_change_width on first run.
+    if plot_state.last_tick_change_width == 0.0 {
+        plot_state.last_tick_change_width = plot_width;
+    }
+
+    // Calculate how much the width has changed since last tick adjustment.
+    let width_change = (plot_width - plot_state.last_tick_change_width).abs();
+
+    // Only reconsider tick count if width has changed significantly.
+    if width_change > TICK_HYSTERESIS {
+        let current_spacing = plot_width / plot_state.num_tick_intervals as f32;
+        
+        // Check if we need to add or remove a tick interval.
+        if current_spacing > MAX_TICK_SPACING {
+            // Spacing too wide - add an interval (more ticks)
+            plot_state.num_tick_intervals += 1;
+            plot_state.last_tick_change_width = plot_width;
+        } else if current_spacing < MIN_TICK_SPACING && plot_state.num_tick_intervals > 2 {
+            // Spacing too narrow - remove an interval (fewer ticks).
+            // Minimum of 2 intervals means 3 ticks (start, middle, end).
+            plot_state.num_tick_intervals -= 1;
+            plot_state.last_tick_change_width = plot_width;
+        }
+    }
+
+    // Time interval between time ticks.
+    // Note intervals = ticks - 1.
+    let tick_interval: f32 = (panned_time_max - panned_time_min) as f32 / plot_state.num_tick_intervals as f32;
+
+    // Use the current tick interval count.
+    let num_ticks = plot_state.num_tick_intervals + 1;
     if panned_time_max > panned_time_min {
-        let time_positions = [
-            (panned_time_min, plot_rect.min.x),
-            (panned_time_min + (panned_time_max - panned_time_min) / 3, plot_rect.min.x + plot_rect.width() / 3.0),
-            (panned_time_min + 2 * (panned_time_max - panned_time_min) / 3, plot_rect.min.x + 2.0 * plot_rect.width() / 3.0),
-            (panned_time_max, plot_rect.max.x),
-        ];
+        // Build time positions dynamically based on num_ticks.
+        let mut time_positions: Vec<(u64, f32)> = Vec::new();
+        
+        for i in 0..num_ticks {
+            let time_value = if i == num_ticks - 1 {
+                // Last tick should be exactly at max.
+                panned_time_max
+            } else {
+                // Calculate intermediate ticks.
+                panned_time_min + (i as f32 * tick_interval) as u64
+            };
+            
+            let x_pos = plot_rect.min.x + (i as f32 * plot_rect.width() / plot_state.num_tick_intervals as f32);
+            time_positions.push((time_value, x_pos));
+        }
         
         for (time_value, x_pos) in time_positions {
-            // Draw tick mark.
+            // Draw tick mark
             painter.line_segment(
                 [egui::pos2(x_pos, plot_rect.max.y), 
-                 egui::pos2(x_pos, plot_rect.max.y + 5.0)],
+                egui::pos2(x_pos, plot_rect.max.y + 5.0)],
                 egui::Stroke::new(1.0, axis_colour),
             );
             
@@ -568,14 +619,14 @@ fn draw_plot_with_axes(
 
     // Vertical grid lines (same X positions as time tick marks).
     if panned_time_max > panned_time_min {
-        let time_positions = [
-            plot_rect.min.x,
-            plot_rect.min.x + plot_rect.width() / 3.0,
-            plot_rect.min.x + 2.0 * plot_rect.width() / 3.0,
-            plot_rect.max.x,
-        ];
+        let mut grid_x_positions: Vec<f32> = Vec::new();
         
-        for x_pos in time_positions {
+        for i in 0..num_ticks {
+            let x_pos = plot_rect.min.x + (i as f32 * plot_rect.width() / plot_state.num_tick_intervals as f32);
+            grid_x_positions.push(x_pos);
+        }
+        
+        for x_pos in grid_x_positions {
             painter.line_segment(
                 [egui::pos2(x_pos, plot_rect.min.y), 
                 egui::pos2(x_pos, plot_rect.max.y)],
@@ -801,21 +852,21 @@ fn plot_data_points(
 
         // Draw each level.
         for (index, level_name) in dataset.levels.iter().enumerate() {
-            // Calculate the center Y position of this trace's band
+            // Calculate the center Y position of this trace's band.
             let band_bottom = index as f32 / total_levels as f32;
             let band_top = (index + 1) as f32 / total_levels as f32;
             let band_center = (band_bottom + band_top) / 2.0;
             
             let pos_y = plot_rect.max.y - (band_center * plot_rect.height());
             
-            // Draw tick mark at the centered position
+            // Draw tick mark at the centered position.
             painter.line_segment(
                 [egui::pos2(plot_rect.min.x - 5.0, pos_y), 
                 egui::pos2(plot_rect.min.x, pos_y)],
                 egui::Stroke::new(1.0, axis_colour),
             );
             
-            // Draw level name at the centered position
+            // Draw level name at the centered position.
             painter.text(
                 egui::pos2(plot_rect.min.x - 10.0, pos_y),
                 egui::Align2::RIGHT_CENTER,
@@ -892,7 +943,7 @@ fn plot_data_points(
             // Using a different name to avoid conflicts with other plot types.
             let stacked_points: Vec<(egui::Pos2, f32)> = trace.iter()
                 .filter(|p| {
-                    // Only include points within the visible time range
+                    // Only include points within the visible time range.
                     p.unix_time >= time_min && p.unix_time <= time_max
                 })
                 .map(|p| {
