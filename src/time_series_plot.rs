@@ -422,29 +422,37 @@ fn draw_plot_with_axes(
     // Calculate how much the width has changed since last tick adjustment.
     let width_change = (plot_width - plot_state.last_tick_change_width).abs();
 
-    // Only reconsider tick count if width has changed significantly.
+    // Only reconsider tick count if width has changed significantly,
     if width_change > TICK_HYSTERESIS {
-        let current_spacing = plot_width / plot_state.num_tick_intervals as f32;
-        
-        // Check if we need to add or remove a tick interval.
-        if current_spacing > MAX_TICK_SPACING {
-            // Spacing too wide - add an interval (more ticks)
-            plot_state.num_tick_intervals += 1;
-            plot_state.last_tick_change_width = plot_width;
-        } else if current_spacing < MIN_TICK_SPACING && plot_state.num_tick_intervals > 2 {
-            // Spacing too narrow - remove an interval (fewer ticks).
-            // Minimum of 2 intervals means 3 ticks (start, middle, end).
-            plot_state.num_tick_intervals -= 1;
-            plot_state.last_tick_change_width = plot_width;
+        // Keep adjusting until spacing is within valid range.
+        // This handles large jumps like window maximize.
+        loop {
+            let current_spacing = plot_width / plot_state.num_tick_intervals as f32;
+            
+            if current_spacing > MAX_TICK_SPACING {
+                // Spacing too wide - add an interval (more ticks).
+                plot_state.num_tick_intervals += 1;
+            } else if current_spacing < MIN_TICK_SPACING && plot_state.num_tick_intervals > 2 {
+                // Spacing too narrow - remove an interval (fewer ticks).
+                // Minimum of 2 intervals means 3 ticks (start, middle, end).
+                plot_state.num_tick_intervals -= 1;
+            } else {
+                // Spacing is now within valid range - stop adjusting.
+                break;
+            }
         }
+        
+        // Update the stored width after all adjustments.
+        plot_state.last_tick_change_width = plot_width;
     }
 
+    // Use the current tick interval count.
+    // +1 because intervals = ticks - 1.
+    let num_ticks = plot_state.num_tick_intervals + 1;
+
     // Time interval between time ticks.
-    // Note intervals = ticks - 1.
     let tick_interval: f32 = (panned_time_max - panned_time_min) as f32 / plot_state.num_tick_intervals as f32;
 
-    // Use the current tick interval count.
-    let num_ticks = plot_state.num_tick_intervals + 1;
     if panned_time_max > panned_time_min {
         // Build time positions dynamically based on num_ticks.
         let mut time_positions: Vec<(u64, f32)> = Vec::new();
@@ -480,7 +488,7 @@ fn draw_plot_with_axes(
             );
         }
     }
-    
+
     // Draw Y-axis tick marks and labels.
     if dataset.data_type == "Digital" {
         // For digital signals, only show 0 and 1.
