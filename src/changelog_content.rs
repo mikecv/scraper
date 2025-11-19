@@ -10,7 +10,11 @@ pub fn draw_changelog_content(ui: &mut egui::Ui, _app: &mut MyApp) {
     ui.heading("Scraper Changelog");
     ui.separator();
 
-        ui.collapsing("0.5.0 - update release", |ui| {
+    ui.collapsing("0.6.0 - update release", |ui| {
+        ui.label("Added delta time measurement to time-series plots.");
+    });
+
+    ui.collapsing("0.5.0 - update release", |ui| {
         ui.label("Changed time-series plots to have addaptive time grid.");
         ui.label("Changed most windows to have addaptive x/y sizing..");
         ui.label("Corrected INPUT event plotting.");

@@ -156,3 +156,18 @@ pub fn convert_to_pulse_data(ev_points: &[SinglePoint], trip_start: u64, trip_en
     
     pulse_points
 }
+
+// Helper function to convert seconds to h:m:s/
+pub fn format_time_difference(seconds: u64) -> String {
+    let hours = seconds / 3600;
+    let minutes = (seconds % 3600) / 60;
+    let secs = seconds % 60;
+    
+    if hours > 0 {
+        format!("{:02}:{:02}:{:02}", hours, minutes, secs)
+    } else if minutes > 0 {
+        format!("{:02}:{:02}", minutes, secs)
+    } else {
+        format!("{}s", secs)
+    }
+}

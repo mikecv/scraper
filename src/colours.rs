@@ -310,3 +310,19 @@ pub fn ts_cursor_label_colour(dark_mode: bool) -> Color32 {
         Color32::from_rgba_premultiplied(245, 245, 245, 230)
     }
 }
+
+pub fn ts_delta_cursor_colour(dark_mode: bool) -> egui::Color32 {
+    if dark_mode {
+        egui::Color32::from_rgb(255, 165, 0) // Orange
+    } else {
+        egui::Color32::from_rgb(255, 140, 0) // Dark orange
+    }
+}
+
+pub fn ts_delta_cursor_label_colour(dark_mode: bool) -> egui::Color32 {
+    if dark_mode {
+        egui::Color32::from_rgba_premultiplied(50, 40, 30, 230)
+    } else {
+        egui::Color32::from_rgba_premultiplied(255, 245, 230, 230)
+    }
+}

@@ -69,7 +69,7 @@ fn load_settings() -> Settings {
 fn create_details() -> Details {
     Details {
         program_name:               "Scraper".to_string(),
-        program_ver:                "0.5.0".to_string(),
+        program_ver:                "0.6.0".to_string(),
         program_date:               "2025".to_string(),
         program_devs:               vec!["mdc".to_string()],
         program_web:                "galacticwingcommander".to_string(),
