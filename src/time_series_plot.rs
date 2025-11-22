@@ -74,7 +74,7 @@ const PLOT_HEIGHT_TALL: f32 = 250.0;
 const SPACE_BETWEEN_PLOTS: f32 = 5.0;
 const MARGIN_LEFT: f32 = 55.0;
 const MARGIN_RIGHT: f32 = 35.0;
-const MARGIN_TOP: f32 = 30.0;
+const MARGIN_TOP: f32 = 40.0;
 const MARGIN_BOTTOM: f32 = 40.0;
 const SHOW_MARKERS: bool = false;
 const LINE_THICKNESS: f32 = 1.5;
@@ -237,7 +237,7 @@ pub fn plot_time_series_data(
                                 };
                                 
                                 ui.label(egui::RichText::new(format!(
-                                    "Cursor: {} | Delta: {} | Δ: {}",
+                                    "Cursor: {}    |    Delta: {}    |    Δ: {}",
                                     helpers_ts::unix_time_to_hms(cursor_time),
                                     helpers_ts::unix_time_to_hms(delta_time),
                                     helpers_ts::format_time_difference(time_diff)
@@ -246,7 +246,7 @@ pub fn plot_time_series_data(
                                 .size(12.0));
                             } else {
                                 ui.label(egui::RichText::new(format!(
-                                    "Cursor: {} | Click to place delta cursor",
+                                    "Cursor: {}    |    Click to place delta cursor",
                                     helpers_ts::unix_time_to_hms(cursor_time)
                                 ))
                                 .color(colours::ts_notices_colour(*dark_mode))
@@ -265,7 +265,7 @@ pub fn plot_time_series_data(
                 }
                 // Show helpful hint when pan/zoom is enabled.
                 else if plot_state.pan_zoom_enabled {
-                    ui.label(egui::RichText::new("Drag to pan, scroll wheel to zoom")
+                    ui.label(egui::RichText::new("Drag to pan, Ctrl scroll wheel to zoom")
                         .color(colours::ts_notices_colour(*dark_mode))
                         .size(12.0));
                 }
@@ -345,6 +345,12 @@ pub fn plot_time_series_data(
                                 (time_min, time_max)
                             };
 
+                            // Check if Shift key is pressed (check once at the start).
+                            let shift_pressed = ui.input(|i| i.modifiers.shift);
+
+                            // Check if mouse button was just pressed this frame.
+                            let mouse_just_pressed = ui.input(|i| i.pointer.button_pressed(egui::PointerButton::Primary));
+
                             // Handle cursor dragging and clicking with proper drag locking.
                             if plot_response.hover_pos().is_some() {
                                 let hover_pos = plot_response.hover_pos().unwrap();
@@ -355,13 +361,8 @@ pub fn plot_time_series_data(
                                     let x_ratio = (hover_pos.x - plot_rect.min.x) / plot_rect.width();
                                     let new_time = panned_time_min + ((panned_time_max - panned_time_min) as f32 * x_ratio) as u64;
                                     
-                                    // Check if Shift key is pressed.
-                                    // Shift drag applies to the delta time cursor.
-                                    // Just dragging for the time cursor.
-                                    let shift_pressed = ui.input(|i| i.modifiers.shift);
-                                    
-                                    // On initial click, determine which cursor to drag.
-                                    if plot_response.clicked() {
+                                    // On initial mouse press, determine which cursor to drag based on Shift key.
+                                    if mouse_just_pressed && plot_response.hovered() {
                                         if shift_pressed && plot_state.delta_enabled {
                                             plot_state.dragging_delta = true;
                                             plot_state.delta_time = Some(new_time);
@@ -370,10 +371,11 @@ pub fn plot_time_series_data(
                                             plot_state.cursor_time = Some(new_time);
                                         }
                                     }
-                                    // While dragging, maintain the locked cursor.
-                                    else if plot_response.dragged() {
+                                    
+                                    // While dragging OR if button is held down, update the appropriate cursor.
+                                    if ui.input(|i| i.pointer.primary_down()) && (plot_response.dragged() || mouse_just_pressed) {
                                         if plot_state.dragging_delta {
-                                            // Continue dragging delta cursor regardless of Shift state.
+                                            // Continue dragging delta cursor.
                                             plot_state.delta_time = Some(new_time);
                                         } else {
                                             // Continue dragging main cursor.
@@ -382,9 +384,9 @@ pub fn plot_time_series_data(
                                     }
                                 }
                             }
-                            
+
                             // Reset drag state when mouse is released.
-                            if !plot_response.dragged() && !ui.input(|i| i.pointer.primary_down()) {
+                            if !ui.input(|i| i.pointer.primary_down()) {
                                 plot_state.dragging_delta = false;
                             }
                         }
@@ -573,8 +575,8 @@ fn draw_plot_with_axes(
                 let delta_colour = colours::ts_delta_cursor_colour(dark_mode);
                 
                 // Draw vertical delta cursor line (dashed for distinction).
-                let dash_length = 8.0;
-                let gap_length = 4.0;
+                let dash_length = 4.0;
+                let gap_length = 2.0;
                 let mut y = plot_rect.min.y;
                 
                 while y < plot_rect.max.y {
@@ -582,24 +584,25 @@ fn draw_plot_with_axes(
                     painter.line_segment(
                         [egui::pos2(delta_x, y), 
                         egui::pos2(delta_x, segment_end)],
-                        egui::Stroke::new(1.5, delta_colour),
+                        egui::Stroke::new(1.0, delta_colour),
                     );
                     y = segment_end + gap_length;
                 }
                 
-                // Draw time label at the bottom of the delta cursor.
+                // Draw time label at the top of the delta cursor.
                 let time_text = helpers_ts::unix_time_to_hms(delta_time);
                 let label_bg = colours::ts_delta_cursor_label_colour(dark_mode);
+                let cursor_label_text_colour = colours::cursor_label_text_colour(dark_mode);
                 
                 // Calculate label size and position.
                 let font_id = egui::FontId::proportional(10.0);
-                let galley = painter.layout_no_wrap(time_text.clone(), font_id.clone(), text_colour);
+                let galley = painter.layout_no_wrap(time_text.clone(), font_id.clone(), cursor_label_text_colour);
                 let label_width = galley.rect.width() + 8.0;
                 let label_height = galley.rect.height() + 4.0;
                 
-                // Position label below plot, between the X-axis and time labels.
+                // Position label above plot, between the top of the chart and the chart title.
                 let label_rect = egui::Rect::from_center_size(
-                    egui::pos2(delta_x, plot_rect.max.y + 10.0),
+                    egui::pos2(delta_x, plot_rect.min.y - 10.0),
                     egui::vec2(label_width, label_height)
                 );
                 
@@ -613,25 +616,9 @@ fn draw_plot_with_axes(
                     egui::Align2::CENTER_CENTER,
                     time_text,
                     font_id,
-                    text_colour,
+                    cursor_label_text_colour,
                 );
                 
-                // Draw shaded area between cursors if both are visible.
-                if let Some(cursor_time) = plot_state.cursor_time {
-                    if cursor_time >= panned_time_min && cursor_time <= panned_time_max {
-                        let cursor_x_ratio = (cursor_time as f64 - panned_time_min as f64) / (panned_time_max as f64 - panned_time_min as f64);
-                        let cursor_x = plot_rect.min.x + (cursor_x_ratio as f32 * plot_rect.width());
-                        
-                        // Create a semi-transparent rectangle between the cursors
-                        let rect = egui::Rect::from_min_max(
-                            egui::pos2(cursor_x.min(delta_x), plot_rect.min.y),
-                            egui::pos2(cursor_x.max(delta_x), plot_rect.max.y)
-                        );
-                        
-                        let fill_colour = delta_colour.linear_multiply(0.1);
-                        painter.rect_filled(rect, 0.0, fill_colour);
-                    }
-                }
             }
         }
     }
@@ -930,10 +917,11 @@ fn draw_plot_with_axes(
                 // Draw time label at the bottom of the cursor (between plot and time scale).
                 let time_text = helpers_ts::unix_time_to_hms(cursor_time);
                 let label_bg = colours::ts_cursor_label_colour(dark_mode);
+                let cursor_label_text_colour = colours::cursor_label_text_colour(dark_mode);
                 
                 // Calculate label size and position.
                 let font_id = egui::FontId::proportional(10.0);
-                let galley = painter.layout_no_wrap(time_text.clone(), font_id.clone(), text_colour);
+                let galley = painter.layout_no_wrap(time_text.clone(), font_id.clone(), cursor_label_text_colour);
                 let label_width = galley.rect.width() + 8.0;
                 let label_height = galley.rect.height() + 4.0;
                 
@@ -953,7 +941,7 @@ fn draw_plot_with_axes(
                     egui::Align2::CENTER_CENTER,
                     time_text,
                     font_id,
-                    text_colour,
+                    cursor_label_text_colour,
                 );
             }
         }

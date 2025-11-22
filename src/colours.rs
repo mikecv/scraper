@@ -293,7 +293,7 @@ pub fn ts_disabled_button_text_colour(dark_mode: bool) -> egui::Color32 {
     }
 }
 
-// Cursor colour.
+// Time cursor colour.
 pub fn ts_cursor_colour(dark_mode: bool) -> egui::Color32 {
     if dark_mode {
         egui::Color32::from_rgb(255, 179, 255)
@@ -305,24 +305,35 @@ pub fn ts_cursor_colour(dark_mode: bool) -> egui::Color32 {
 // Time cursor label colour.
 pub fn ts_cursor_label_colour(dark_mode: bool) -> Color32 {
     if dark_mode {
-        Color32::from_rgba_premultiplied(40, 40, 40, 230)
+        Color32::from_rgba_premultiplied(255, 179, 255, 230)
     } else {
-        Color32::from_rgba_premultiplied(245, 245, 245, 230)
+        Color32::from_rgba_premultiplied(153, 0, 153, 230)
     }
 }
 
+// Delta cursor colour.
 pub fn ts_delta_cursor_colour(dark_mode: bool) -> egui::Color32 {
     if dark_mode {
-        egui::Color32::from_rgb(255, 165, 0) // Orange
+        egui::Color32::from_rgb(128, 128, 255)
     } else {
-        egui::Color32::from_rgb(255, 140, 0) // Dark orange
+        egui::Color32::from_rgb(0, 0, 204)
     }
 }
 
+// Delta cursor label colour.
 pub fn ts_delta_cursor_label_colour(dark_mode: bool) -> egui::Color32 {
     if dark_mode {
-        egui::Color32::from_rgba_premultiplied(50, 40, 30, 230)
+        egui::Color32::from_rgba_premultiplied(128, 128, 255, 230)
     } else {
-        egui::Color32::from_rgba_premultiplied(255, 245, 230, 230)
+        egui::Color32::from_rgba_premultiplied(0, 0, 204, 230)
+    }
+}
+
+// Colour for cursor label text.
+pub fn cursor_label_text_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgb(0, 0, 0)
+    } else {
+        Color32::from_rgb(255, 255, 255)
     }
 }
