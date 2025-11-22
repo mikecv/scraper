@@ -68,6 +68,9 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
                     app.show_time_series = true;
                     ui.close_menu();
                 }
+                ui.separator();
+                ui.checkbox(&mut app.plot_battery, "Plot Battery Voltage");
+                ui.checkbox(&mut app.plot_speed, "Plot Speed");
             });
 
             // View menu.
@@ -514,7 +517,15 @@ pub fn draw_time_series_window(app: &mut MyApp, ctx: &egui::Context) {
                             ui.separator();
 
                             // Call the time series plot function.
-                            time_series_plot::plot_time_series_data(ui, &app.scraper, &app.selected_id, &mut app.plot_state, &app.dark_mode);
+                            // Pass flags to optionally plot machine speed or battery voltage.
+                            time_series_plot::plot_time_series_data(ui,
+                                &app.scraper,
+                                &app.selected_id,
+                                &mut app.plot_state,
+                                &app.dark_mode,
+                                app.plot_battery,
+                                app.plot_speed,
+                            );
                         });
                     });
             },

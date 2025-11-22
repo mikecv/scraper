@@ -6,10 +6,15 @@ use crate::time_series_plot::SinglePoint;
 use crate::helpers_ts;
 
 // Function to create the data sets to plot.
-pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Vec<TimeSeriesData> {
+// Flags to optionally plot (or not) machine speed or battery voltage.
+pub fn create_time_series_datasets(scraper: &Scraper,
+        selected_trip: &str,
+        plot_battery: bool,
+        plot_speed: bool) -> Vec<TimeSeriesData> {
+
     // Create datasets of plots.
     let mut datasets = Vec::new();
-    
+
     // Get all points for the selected trip.
     let trip_data: Vec<&ScrapedData> = scraper.scrapings.iter()
         .filter(|scraped| scraped.trip_num == *selected_trip)
@@ -32,54 +37,60 @@ pub fn create_time_series_datasets(scraper: &Scraper, selected_trip: &str) -> Ve
         .unwrap_or(0);
 
     // Battery voltage time series.
-    let battery_points: Vec<SinglePoint> = trip_data.iter()
-    .filter_map(|data| {
-        // Look for "Battery voltage" in the ev_detail vector.
-        // This is in all events, even the logic ones.
-        data.ev_detail.iter()
-            .find(|(tag, _)| tag == "Battery voltage")
-            .and_then(|(_, value)| {
-                // Parse the f16 string value to f32.
-                value.parse::<f32>().ok()
-            })
-            .map(|voltage| SinglePoint {
-                unix_time: data.unix_time,
-                point_value: voltage,
-            })
-    })
-    .collect();
+    // Optionally plot battery voltage accoroding to menu.
+    if plot_battery {
+        let battery_points: Vec<SinglePoint> = trip_data.iter()
+        .filter_map(|data| {
+            // Look for "Battery voltage" in the ev_detail vector.
+            // This is in all events, even the logic ones.
+            data.ev_detail.iter()
+                .find(|(tag, _)| tag == "Battery voltage")
+                .and_then(|(_, value)| {
+                    // Parse the f16 string value to f32.
+                    value.parse::<f32>().ok()
+                })
+                .map(|voltage| SinglePoint {
+                    unix_time: data.unix_time,
+                    point_value: voltage,
+                })
+        })
+        .collect();
 
-    if !battery_points.is_empty() {
-        datasets.push(TimeSeriesData {
-            data_type: "Analog".to_string(),
-            series_name: "Battery".to_string(),
-            units: "V".to_string(),
-            levels: Vec::new(),
-            time_series_points: battery_points,
-            multi_traces: Vec::new(),
-            tall_chart: false,
-        });
+        if !battery_points.is_empty() {
+            datasets.push(TimeSeriesData {
+                data_type: "Analog".to_string(),
+                series_name: "Battery".to_string(),
+                units: "V".to_string(),
+                levels: Vec::new(),
+                time_series_points: battery_points,
+                multi_traces: Vec::new(),
+                tall_chart: false,
+            });
+        }
     }
 
     // Speed time series.
     // This is in all events, even the logic ones if they contain gps data.
-    let speed_points: Vec<SinglePoint> = trip_data.iter()
-        .map(|data| SinglePoint {
-            unix_time: data.unix_time,
-            point_value: data.gps_speed as f32,
-        })
-        .collect();
+    // Optionally plot speed accoroding to menu.
+    if plot_speed {
+        let speed_points: Vec<SinglePoint> = trip_data.iter()
+            .map(|data| SinglePoint {
+                unix_time: data.unix_time,
+                point_value: data.gps_speed as f32,
+            })
+            .collect();
 
-    if !speed_points.is_empty() {
-        datasets.push(TimeSeriesData {
-            data_type: "Analog".to_string(),
-            series_name: "Speed".to_string(),
-            units: "kph".to_string(),
-            levels: Vec::new(),
-            time_series_points: speed_points,
-            multi_traces: Vec::new(),
-            tall_chart: false,
-        });
+        if !speed_points.is_empty() {
+            datasets.push(TimeSeriesData {
+                data_type: "Analog".to_string(),
+                series_name: "Speed".to_string(),
+                units: "kph".to_string(),
+                levels: Vec::new(),
+                time_series_points: speed_points,
+                multi_traces: Vec::new(),
+                tall_chart: false,
+            });
+        }
     }
 
     // The impulse is an instantaneous event marker.

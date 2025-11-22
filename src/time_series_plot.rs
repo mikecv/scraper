@@ -92,6 +92,8 @@ pub fn plot_time_series_data(
     selected_trip: &Option<String>,
     plot_state: &mut PlotState,
     dark_mode: &bool,
+    plot_battery: bool,
+    plot_speed: bool,
 ) {
     // Create a fixed top panel for info.
     egui::TopBottomPanel::top("info_panel").show_inside(ui, |ui| {
@@ -296,11 +298,10 @@ pub fn plot_time_series_data(
                     }
         
                     // If trip selected, and not empty, get datasets to plot.
-                    let datasets = dataset_ts::create_time_series_datasets(scraper, trip_id);
+                    let datasets = dataset_ts::create_time_series_datasets(scraper, trip_id, plot_battery, plot_speed);
 
                     // Calculate overall time range for all datasets.
                     let (time_min, time_max) = helpers_ts::calculate_time_range(&datasets);
-
                     // Initialize cursor to centre time if not set.
                     if plot_state.cursor_enabled && plot_state.cursor_time.is_none() {
                         plot_state.cursor_time = Some((time_min + time_max) / 2);

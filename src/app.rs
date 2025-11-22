@@ -52,6 +52,8 @@ pub struct MyApp {
     pub show_debug_events: bool,
     pub show_gps_events: bool,
     pub show_time_series: bool,
+    pub plot_speed: bool,
+    pub plot_battery: bool,
     pub show_about: bool,
     pub show_help: bool,
     pub about_icon: Option<egui::TextureHandle>,
@@ -69,7 +71,7 @@ pub struct MyApp {
     pub last_trip_id: Option<String>,
     pub map_tiles: Option<walkers::HttpTiles>,
     pub satellite_tiles: Option<walkers::HttpTiles>,
-    pub map_state: Option<MapState>,  // ADD THIS LINE
+    pub map_state: Option<MapState>,
     pub plot_state: PlotState,
     _runtime: tokio::runtime::Runtime,
     
@@ -113,6 +115,8 @@ impl Default for MyApp {
             show_debug_events: false,
             show_gps_events: false,
             show_time_series: false,
+            plot_battery: false,
+            plot_speed: true,
             show_about: false,
             show_help: false,
             about_icon: None,
@@ -130,7 +134,7 @@ impl Default for MyApp {
             last_trip_id: None,
             map_tiles: None,
             satellite_tiles: None,
-            map_state: None,  // ADD THIS LINE
+            map_state: None,
             plot_state: PlotState::default(),
             _runtime: runtime,
 
