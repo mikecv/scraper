@@ -299,8 +299,9 @@ pub fn draw_help_panel(app: &mut MyApp, ctx: &egui::Context) {
                 .with_title("Scraper Help")
                 .with_inner_size([details.help_win_width, details.help_win_height])
                 .with_resizable(false)
-                .with_min_inner_size([details.help_win_width, details.min_help_win_height])
-                .with_max_inner_size([details.help_win_width, details.max_help_win_height]),
+                .with_min_inner_size([details.min_help_win_width, details.min_help_win_height])
+                .with_max_inner_size([details.max_help_win_width, details.max_help_win_height]),
+
             |ctx, class| {
                 assert!(class == egui::ViewportClass::Immediate);
 

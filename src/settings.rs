@@ -45,8 +45,10 @@ pub struct Details {
     pub max_win_height:             f32,
 
     pub help_win_width:             f32,
-    pub min_help_win_height:        f32,
+    pub min_help_win_width:         f32,
+    pub max_help_win_width:         f32,
     pub help_win_height:            f32,
+    pub min_help_win_height:        f32,
     pub max_help_win_height:        f32,
 
     pub gps_win_width:              f32,
@@ -56,11 +58,11 @@ pub struct Details {
     pub gps_win_min_height:         f32,
     pub gps_win_max_height:         f32,
 
-    pub time_series_win_min_width:  f32,
     pub time_series_win_width:      f32,
+    pub time_series_win_min_width:  f32,
     pub time_series_win_max_width:  f32,
-    pub time_series_win_min_height: f32,
     pub time_series_win_height:     f32,
+    pub time_series_win_min_height: f32,
     pub time_series_win_max_height: f32,
 
     pub changelog_win_width:        f32,

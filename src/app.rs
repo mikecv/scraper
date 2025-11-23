@@ -98,6 +98,7 @@ pub struct MyApp {
     pub help_image_20: Option<egui::TextureHandle>,
     pub help_image_21: Option<egui::TextureHandle>,
     pub help_image_22: Option<egui::TextureHandle>,
+    pub help_image_23: Option<egui::TextureHandle>,
 }
 
 impl Default for MyApp {
@@ -161,6 +162,7 @@ impl Default for MyApp {
             help_image_20: None,
             help_image_21: None,
             help_image_22: None,
+            help_image_23: None,
         }
     }
 }
@@ -530,7 +532,21 @@ impl MyApp {
                 Err(e) => info!("Failed to load help image 22: {}", e),
             }
         }
-    }
+ 
+        // Help image 23 - time series delta time cursor.
+        if self.help_image_23.is_none() {
+            let icon_bytes = include_bytes!("../assets/help-23.png");
+            match image::load_from_memory(icon_bytes) {
+                Ok(img) => {
+                    let rgba = img.to_rgba8();
+                    let size = [img.width() as usize, img.height() as usize];
+                    let color_image = egui::ColorImage::from_rgba_unmultiplied(size, &rgba);
+                    self.help_image_23 = Some(ctx.load_texture("help_image_23", color_image, Default::default()));
+                }
+                Err(e) => info!("Failed to load help image 23: {}", e),
+            }
+        }
+   }
 }
 
 // Implement the eframe::App trait for MyApp.

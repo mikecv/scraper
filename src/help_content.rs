@@ -109,7 +109,7 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
 
     ui.collapsing("2.8 Trip events showing GPS data", |ui| {
         ui.label("Most trip events include some GPS data in the event string.");
-        ui.label("By checking the 'GPS event data' from the 'Show' menu option, GPS data is appended to the event data for each event as illustrated in the figure below.");
+        ui.label("By checking 'GPS event data' from the 'Show' menu option, GPS data is appended to the event data for each event as illustrated in the figure below.");
         ui.label("Note that GPS data relies on a gps fix for data to be accurate or useful.");
     });
 
@@ -203,12 +203,15 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
     }
 
     ui.collapsing("4.0 Time series data plots", |ui| {
-        ui.label("As data is collected per trip (discounting out of trip events) it is possible to plot this time series data.");
+        ui.label("As data is collected per trip (discounting out of trip events) it is possible to plot this as time series data.");
         ui.label("From the Plot menu the user can select to show time series plots for the currently selected trip (if there is one selected).");
         ui.label("On selecting the Time Series Data option from the Plot menu a separate application window will be displayed.");
         ui.label("The window will be blank or complete with plots depending on whether or not there is a current trip selected.");
-        ui.label("In the figure below a trip is already selected so time series events from the trip are displayed.");
+        ui.label("In the figure below, a trip is already selected so time series events from the trip are displayed.");
         ui.label("\nNote that unsupported events are not displayed in the time series plots, and currently only digital, analog, and impulse events are plotted.");
+        ui.label("\nIn the plot menu as illustrated above in section 3.0 we see that there are options to plot or not to plot machine speed or machine battery voltage.");
+        ui.label("Data in these 2 datasets is not from particular events, but rather collected as additonal information from most events.");
+        ui.label("These 2 datasets can be toggled on or off at any time; currently plotted charts will be redrawn as necessary.");
     });
 
     // Time series data plotting.
@@ -250,7 +253,7 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
     });
 
     ui.collapsing("4.4 Time series data Time Cursor", |ui| {
-        ui.label("My selecting the Cursor button it is possible to dispay a time cursor on each of the time series plots.");
+        ui.label("By selecting the Cursor button it is possible to display a time cursor on each of the time series plots.");
         ui.label("Click on a time series plot, and then move the cursor line to time left or right, doing so will move the cursor line on all plots together.");
         ui.label("At the bottom of each cursor line is the plot time corresponding to the time at that location.");
         ui.label("An example of using the time cursor is illustrated in the figure below.");
@@ -263,8 +266,26 @@ pub fn draw_help_content(ui: &mut egui::Ui, app: &mut MyApp) {
         ui.add_space(10.0);
     }
 
-    ui.collapsing("4.5 Cancelling the time cursor", |ui| {
+    ui.collapsing("4.5 Time series data Delta Time Cursor", |ui| {
+        ui.label("By selecting the Delta button it is possible to display a a second time cursor on each of the time series plots.");
+        ui.label("The Delta time cursor can be added in a similar way to that of the time cursor.");
+        ui.label("The Delta time cursor can me moved using by holding down the 'Shift' key and dragging the cursor");
+        ui.label("The Delta time cursor displays the time where the delta cursor is placed, while below the cursor buttons the delta time between the time and delta cursors is displyed.");
+        ui.label("The delta cursor is useful for measuring the time between events, or the width of pulses, etc.");
+        ui.label("An example of using the delta time cursor is illustrated in the figure below.");
+    });
+
+        // Time series data delta time cursor.
+    if let Some(texture) = &app.help_image_23 {
+        ui.add_space(10.0);
+        ui.add(egui::Image::new(texture).max_width(400.0));
+        ui.add_space(10.0);
+    }
+
+    ui.collapsing("4.6 Cancelling the time and delta time cursor", |ui| {
         ui.label("By pressing the Cursor button again, it will remove the time cursor from all plots.");
+        ui.label("If the delta time cursor was in use it would be removed at the same time.");
+        ui.label("Deleting the delta time cursor will still leave the time cursor alone.");
     });
 
     ui.collapsing("5.0 User settings", |ui| {
