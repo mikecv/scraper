@@ -110,8 +110,7 @@ impl Scraper {
             {
                 // For windows use FileDialog.
                 FileDialog::new()
-                    // .add_filter("text", &["txt"])
-                    .add_filter("Log files", &["log", "bak", "csv", "txt"])
+                    .add_filter("Log files", &["csv", "txt"])
                     .add_filter("All files", &["*"])
                     .pick_file()
                     .map(|path| path.to_string_lossy().to_string())
@@ -122,7 +121,7 @@ impl Scraper {
                 open_file_dialog(
                     "Select log file",
                     "",
-                    Some((&["*.log", "*.bak", "*.csv", "*.txt"], "Log files (log, bak, csv, txt)")),
+                    Some((&["*.csv", "*.txt"], "Log files (csv, txt)")),
                 )
             }
         };
@@ -205,24 +204,27 @@ impl Scraper {
         // Open the file.
         let file = File::open(path)?;
         let reader = BufReader::new(file);
+
+        // Collect all lines into a vector.
+        // Should only have to do this once.
+        let lines: Vec<String> = reader.lines()
+            .collect::<Result<_, _>>()?;
+
+        // Get the serial number of the controller.
+        let sn_pattern = Regex::new(r"\[UNIT\s+(\d+)\]")?;
+
+        let mut found_sn = false;
         
         info!("Searching file for controller serial number.");
     
-        // Get the serial number of the controller (microseconds on time).
-        // let sn_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\.\d+)?(?: [AP]M)?)[:, ]UNIT ([0-9]+)(?: (.+))?$")?;
-        // Additional string before UNIT,
-        let sn_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\.\d+)?(?: [AP]M)?) (?:\S+ )?UNIT ([0-9]+)(?: (.+))?$")?;
-        let mut found_sn = false;
-        
         // Process file line by line,
-        for line_result in reader.lines() {
-            let line = line_result?;
+        for line in lines.iter().rev() {
  
             if let Some(caps) = sn_pattern.captures(&line) {
-                let unit_number = &caps[3];
+                let unit_number = &caps[1];
 
                 // Combine unit number with optional suffix.
-                let unit = if let Some(suffix) = caps.get(4) {
+                let unit = if let Some(suffix) = caps.get(10) {
                     format!("{} {}", unit_number, suffix.as_str())
                 } else {
                     unit_number.to_string()
@@ -233,8 +235,9 @@ impl Scraper {
                 // Get combined string for controller id.
                 self.controller_id = unit;
 
-                info!("Found controller: {:?}", self.controller_id); 
+                info!("Found controller: {:?}", self.controller_id);
             }
+            
             if found_sn {
                 // Have found one instance of controller number.
                 // Don't need to look any further.
@@ -247,24 +250,23 @@ impl Scraper {
         }
 
         // Initialise file reader again.
-        let file = File::open(path)?;
-        let reader = BufReader::new(file);
+        let _file = File::open(path)?;
 
         info!("Searching file for controller firmware version.");
        
         // Get the controller firmware version.
-        let fw_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\.\d+)?(?: [AP]M)?)[:, ]EVENT ([0-9]+) ([0-9]+) (.+)/(.+)/(.+)/([-0-9]+)/([0-9]+) SWSTART (.+) ([.0-9]+.+) v(.+)$")?;
+        let fw_pattern = Regex::new(r#"^"([^@]+) @ ([^"]+)",[^,]+,[^,]+,"[^<]+ <== \[EVENT (\d+) (\d+) [^\s]+ (SWSTART) FC ([^v]+) v:\d+\]"$"#).unwrap();
+
         let mut found_fw = false;
 
         // Process file line by line,
-        for line_result in reader.lines() {
-            let line = line_result?;
+        for line in lines.iter().rev() {
             
             // Check if we should stop processing.
             if let Some(captures) = fw_pattern.captures(&line) {
                 found_fw = true;
-                // Group 11 contains the firmware versin.
-                let fw_str = captures.get(11).unwrap().as_str();
+                // Group 6 contains the firmware version.
+                let fw_str = captures.get(6).unwrap().as_str();
                 self.controller_fw = fw_str.to_string();
                 info!("Found controller firmware: {:?}", fw_str); 
             }
@@ -281,100 +283,100 @@ impl Scraper {
         }
 
         // Initialise file reader again.
-        let file = File::open(path)?;
-        let reader = BufReader::new(file);
         info!("Searching file for controller events.");
 
-        // Get the controller events
-        // let ev_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2})(?:\.[0-9]{3})? EVENT ([0-9]+) ([0-9]+) ([-0-9]+)/([0-9]+)/([0-9]+)/([0-9]+)/([0-9]+) ([A-Z_]+) (.+)$")?;
-        // Extra string before EVENT.
-        let ev_pattern = Regex::new(r"([0-9]{1,2}/[0-9]{2}/[0-9]{4}) ([0-9]{1,2}:[0-9]{2}:[0-9]{2})(?:\.[0-9]{3})? (?:\S+ )?EVENT ([0-9]+) ([0-9]+) ([-0-9]+)/([0-9]+)/([0-9]+)/([0-9]+)/([0-9]+) ([A-Z_]+) (.+)$")?;
+        // Get the controller events.
+        let ev_pattern = Regex::new(r#"^"([^@]+) @ ([^"]+)",[^,]+,[^,]+,"([^<]+) <== \[EVENT (\d+) (\d+) (-?\d+)/(-?\d+)/(\d+)/(-?\d+)/(\d+) (\w+) ([^\]]+)\]"$"#).unwrap();
 
         // Trip number for SIGNON event so that it can
         // be copied to the other events in the trip.
         let mut trip_num_id = "".to_string();
 
         // Process file line by line.
-        for line_result in reader.lines() {
-            let line = line_result?;
+        for line in lines.iter().rev() {
             
             // Check for event pattern.
             if let Some(captures) = ev_pattern.captures(&line) {
                 
-                // Extract key fields for logging.
-                let date = captures.get(1).unwrap().as_str();
-                let time = captures.get(2).unwrap().as_str();
-                let unix_time = captures.get(4).unwrap().as_str();
-                let event_type = captures.get(10).unwrap().as_str();
-                let event_detail = captures.get(11).unwrap().as_str();
-                let mut on_trip = true;
-                let mut ev_supported = true;
-                let ev_key_vals = ungroup_event_data(event_type.to_string(), event_detail, &mut on_trip, &mut ev_supported);
-                let trip_id = captures.get(3).unwrap().as_str();
+                // Could have more than one device captured in data.
+                // Check to see if the device serial number matches the number in the event string.
+                if captures.get(3).unwrap().as_str() == self.controller_id {
 
-                // Get the gps location from the event data.
-                // While gps location is included in the event string,
-                // it's not part of the event detail.
-                let gps_latitude = captures.get(5)
-                    .expect("Latitude capture group not found.")
-                    .as_str()
-                    .parse::<f64>()
-                    .expect("Failed to parse latitude as f64");
-                let gps_longitude = captures.get(6)
-                    .expect("Longitude capture group not found.")
-                    .as_str()
-                    .parse::<f64>()
-                    .expect("Failed to parse longitude as f64");
-                let gps_locn = GpsLocation {
-                    lat: gps_latitude / 10_000_000.0,
-                    lon: gps_longitude / 10_000_000.0,
-                };
+                    // Extract key fields for logging.
+                    let date = captures.get(1).unwrap().as_str();
+                    let time = captures.get(2).unwrap().as_str();
+                    let unix_time = captures.get(5).unwrap().as_str();
+                    let event_type = captures.get(11).unwrap().as_str();
+                    let event_detail = captures.get(12).unwrap().as_str();
+                    let mut on_trip = true;
+                    let mut ev_supported = true;
+                    let ev_key_vals = ungroup_event_data(event_type.to_string(), event_detail, &mut on_trip, &mut ev_supported);
+                    let trip_id = captures.get(4).unwrap().as_str();
 
-                // Get the gps RSSI from the event data.
-                let gps_rssi = captures.get(8)
-                    .expect("GPS RSSI capture group not found.")
-                    .as_str()
-                    .parse::<u32>()
-                    .expect("Failed to parse gps rssi as u32");
+                    // Get the gps location from the event data.
+                    // While gps location is included in the event string,
+                    // it's not part of the event detail.
+                    let gps_latitude = captures.get(6)
+                        .expect("Latitude capture group not found.")
+                        .as_str()
+                        .parse::<f64>()
+                        .expect("Failed to parse latitude as f64");
+                    let gps_longitude = captures.get(7)
+                        .expect("Longitude capture group not found.")
+                        .as_str()
+                        .parse::<f64>()
+                        .expect("Failed to parse longitude as f64");
+                    let gps_locn = GpsLocation {
+                        lat: gps_latitude / 10_000_000.0,
+                        lon: gps_longitude / 10_000_000.0,
+                    };
 
-                // Get the gps speed from the event data.
-                let gps_speed = captures.get(9)
-                    .expect("GPS speed capture group not found.")
-                    .as_str()
-                    .parse::<u32>()
-                    .expect("Failed to parse gps speed as u32");
+                    // Get the gps RSSI from the event data.
+                    let gps_rssi = captures.get(9)
+                        .expect("GPS RSSI capture group not found.")
+                        .as_str()
+                        .parse::<u32>()
+                        .expect("Failed to parse gps rssi as u32");
 
-                // Keep track of on-trip state.
-                // SIGNON sets TRIP clears.
-                if event_type == "SIGNON" { 
-                    // Save the trip number to apply to other events.
-                    trip_num_id = trip_id.to_string();   
-                }   
+                    // Get the gps speed from the event data.
+                    let gps_speed = captures.get(10)
+                        .expect("GPS speed capture group not found.")
+                        .as_str()
+                        .parse::<u32>()
+                        .expect("Failed to parse gps speed as u32");
 
-                // Create and populate the struct.
-                // Initialise events to be supported; change later if not.
-                let ev_data = ScrapedData {
-                    date_time: format!("{} {}", date, time),
-                    unix_time: unix_time.parse().expect("Invalid Unix time string"),
-                    on_trip: on_trip,
-                    trip_num: trip_num_id.clone(),
-                    event_type: event_type.to_string(),
-                    ev_detail: ev_key_vals,
-                    ev_supported: ev_supported,
-                    gps_locn: gps_locn,
-                    gps_rssi: gps_rssi,
-                    gps_speed: gps_speed,
-                };
+                    // Keep track of on-trip state.
+                    // SIGNON sets TRIP clears.
+                    if event_type == "SIGNON" {
+                        // Save the trip number to apply to other events.
+                        trip_num_id = trip_id.to_string();
+                    }
 
-                // Push the struct onto the vector.
-                self.scrapings.push(ev_data);
+                    // Create and populate the struct.
+                    // Initialise events to be supported; change later if not.
+                    let ev_data = ScrapedData {
+                        date_time: format!("{} {}", date, time),
+                        unix_time: unix_time.parse().expect("Invalid Unix time string"),
+                        on_trip: on_trip,
+                        trip_num: trip_num_id.clone(),
+                        event_type: event_type.to_string(),
+                        ev_detail: ev_key_vals,
+                        ev_supported: ev_supported,
+                        gps_locn: gps_locn,
+                        gps_rssi: gps_rssi,
+                        gps_speed: gps_speed,
+                    };
 
-                // Clear on trip flag after TRIP event.
-                // This makes TRIP still part of the trip.
-                if event_type == "TRIP" {
-                   // Clear the saved trip number as
-                   // following events are out of trip.
-                   trip_num_id = "".to_string();
+                    // Push the struct onto the vector.
+                    self.scrapings.push(ev_data);
+
+                    // Clear on trip flag after TRIP event.
+                    // This makes TRIP still part of the trip.
+                    if event_type == "TRIP" {
+                    // Clear the saved trip number as
+                    // following events are out of trip.
+                    trip_num_id = "".to_string();
+                    }
                 }
             }
         }
@@ -409,7 +411,7 @@ fn ungroup_event_data(event_type: String, sub_data: &str, on_trip: &mut bool, ev
     // Search for the event sub-data for the SIGNON event.
     match event_type.as_str() {
         "SIGNON" => {
-            let sub_signon_pattern = Regex::new(r"([-\*\+0-9]+) ([0-9a-fA-F]+) (.+?) ([0-9]+) ([0-9]+) ([0-9]+) v:(.+?)$")
+            let sub_signon_pattern = Regex::new(r"([-*+0-9]+) ([0-9a-fA-F]+) (.+?) ([0-9]+) ([0-9a-fA-F]+) ([0-9]+) v:(.+?)$")
                 .expect("Invalid SIGNON regex pattern");
 
             if let Some(captures) = sub_signon_pattern.captures(sub_data) {
@@ -438,7 +440,7 @@ fn ungroup_event_data(event_type: String, sub_data: &str, on_trip: &mut bool, ev
                     }
                 }
             } else {
-                    warn!("Failed to extract sub-data from SIGNON");
+                    warn!("Failed to extract sub-data from SIGNON: {:?}", sub_data);
             }
         },
 
@@ -841,7 +843,19 @@ fn ungroup_event_data(event_type: String, sub_data: &str, on_trip: &mut bool, ev
 
         // Search for the event sub-data for the POWERDOWN event.
         "POWERDOWN" => {
-                info!("POWERDOWN event found, no sub-data applicable.");
+            let sub_power_pattern = Regex::new(r"v:(.+?)$")
+                .expect("Invalid POWERDOWN regex pattern");
+
+            if let Some(captures) = sub_power_pattern.captures(sub_data) {
+                if let Some(battery) = captures.get(1) {
+                    if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
+                        let voltage_volts = voltage_tens / 10.0;
+                        result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));
+                    }
+                }
+            } else {
+                warn!("Failed to extract sub-data from POWERDOWN: {:?}", sub_data);
+            }
         },
 
         // Search for the event sub-data for the REPORT event.
@@ -941,7 +955,7 @@ fn ungroup_event_data(event_type: String, sub_data: &str, on_trip: &mut bool, ev
 
         // Search for the event sub-data for the XSIDLE event.
         "XSIDLE" => {
-            let sub_xsidle_pattern = Regex::new(r"([0-9]+) ([0-9]+) ([0-9]+) v:(.+?)$")
+            let sub_xsidle_pattern = Regex::new(r"([0-9]+) ([0-9]+) v:(.+?)$")
                 .expect("Invalid XSIDLE regex pattern");
 
             if let Some(captures) = sub_xsidle_pattern.captures(sub_data) {
@@ -951,10 +965,7 @@ fn ungroup_event_data(event_type: String, sub_data: &str, on_trip: &mut bool, ev
                 if let Some(max_idle) = captures.get(2) {
                     result.push(("Max idle".to_string(), max_idle.as_str().to_string()));
                 }
-                if let Some(xsidle_reason) = captures.get(3) {
-                    result.push(("Excess idle reason".to_string(), xsidle_reason.as_str().to_string()));
-                }
-                if let Some(battery) = captures.get(4) {
+                if let Some(battery) = captures.get(3) {
                     if let Ok(voltage_tens) = battery.as_str().parse::<f32>() {
                         let voltage_volts = voltage_tens / 10.0;
                         result.push(("Battery voltage".to_string(), format!("{:.1}", voltage_volts)));

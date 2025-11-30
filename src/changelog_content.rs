@@ -10,6 +10,10 @@ pub fn draw_changelog_content(ui: &mut egui::Ui, _app: &mut MyApp) {
     ui.heading("Scraper Changelog");
     ui.separator();
 
+    ui.collapsing("0.7.0 - update release", |ui| {
+        ui.label("Changed to get input from Elastic Search logging exports.");
+    });
+
     ui.collapsing("0.6.0 - update release", |ui| {
         ui.label("Added menu options to plot speed and batter voltage.");
         ui.label("Added delta time measurement to time-series plots.");
