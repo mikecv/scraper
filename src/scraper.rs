@@ -3,6 +3,7 @@
 use log::info;
 use log::warn;
 
+use chrono::NaiveDateTime;
 use regex::Regex;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -303,8 +304,24 @@ impl Scraper {
                 if captures.get(3).unwrap().as_str() == self.controller_id {
 
                     // Extract key fields for logging.
-                    let date = captures.get(1).unwrap().as_str();
-                    let time = captures.get(2).unwrap().as_str();
+                    // Need to do date and time with format conversion as already used
+                    // by gps plotting routines.
+                    let date_str = captures.get(1).unwrap().as_str();
+                    let time_str = captures.get(2).unwrap().as_str();
+                    
+                    // Convert from time data format in elastic search tp more compact format.
+                    // For example - "Nov 27, 2025 @ 14:03:00.805" to "02/11/2025 10:21:13"
+                    let input_datetime = format!("{} {}", date_str, time_str);
+                    let (date, time) = if let Ok(dt) = NaiveDateTime::parse_from_str(&input_datetime, "%b %d, %Y %H:%M:%S%.f") {
+                        let date = dt.format("%d/%m/%Y").to_string();
+                        let time = dt.format("%H:%M:%S").to_string();
+                        (date, time)
+                    } else {
+                        warn!("Failed to parse datetime: {}", input_datetime);
+                        (date_str.to_string(), time_str.to_string())
+                    };
+
+                    // Capture remainder of event attributes.                    
                     let unix_time = captures.get(5).unwrap().as_str();
                     let event_type = captures.get(11).unwrap().as_str();
                     let event_detail = captures.get(12).unwrap().as_str();
