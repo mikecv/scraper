@@ -44,6 +44,8 @@ pub struct Details {
     pub min_win_height:             f32,
     pub max_win_height:             f32,
 
+    pub controller_win_width:       f32,
+
     pub help_win_width:             f32,
     pub min_help_win_width:         f32,
     pub max_help_win_width:         f32,

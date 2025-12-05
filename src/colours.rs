@@ -337,3 +337,12 @@ pub fn cursor_label_text_colour(dark_mode: bool) -> Color32 {
         Color32::from_rgb(255, 255, 255)
     }
 }
+
+// Colour for device selection.
+pub fn device_select_colour(dark_mode: bool) -> Color32 {
+    if dark_mode {
+        Color32::from_rgb(51, 51, 255)
+    } else {
+        Color32::from_rgb(179, 179, 255)
+    }
+}

@@ -60,8 +60,10 @@ pub struct Scraper {
     pub file_receiver: Option<mpsc::Receiver<FileDialogMessage>>,
     pub processing_status: String,
     pub processing_duration: Duration,
-    pub controller_id: String,
-    pub controller_fw: String,
+    pub devices: Vec<String>,
+    pub selected_device: String,
+    pub device_id: String,
+    pub device_fw: String,
     pub scrapings: Vec<ScrapedData>,
 }
 
@@ -77,8 +79,10 @@ impl Scraper {
             file_receiver: None,
             processing_status: "No file selected.".to_string(),
             processing_duration: Duration::new(0, 0),
-            controller_id: "".to_string(),
-            controller_fw: "".to_string(),
+            devices: Vec::new(),
+            selected_device: "".to_string(),
+            device_id: "".to_string(),
+            device_fw: "".to_string(),
             scrapings: Vec::new(),
         }
     }
@@ -88,7 +92,7 @@ impl Scraper {
     // Load log file for processing.
     // The load file triggers a clearing of any previous selection id.
     pub fn load_file(&mut self, ctx: &egui::Context, selected_id: &mut Option<String>) {
-        info!("Browsing for file to open.");
+        info!("Browsing for file to load.");
 
         // Prevent multiple dialogs.
         if self.file_dialog_open {
@@ -149,8 +153,10 @@ impl Scraper {
         info!("Reinitializing scraper data for new file.");
 
         self.processing_status = "Loading new file...".to_string();
-        self.controller_id = "".to_string();
-        self.controller_fw = "".to_string();
+        self.devices = Vec::new();
+        self.device_id = "".to_string();
+        self.selected_device = "".to_string();
+        self.device_fw = "".to_string();
 
         // Clear any ongoing file dialog state.
         self.file_dialog_open = false;
@@ -194,218 +200,7 @@ impl Scraper {
             }
         }
     }
-
-    // Main file processing logic.
-    fn read_and_process_file(&mut self, path: &PathBuf) -> Result<usize, Box<dyn std::error::Error>> {
-
-        // Clear fields at start of processing to ensure clean state.
-        self.controller_id.clear();
-        self.controller_fw.clear();
-
-        // Open the file.
-        let file = File::open(path)?;
-        let reader = BufReader::new(file);
-
-        // Collect all lines into a vector.
-        // Should only have to do this once.
-        let lines: Vec<String> = reader.lines()
-            .collect::<Result<_, _>>()?;
-
-        // Get the serial number of the controller.
-        let sn_pattern = Regex::new(r"\[UNIT\s+(\d+)\]")?;
-
-        let mut found_sn = false;
-        
-        info!("Searching file for controller serial number.");
     
-        // Process file line by line,
-        for line in lines.iter().rev() {
- 
-            if let Some(caps) = sn_pattern.captures(&line) {
-                let unit_number = &caps[1];
-
-                // Combine unit number with optional suffix.
-                let unit = if let Some(suffix) = caps.get(10) {
-                    format!("{} {}", unit_number, suffix.as_str())
-                } else {
-                    unit_number.to_string()
-                };
-
-                found_sn = true;
-
-                // Get combined string for controller id.
-                self.controller_id = unit;
-
-                info!("Found controller: {:?}", self.controller_id);
-            }
-            
-            if found_sn {
-                // Have found one instance of controller number.
-                // Don't need to look any further.
-                break;
-            }
-        }
-        if found_sn == false {
-            self.controller_id = "Not defined.".to_string();
-            info!("Failed to find controller serial number."); 
-        }
-
-        // Initialise file reader again.
-        let _file = File::open(path)?;
-
-        info!("Searching file for controller firmware version.");
-       
-        // Get the controller firmware version.
-        let fw_pattern = Regex::new(r#"^"([^@]+) @ ([^"]+)",[^,]+,[^,]+,"[^<]+ <== \[EVENT (\d+) (\d+) [^\s]+ (SWSTART) FC ([^v]+) v:\d+\]"$"#).unwrap();
-
-        let mut found_fw = false;
-
-        // Process file line by line,
-        for line in lines.iter().rev() {
-            
-            // Check if we should stop processing.
-            if let Some(captures) = fw_pattern.captures(&line) {
-                found_fw = true;
-                // Group 6 contains the firmware version.
-                let fw_str = captures.get(6).unwrap().as_str();
-                self.controller_fw = fw_str.to_string();
-                info!("Found controller firmware: {:?}", fw_str); 
-            }
-            if found_fw {
-                // Have found one instance of firmware version.
-                // Don't need to look any further as for now we are only
-                // looking for the first instance.
-                break;
-            }
-        }
-        if found_fw == false {
-            self.controller_fw = "Not defined.".to_string();
-            info!("Failed to find controller firmware version."); 
-        }
-
-        // Initialise file reader again.
-        info!("Searching file for controller events.");
-
-        // Get the controller events.
-        let ev_pattern = Regex::new(r#"^"([^@]+) @ ([^"]+)",[^,]+,[^,]+,"([^<]+) <== \[EVENT (\d+) (\d+) (-?\d+)/(-?\d+)/(\d+)/(-?\d+)/(\d+) (\w+) ([^\]]+)\]"$"#).unwrap();
-
-        // Trip number for SIGNON event so that it can
-        // be copied to the other events in the trip.
-        let mut trip_num_id = "".to_string();
-
-        // Process file line by line.
-        for line in lines.iter().rev() {
-            
-            // Check for event pattern.
-            if let Some(captures) = ev_pattern.captures(&line) {
-                
-                // Could have more than one device captured in data.
-                // Check to see if the device serial number matches the number in the event string.
-                if captures.get(3).unwrap().as_str() == self.controller_id {
-
-                    // Extract key fields for logging.
-                    // Need to do date and time with format conversion as already used
-                    // by gps plotting routines.
-                    let date_str = captures.get(1).unwrap().as_str();
-                    let time_str = captures.get(2).unwrap().as_str();
-                    
-                    // Convert from time data format in elastic search tp more compact format.
-                    // For example - "Nov 27, 2025 @ 14:03:00.805" to "02/11/2025 10:21:13"
-                    let input_datetime = format!("{} {}", date_str, time_str);
-                    let (date, time) = if let Ok(dt) = NaiveDateTime::parse_from_str(&input_datetime, "%b %d, %Y %H:%M:%S%.f") {
-                        let date = dt.format("%d/%m/%Y").to_string();
-                        let time = dt.format("%H:%M:%S").to_string();
-                        (date, time)
-                    } else {
-                        warn!("Failed to parse datetime: {}", input_datetime);
-                        (date_str.to_string(), time_str.to_string())
-                    };
-
-                    // Capture remainder of event attributes.                    
-                    let unix_time = captures.get(5).unwrap().as_str();
-                    let event_type = captures.get(11).unwrap().as_str();
-                    let event_detail = captures.get(12).unwrap().as_str();
-                    let mut on_trip = true;
-                    let mut ev_supported = true;
-                    let ev_key_vals = ungroup_event_data(event_type.to_string(), event_detail, &mut on_trip, &mut ev_supported);
-                    let trip_id = captures.get(4).unwrap().as_str();
-
-                    // Get the gps location from the event data.
-                    // While gps location is included in the event string,
-                    // it's not part of the event detail.
-                    let gps_latitude = captures.get(6)
-                        .expect("Latitude capture group not found.")
-                        .as_str()
-                        .parse::<f64>()
-                        .expect("Failed to parse latitude as f64");
-                    let gps_longitude = captures.get(7)
-                        .expect("Longitude capture group not found.")
-                        .as_str()
-                        .parse::<f64>()
-                        .expect("Failed to parse longitude as f64");
-                    let gps_locn = GpsLocation {
-                        lat: gps_latitude / 10_000_000.0,
-                        lon: gps_longitude / 10_000_000.0,
-                    };
-
-                    // Get the gps RSSI from the event data.
-                    let gps_rssi = captures.get(9)
-                        .expect("GPS RSSI capture group not found.")
-                        .as_str()
-                        .parse::<u32>()
-                        .expect("Failed to parse gps rssi as u32");
-
-                    // Get the gps speed from the event data.
-                    let gps_speed = captures.get(10)
-                        .expect("GPS speed capture group not found.")
-                        .as_str()
-                        .parse::<u32>()
-                        .expect("Failed to parse gps speed as u32");
-
-                    // Keep track of on-trip state.
-                    // SIGNON sets TRIP clears.
-                    if event_type == "SIGNON" {
-                        // Save the trip number to apply to other events.
-                        trip_num_id = trip_id.to_string();
-                    }
-
-                    // Create and populate the struct.
-                    // Initialise events to be supported; change later if not.
-                    let ev_data = ScrapedData {
-                        date_time: format!("{} {}", date, time),
-                        unix_time: unix_time.parse().expect("Invalid Unix time string"),
-                        on_trip: on_trip,
-                        trip_num: trip_num_id.clone(),
-                        event_type: event_type.to_string(),
-                        ev_detail: ev_key_vals,
-                        ev_supported: ev_supported,
-                        gps_locn: gps_locn,
-                        gps_rssi: gps_rssi,
-                        gps_speed: gps_speed,
-                    };
-
-                    // Push the struct onto the vector.
-                    self.scrapings.push(ev_data);
-
-                    // Clear on trip flag after TRIP event.
-                    // This makes TRIP still part of the trip.
-                    if event_type == "TRIP" {
-                    // Clear the saved trip number as
-                    // following events are out of trip.
-                    trip_num_id = "".to_string();
-                    }
-                }
-            }
-        }
-        Ok(0)
-    }
-       
-    // Method to get path and filename for display.
-    // Not currently used.
-    pub fn _get_selected_file(&self) -> Option<&PathBuf> {
-        self.selected_file.as_ref()
-    }
-
     // Method to get just the filename for display.
     pub fn get_selected_filename(&self) -> Option<String> {
         self.selected_file.as_ref()
@@ -417,6 +212,203 @@ impl Scraper {
     // Get processing status for display.
     pub fn get_processing_status(&self) -> &str {
         &self.processing_status
+    }
+
+    // Do the log parsing for the selected device.
+    pub fn parse_selected_device(&mut self) {
+        if let Some(path) = &self.selected_file.clone() {
+            info!("Re-parsing file for device: {}", self.selected_device);
+            self.scrapings.clear();
+            
+            // Clone the selected_device to avoid borrow conflicts.
+            let device = self.selected_device.clone();
+            
+            match self.parse_device_data(&path, &device) {
+                Ok(_) => {
+                    info!("Successfully parsed data for device {}", device);
+                    self.processing_status = format!("Loaded device: {}", device);
+                }
+                Err(e) => {
+                    self.processing_status = format!("Error parsing device data: {}", e);
+                }
+            }
+        }
+    }
+
+    // Read_and_process_file done in 2 two passes.
+    // First pass: collect all devices
+    // Second pass: parse data for the first device (or selected one)
+    fn read_and_process_file(&mut self, path: &PathBuf) -> Result<usize, Box<dyn std::error::Error>> {
+        // Clear fields at start of processing to ensure clean state.
+        self.devices = Vec::new();
+        self.selected_device.clear();
+        self.device_fw.clear();
+
+        // Open the file.
+        let file = File::open(path)?;
+        let reader = BufReader::new(file);
+
+        // Collect all lines into a vector.
+        let lines: Vec<String> = reader.lines()
+            .collect::<Result<_, _>>()?;
+
+        // === FIRST PASS: Find all devices ===
+        let sn_pattern = Regex::new(r"\[UNIT\s+(\d+)\]")?;
+        
+        info!("Searching file for all device serial numbers.");
+        
+        for line in lines.iter() {
+            if let Some(caps) = sn_pattern.captures(&line) {
+                let unit_number = &caps[1];
+                let unit = if let Some(suffix) = caps.get(10) {
+                    format!("{} {}", unit_number, suffix.as_str())
+                } else {
+                    unit_number.to_string()
+                };
+
+                // Add to list of devices if unique.
+                if !self.devices.contains(&unit) {
+                    info!("Found device: {:?}", unit);
+                    self.devices.push(unit.clone());
+                }
+            }
+        }
+
+        // Select first device if we found any.
+        if self.devices.len() == 1 {
+            self.selected_device = self.devices[0].clone();
+            info!("Auto-selecting first device: {}", self.selected_device);
+        }
+        else {
+            if self.devices.is_empty() {
+                self.selected_device = "Not defined.".to_string();
+                info!("No devices found in file.");
+                return Ok(0);
+            }
+        }
+
+        // SECOND PASS: Parse firmware version for selected device.
+        self.parse_firmware(&lines)?;
+
+        // THIRD PASS: Parse events for selected device.
+        let selected = self.selected_device.clone();
+        self.parse_device_data(path, &selected)?;
+
+        Ok(0)
+    }
+
+    // Extract firmware parsing into separate method.
+    fn parse_firmware(&mut self, lines: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+        info!("Searching file for device firmware version.");
+        
+        let fw_pattern = Regex::new(r#"^"([^@]+) @ ([^"]+)",[^,]+,[^,]+,"[^<]+ <== \[EVENT (\d+) (\d+) [^\s]+ (SWSTART) FC ([^v]+) v:\d+\]"$"#)?;
+
+        for line in lines.iter().rev() {
+            if let Some(captures) = fw_pattern.captures(&line) {
+                let fw_str = captures.get(6).unwrap().as_str();
+                self.device_fw = fw_str.to_string();
+                info!("Found device firmware: {:?}", fw_str);
+                return Ok(());
+            }
+        }
+        
+        self.device_fw = "Not defined.".to_string();
+        info!("Failed to find device firmware version.");
+        Ok(())
+    }
+
+    // Extract event parsing into separate method that takes device ID.
+    // List of devices is found on file load and not repeated until next file.
+    // Here there is a selected device nomimated.
+    fn parse_device_data(&mut self, path: &PathBuf, device_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+        info!("Parsing events for device: {}", device_id);
+
+        // Open file and read lines.
+        let file = File::open(path)?;
+        let reader = BufReader::new(file);
+        let lines: Vec<String> = reader.lines().collect::<Result<_, _>>()?;
+
+        let ev_pattern = Regex::new(r#"^"([^@]+) @ ([^"]+)",[^,]+,[^,]+,"([^<]+) <== \[EVENT (\d+) (\d+) (-?\d+)/(-?\d+)/(\d+)/(-?\d+)/(\d+) (\w+) ([^\]]+)\]"$"#)?;
+
+        let mut trip_num_id = String::new();
+
+        // Process file line by line (reversed to get chronological order).
+        for line in lines.iter().rev() {
+            if let Some(captures) = ev_pattern.captures(&line) {
+                // Check if this event is for the selected device.
+                let event_controller = captures.get(3).unwrap().as_str();
+                
+                // Ignore event as not interested in this device,
+                // i.e. not the selected device.
+                if event_controller != device_id {
+                    continue;
+                }
+
+                // Extract date, time, event details, GPS data, etc.              
+                let date_str = captures.get(1).unwrap().as_str();
+                let time_str = captures.get(2).unwrap().as_str();
+
+                // Need to convert the time as different format in log file.
+                // compared to format in trip and event lists.
+                let input_datetime = format!("{} {}", date_str, time_str);
+                let (date, time) = if let Ok(dt) = NaiveDateTime::parse_from_str(&input_datetime, "%b %d, %Y %H:%M:%S%.f") {
+                    let date = dt.format("%d/%m/%Y").to_string();
+                    let time = dt.format("%H:%M:%S").to_string();
+                    (date, time)
+                } else {
+                    warn!("Failed to parse datetime: {}", input_datetime);
+                    (date_str.to_string(), time_str.to_string())
+                };
+
+                let unix_time = captures.get(5).unwrap().as_str();
+                let event_type = captures.get(11).unwrap().as_str();
+                let event_detail = captures.get(12).unwrap().as_str();
+                let mut on_trip = true;
+                let mut ev_supported = true;
+                let ev_key_vals = ungroup_event_data(event_type.to_string(), event_detail, &mut on_trip, &mut ev_supported);
+                let trip_id = captures.get(4).unwrap().as_str();
+
+                let gps_latitude = captures.get(6).unwrap().as_str().parse::<f64>()?;
+                let gps_longitude = captures.get(7).unwrap().as_str().parse::<f64>()?;
+                let gps_locn = GpsLocation {
+                    lat: gps_latitude / 10_000_000.0,
+                    lon: gps_longitude / 10_000_000.0,
+                };
+
+                let gps_rssi = captures.get(9).unwrap().as_str().parse::<u32>()?;
+                let gps_speed = captures.get(10).unwrap().as_str().parse::<u32>()?;
+
+                // If event is SIGNON then this is that start of new trip.
+                if event_type == "SIGNON" {
+                    trip_num_id = trip_id.to_string();
+                }
+
+                let ev_data = ScrapedData {
+                    date_time: format!("{} {}", date, time),
+                    unix_time: unix_time.parse().expect("Invalid Unix time string"),
+                    on_trip,
+                    trip_num: trip_num_id.clone(),
+                    event_type: event_type.to_string(),
+                    ev_detail: ev_key_vals,
+                    ev_supported,
+                    gps_locn,
+                    gps_rssi,
+                    gps_speed,
+                };
+
+                self.scrapings.push(ev_data);
+
+                // End of the current trip if event is TRIP.
+                // If trip not started per chance then these events
+                // will be outside of a trip.
+                if event_type == "TRIP" {
+                    trip_num_id = String::new();
+                }
+            }
+        }
+
+        info!("Parsed {} events for device {}", self.scrapings.len(), device_id);
+        Ok(())
     }
 }
 

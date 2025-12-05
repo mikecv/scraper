@@ -121,7 +121,7 @@ pub fn draw_menu_bar(app: &mut MyApp, ctx: &egui::Context) {
 
 // Function to draw the bottom status panel.
 // This is a strip at the bottom of the screen to show
-// controller details.
+// device details.
 pub fn draw_bottom_panel(app: &mut MyApp, ctx: &egui::Context) {
     egui::TopBottomPanel::bottom("bottom_panel")
         .min_height(30.0)
@@ -129,7 +129,7 @@ pub fn draw_bottom_panel(app: &mut MyApp, ctx: &egui::Context) {
             ui.vertical(|ui| {
                 ui.add_space(0.5);
                 
-                // First row: File and Controller ID.
+                // First row: File and Device ID.
                 ui.horizontal(|ui| {
                     ui.style_mut().text_styles.insert(
                         egui::TextStyle::Body,
@@ -141,23 +141,23 @@ pub fn draw_bottom_panel(app: &mut MyApp, ctx: &egui::Context) {
                         ui.label("File:");
                         ui.strong(filename);
                         
-                        // Add controller ID if available.
-                        if !app.scraper.controller_id.is_empty() {
+                        // Add device ID if available.
+                        if !app.scraper.selected_device.is_empty() {
                             ui.separator();
-                            ui.label("Controller:");
-                            ui.strong(format!("{:0>6}", app.scraper.controller_id));
+                            ui.label("Device:");
+                            ui.strong(format!("{:0>6}", app.scraper.selected_device));
                         }
                         else {
                             ui.separator();
-                            ui.label("Controller:");
+                            ui.label("Device:");
                             ui.strong("Not defined.");
                         }
 
-                        // Add controller firmware version if available.
-                        if !app.scraper.controller_fw.is_empty() {
+                        // Add device firmware version if available.
+                        if !app.scraper.device_fw.is_empty() {
                             ui.separator();
                             ui.label("Firmware:");
-                            ui.strong(format!("{}", app.scraper.controller_fw));
+                            ui.strong(format!("{}", app.scraper.device_fw));
                         }
                         else {
                             ui.separator();
@@ -203,6 +203,49 @@ pub fn draw_bottom_panel(app: &mut MyApp, ctx: &egui::Context) {
 
 // Draw the central panel with the log data.
 pub fn draw_central_panel(app: &mut MyApp, ctx: &egui::Context) {
+
+    // Lock the global DETAILS to obtain access to the Details object.
+    let details = DETAILS.lock().unwrap().clone();
+
+    // Side panel for device selection (if multiple devices exist).
+    // Actually if only 1 device then don't a device list.
+    if app.scraper.devices.len() > 1 {
+        // Clone the data we need to avoid borrow conflicts
+        let devices = app.scraper.devices.clone();
+        let selected = app.scraper.selected_device.clone();
+        
+        // Add the side panel on the left where the list of devices is.
+        // The devices are a list of radiio buttons, and
+        // is the selector above the level of trips.
+        egui::SidePanel::left("devices")
+            .resizable(false)
+            .max_width(details.controller_win_width)
+            .show(ctx, |ui| {
+
+                ui.label(
+                    egui::RichText::new("Devices")
+                    .size(16.0)
+                    .color(colours::device_select_colour(app.dark_mode))
+                    .strong()
+                );
+                ui.separator();
+                
+                for device in &devices {
+                    if ui.selectable_label(
+                        &selected == device,
+                        device
+                    ).clicked() {
+                        app.scraper.selected_device = device.clone();
+                        // Re-parse data for the selected device.
+                        app.scraper.parse_selected_device();
+                        // Reset selected trip when switching devices.
+                        app.selected_id = None;
+                    }
+                }
+            });
+    }
+    
+    // Central panel with the scraped data,
     egui::CentralPanel::default().show(ctx, |ui| {
         // Update UI state with scraped data if available.
         if !app.scraper.scrapings.is_empty() {

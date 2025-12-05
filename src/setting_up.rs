@@ -74,12 +74,14 @@ fn create_details() -> Details {
         program_devs:               vec!["mdc".to_string()],
         program_web:                "galacticwingcommander".to_string(),
 
-        win_width:                  450.0,
-        min_win_width:              400.0,
-        max_win_width:              500.0,
+        win_width:                  550.0,
+        min_win_width:              500.0,
+        max_win_width:              650.0,
         win_height:                 500.0,
         min_win_height:             400.0,
         max_win_height:             750.0,
+
+        controller_win_width:       90.0,
 
         help_win_width:             600.0,       
         min_help_win_width:         500.0,
